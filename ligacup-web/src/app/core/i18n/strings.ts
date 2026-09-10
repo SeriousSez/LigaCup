@@ -143,6 +143,7 @@ export interface Strings {
     tournament: {
         notFound: string;
         playingNow: string;
+        setup: string;
         liveConsole: string;
         tabs: { tables: string; fixtures: string; bracket: string; scorers: string };
         noTables: string;
@@ -432,6 +433,7 @@ export const danish: Strings = {
     tournament: {
         notFound: 'Turneringen kunne ikke indlæses.',
         playingNow: 'Spilles nu',
+        setup: 'Opsætning',
         liveConsole: 'Livekonsol',
         tabs: {
             tables: 'Stilling',
@@ -737,6 +739,7 @@ export const english: Strings = {
     tournament: {
         notFound: 'That tournament could not be loaded.',
         playingNow: 'Playing now',
+        setup: 'Setup',
         liveConsole: 'Live console',
         tabs: {
             tables: 'Tables',

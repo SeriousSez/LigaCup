@@ -10,9 +10,9 @@ import { StandingsTable } from '../../shared/standings-table';
 type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
 @Component({
-    selector: 'app-tournament',
-    imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
-    template: `
+  selector: 'app-tournament',
+  imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
+  template: `
     @if (store.loading()) {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
       <app-heading-skeleton />
@@ -42,6 +42,9 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
             }
           </span>
           @if (auth.isLoggedIn()) {
+            <a [routerLink]="['/admin', data.tournament.slug]">
+              <button class="ghost" type="button">{{ t().tournament.setup }}</button>
+            </a>
             <a [routerLink]="['/admin', data.tournament.slug, 'live']">
               <button type="button">{{ t().tournament.liveConsole }}</button>
             </a>
@@ -147,7 +150,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
       }
     }
   `,
-    styles: `
+  styles: `
     .heading {
       margin-bottom: 1rem;
     }
@@ -238,58 +241,58 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
   `,
 })
 export class Tournament implements OnInit {
-    readonly slug = input.required<string>();
+  readonly slug = input.required<string>();
 
-    protected readonly store = inject(TournamentStore);
-    protected readonly auth = inject(AuthService);
-    protected readonly t = inject(I18nService).t;
-    protected readonly tab = signal<Tab>('tables');
+  protected readonly store = inject(TournamentStore);
+  protected readonly auth = inject(AuthService);
+  protected readonly t = inject(I18nService).t;
+  protected readonly tab = signal<Tab>('tables');
 
-    protected readonly tabs = computed<{ id: Tab; label: string }[]>(() => {
-        const labels = this.t().tournament.tabs;
-        return [
-            { id: 'tables', label: labels.tables },
-            { id: 'fixtures', label: labels.fixtures },
-            { id: 'bracket', label: labels.bracket },
-            { id: 'scorers', label: labels.scorers },
-        ];
-    });
+  protected readonly tabs = computed<{ id: Tab; label: string }[]>(() => {
+    const labels = this.t().tournament.tabs;
+    return [
+      { id: 'tables', label: labels.tables },
+      { id: 'fixtures', label: labels.fixtures },
+      { id: 'bracket', label: labels.bracket },
+      { id: 'scorers', label: labels.scorers },
+    ];
+  });
 
-    protected readonly detail = this.store.detail;
-    protected readonly liveMatches = this.store.liveMatches;
+  protected readonly detail = this.store.detail;
+  protected readonly liveMatches = this.store.liveMatches;
 
-    protected readonly fixtureRounds = computed(() => {
-        const matches = this.detail()?.matches ?? [];
-        const strings = this.t();
-        const buckets = new Map<string, typeof matches>();
+  protected readonly fixtureRounds = computed(() => {
+    const matches = this.detail()?.matches ?? [];
+    const strings = this.t();
+    const buckets = new Map<string, typeof matches>();
 
-        for (const match of matches) {
-            const key =
-                match.stage === 'Group'
-                    ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
-                    : strings.stagePlural[match.stage];
+    for (const match of matches) {
+      const key =
+        match.stage === 'Group'
+          ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
+          : strings.stagePlural[match.stage];
 
-            buckets.set(key, [...(buckets.get(key) ?? []), match]);
-        }
-
-        return [...buckets.entries()].map(([key, group]) => ({ key, matches: group }));
-    });
-
-    protected readonly bracketStages = computed(() => {
-        const bracket = this.detail()?.bracket ?? [];
-        const strings = this.t();
-        const buckets = new Map<string, typeof bracket>();
-
-        // Grouped by stage rather than the server's English label so the heading follows the language.
-        for (const item of bracket) {
-            const key = strings.stagePlural[item.stage as keyof typeof strings.stagePlural] ?? item.stageName;
-            buckets.set(key, [...(buckets.get(key) ?? []), item]);
-        }
-
-        return [...buckets.entries()].map(([key, matches]) => ({ key, matches }));
-    });
-
-    ngOnInit(): void {
-        void this.store.load(this.slug());
+      buckets.set(key, [...(buckets.get(key) ?? []), match]);
     }
+
+    return [...buckets.entries()].map(([key, group]) => ({ key, matches: group }));
+  });
+
+  protected readonly bracketStages = computed(() => {
+    const bracket = this.detail()?.bracket ?? [];
+    const strings = this.t();
+    const buckets = new Map<string, typeof bracket>();
+
+    // Grouped by stage rather than the server's English label so the heading follows the language.
+    for (const item of bracket) {
+      const key = strings.stagePlural[item.stage as keyof typeof strings.stagePlural] ?? item.stageName;
+      buckets.set(key, [...(buckets.get(key) ?? []), item]);
+    }
+
+    return [...buckets.entries()].map(([key, matches]) => ({ key, matches }));
+  });
+
+  ngOnInit(): void {
+    void this.store.load(this.slug());
+  }
 }
