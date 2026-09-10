@@ -1,13 +1,13 @@
 export type TournamentFormat = 'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly';
 export type TournamentStatus = 'Draft' | 'InProgress' | 'Completed' | 'Archived';
 export type MatchStatus =
-  | 'Scheduled'
-  | 'Live'
-  | 'HalfTime'
-  | 'Finished'
-  | 'Postponed'
-  | 'Abandoned'
-  | 'Paused';
+    | 'Scheduled'
+    | 'Live'
+    | 'HalfTime'
+    | 'Finished'
+    | 'Postponed'
+    | 'Abandoned'
+    | 'Paused';
 export type MatchStage =
     | 'Group'
     | 'RoundOf32'
@@ -129,13 +129,13 @@ export interface MatchEvent {
 }
 
 export interface MatchClock {
-  period: number;
-  periodElapsedSeconds: number;
-  clockStartedUtc: string | null;
-  isRunning: boolean;
-  stoppageMinutes: number;
-  displayMinute: number;
-  stoppageShown: number | null;
+    period: number;
+    periodElapsedSeconds: number;
+    clockStartedUtc: string | null;
+    isRunning: boolean;
+    stoppageMinutes: number;
+    displayMinute: number;
+    stoppageShown: number | null;
 }
 
 export interface Match {
