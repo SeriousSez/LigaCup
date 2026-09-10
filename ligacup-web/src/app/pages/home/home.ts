@@ -7,15 +7,18 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 
 @Component({
-    selector: 'app-home',
-    imports: [RouterLink, CardListSkeleton],
-    template: `
+  selector: 'app-home',
+  imports: [RouterLink, CardListSkeleton],
+  template: `
     <section class="hero card">
-      <h1>Liga Cup</h1>
-      <p class="muted">{{ t().home.tagline }}</p>
-      @if (auth.isLoggedIn()) {
-        <a routerLink="/admin"><button class="primary" type="button">{{ t().home.openAdmin }}</button></a>
-      }
+      <div class="hero-copy">
+        <h1>Liga Cup</h1>
+        <p class="muted">{{ t().home.tagline }}</p>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/admin"><button class="primary" type="button">{{ t().home.openAdmin }}</button></a>
+        }
+      </div>
+      <img class="hero-logo" src="assets/liga-cup-logo.png" alt="Liga Cup" />
     </section>
 
     @if (tournaments(); as list) {
@@ -44,17 +47,44 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
       <app-card-list-skeleton [count]="3" />
     }
   `,
-    styles: `
+  styles: `
     .hero {
       margin-bottom: 1.5rem;
       display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 0.75rem;
       justify-items: start;
+      align-items: center;
     }
 
     .hero p {
       max-width: 55ch;
       margin: 0;
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .hero-logo {
+      width: clamp(7rem, 16vw, 11rem);
+      height: clamp(7rem, 16vw, 11rem);
+      object-fit: contain;
+      opacity: 0.92;
+    }
+
+    @media (max-width: 560px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-logo {
+        width: 5rem;
+        height: 5rem;
+        justify-self: end;
+        grid-row: 1;
+      }
     }
 
     .tournament {
@@ -80,9 +110,9 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
   `,
 })
 export class Home {
-    protected readonly auth = inject(AuthService);
-    private readonly api = inject(ApiService);
+  protected readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
 
-    protected readonly t = inject(I18nService).t;
-    protected readonly tournaments = toSignal(this.api.getTournaments());
+  protected readonly t = inject(I18nService).t;
+  protected readonly tournaments = toSignal(this.api.getTournaments());
 }

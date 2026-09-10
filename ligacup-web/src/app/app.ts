@@ -11,7 +11,7 @@ import { AdminGuide } from './shared/admin-guide';
     <header class="site-header">
       <div class="container spread">
         <a routerLink="/" class="brand">
-          <span class="ball">&#9917;</span>
+          <img src="assets/liga-cup-logo.png" alt="" />
           <span>Liga Cup</span>
         </a>
 
@@ -83,8 +83,10 @@ import { AdminGuide } from './shared/admin-guide';
       text-decoration: none;
     }
 
-    .ball {
-      font-size: 1.2rem;
+    .brand img {
+      width: 2.2rem;
+      height: 2.2rem;
+      object-fit: contain;
     }
 
     nav {
