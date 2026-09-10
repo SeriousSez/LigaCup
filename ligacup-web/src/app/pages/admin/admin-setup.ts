@@ -29,7 +29,49 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
         </div>
       </section>
 
-      <section class="card stack">
+      <nav class="admin-tabs" role="tablist" aria-label="Admin setup sections">
+        <button
+          type="button"
+          role="tab"
+          [class.active]="activeTab() === 'rules'"
+          [attr.aria-selected]="activeTab() === 'rules'"
+          (click)="activeTab.set('rules')"
+        >
+          {{ t().setup.rules }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [class.active]="activeTab() === 'structure'"
+          [attr.aria-selected]="activeTab() === 'structure'"
+          (click)="activeTab.set('structure')"
+        >
+          {{ t().setup.groups }} &amp; {{ t().setup.teams }}
+        </button>
+        @if (data.tournament.trackPlayers) {
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activeTab() === 'squads'"
+            [attr.aria-selected]="activeTab() === 'squads'"
+            (click)="activeTab.set('squads')"
+          >
+            {{ t().setup.squads }}
+          </button>
+        }
+        <button
+          type="button"
+          role="tab"
+          [class.active]="activeTab() === 'fixtures'"
+          [attr.aria-selected]="activeTab() === 'fixtures'"
+          (click)="activeTab.set('fixtures')"
+        >
+          {{ t().setup.fixtures }}
+        </button>
+      </nav>
+
+      @if (activeTab() === 'rules') {
+        <section class="card stack">
         <h3>{{ t().setup.rules }}</h3>
         <div class="form-grid">
           <label>
@@ -192,9 +234,11 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
             <span class="muted">{{ message() }}</span>
           }
         </div>
-      </section>
+        </section>
+      }
 
-      <section class="card stack">
+      @if (activeTab() === 'structure') {
+        <section class="card stack">
         <h3>{{ t().setup.groups }}</h3>
         <div class="row">
           @for (group of data.groups; track group.id) {
@@ -210,9 +254,9 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
           <input [(ngModel)]="newGroupName" [placeholder]="t().setup.groupPlaceholder" />
           <button type="button" (click)="addGroup()">{{ t().setup.addGroup }}</button>
         </div>
-      </section>
+        </section>
 
-      <section class="card stack">
+        <section class="card stack">
         <h3>{{ t().setup.teams }}</h3>
         <div class="team-rows">
           @for (team of data.teams; track team.id) {
@@ -254,9 +298,10 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
           <app-select [options]="groupOptions(data.groups)" [(ngModel)]="newTeamGroupId" />
           <button type="button" (click)="addTeam()">{{ t().setup.addTeam }}</button>
         </div>
-      </section>
+        </section>
+      }
 
-      @if (data.tournament.trackPlayers) {
+      @if (data.tournament.trackPlayers && activeTab() === 'squads') {
         <section class="card stack">
           <h3>{{ t().setup.squads }}</h3>
           @for (team of data.teams; track team.id) {
@@ -286,7 +331,8 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
         </section>
       }
 
-      <section class="card stack">
+      @if (activeTab() === 'fixtures') {
+        <section class="card stack">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
         <div class="row">
@@ -314,7 +360,8 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
         @if (fixtureMessage()) {
           <p class="muted">{{ fixtureMessage() }}</p>
         }
-      </section>
+        </section>
+      }
     } @else {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
       <app-heading-skeleton />
@@ -328,6 +375,33 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
 
     .heading p {
       margin: 0;
+    }
+
+    .admin-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      padding: 0.3rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-line);
+      border-radius: 12px;
+    }
+
+    .admin-tabs button {
+      min-height: var(--tap);
+      padding: 0.55rem 0.65rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .admin-tabs button.active {
+      background: var(--pitch-800);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
     }
 
     section.card {
@@ -451,6 +525,10 @@ import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, Tournam
     }
 
     @media (min-width: 700px) {
+      .admin-tabs {
+        grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+      }
+
       section.card {
         margin-bottom: 1.25rem;
       }
@@ -512,6 +590,7 @@ export class AdminSetup implements OnInit {
     protected readonly t = this.i18n.t;
     protected readonly store = inject(TournamentStore);
     protected readonly detail = this.store.detail;
+    protected readonly activeTab = signal<'rules' | 'structure' | 'squads' | 'fixtures'>('rules');
 
     protected readonly busy = signal(false);
     protected readonly message = signal<string | null>(null);

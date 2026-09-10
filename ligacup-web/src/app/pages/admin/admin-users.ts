@@ -14,6 +14,7 @@ import { SelectField, SelectOption } from '../../shared/select-field';
     selector: 'app-admin-users',
     imports: [FormsModule, RouterLink, DatePipe, CardListSkeleton, SelectField],
     template: `
+    <div class="users-page">
     <section class="spread heading">
       <div>
         <h1>{{ t().users.title }}</h1>
@@ -22,9 +23,15 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       <a routerLink="/admin"><button class="ghost" type="button">{{ t().adminHome.title }}</button></a>
     </section>
 
-    <section class="card stack">
-      <h3>{{ t().users.newUser }}</h3>
-      <div class="form-grid">
+    <section class="card stack create-card">
+      <div class="section-heading">
+        <div>
+          <h2>{{ t().users.newUser }}</h2>
+          <p class="muted">{{ t().users.passwordHint }}</p>
+        </div>
+        <span class="section-mark">+</span>
+      </div>
+      <div class="form-grid create-grid">
         <label>
           {{ t().users.username }}
           <input [(ngModel)]="draft.username" autocomplete="off" />
@@ -62,7 +69,7 @@ import { SelectField, SelectOption } from '../../shared/select-field';
           <app-select [options]="roleOptions()" [(ngModel)]="draft.role" />
         </label>
       </div>
-      <p class="muted hint">{{ t().users.passwordHint }} {{ t().users.roleHelp }}</p>
+      <p class="muted hint">{{ t().users.roleHelp }}</p>
       <div class="row">
         <button class="primary" type="button" [disabled]="busy()" (click)="create()">
           {{ t().users.create }}
@@ -80,7 +87,7 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
       <app-card-list-skeleton [count]="2" />
     } @else {
-      <div class="stack">
+      <div class="stack user-list">
         @for (user of users(); track user.id) {
           <section class="card stack user">
             <div class="spread">
@@ -113,7 +120,7 @@ import { SelectField, SelectOption } from '../../shared/select-field';
               {{ user.lastLoginUtc ? (user.lastLoginUtc | date: 'd MMM y HH:mm' : undefined : locale()) : t().users.never }}
             </p>
 
-            <div class="row">
+            <div class="row user-actions">
               <button type="button" (click)="save(user)" [disabled]="busy()">{{ t().users.save }}</button>
               <button type="button" (click)="startReset(user.id)" [disabled]="busy()">
                 {{ t().users.resetPassword }}
@@ -142,8 +149,14 @@ import { SelectField, SelectOption } from '../../shared/select-field';
         }
       </div>
     }
+    </div>
   `,
     styles: `
+    .users-page {
+      max-width: 980px;
+      margin-inline: auto;
+    }
+
     .heading {
       margin-bottom: 1.25rem;
     }
@@ -157,6 +170,45 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       margin-bottom: 1rem;
     }
 
+    .create-card {
+      border-color: rgb(53 208 127 / 35%);
+      background:
+        linear-gradient(135deg, rgb(53 208 127 / 7%), transparent 42%),
+        var(--surface);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .section-heading h2 {
+      margin-bottom: 0.15rem;
+    }
+
+    .section-heading p {
+      margin: 0;
+      font-size: 0.85rem;
+    }
+
+    .section-mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: rgb(53 208 127 / 14%);
+      color: var(--accent);
+      font-size: 1.35rem;
+      line-height: 1;
+    }
+
+    .create-grid {
+      align-items: end;
+    }
+
     .identity {
       display: grid;
       gap: 0.1rem;
@@ -165,6 +217,18 @@ import { SelectField, SelectOption } from '../../shared/select-field';
 
     .identity span {
       font-size: 0.85rem;
+    }
+
+    .user-list {
+      gap: 0.85rem;
+    }
+
+    .user {
+      gap: 0.85rem;
+    }
+
+    .user-actions {
+      padding-top: 0.1rem;
     }
 
     .hint,
@@ -177,11 +241,12 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       align-self: end;
     }
 
-    /* Side by side rather than overlaid, so the button never fights the input for clicks. */
     .password-field {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.4rem;
+      position: relative;
+    }
+
+    .password-field input {
+      padding-right: calc(var(--tap) + 0.5rem);
     }
 
     .field {
@@ -195,7 +260,16 @@ import { SelectField, SelectOption } from '../../shared/select-field';
     }
 
     .reveal {
+      position: absolute;
+      z-index: 1;
+      top: 0;
+      right: 0;
+      bottom: 0;
       width: var(--tap);
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
       display: grid;
       place-items: center;
       color: var(--text-muted);
@@ -208,6 +282,21 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       align-items: end;
       border-top: 1px solid var(--surface-line);
       padding-top: 0.75rem;
+    }
+
+    @media (min-width: 700px) {
+      .create-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .user .form-grid {
+        grid-template-columns: minmax(0, 1.2fr) 220px auto;
+        align-items: end;
+      }
+
+      .user-actions {
+        padding-top: 0.25rem;
+      }
     }
   `,
 })

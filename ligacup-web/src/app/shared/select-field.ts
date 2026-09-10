@@ -184,8 +184,8 @@ export class SelectField<T = unknown> implements ControlValueAccessor {
         () => this.options().find((option) => option.value === this.value()) ?? null,
     );
 
-    private onChange: (value: T | null) => void = () => {};
-    private onTouched: () => void = () => {};
+    private onChange: (value: T | null) => void = () => { };
+    private onTouched: () => void = () => { };
 
     writeValue(value: T | null): void {
         this.value.set(value);
