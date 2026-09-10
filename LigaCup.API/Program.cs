@@ -94,14 +94,22 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<LigaCupContext>();
-    await dbContext.Database.MigrateAsync();
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<LigaCupContext>();
+        await dbContext.Database.MigrateAsync();
 
-    var databasePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(
-        DatabaseConfiguration.GetSqliteConnectionString(app.Configuration));
-    app.Logger.LogInformation("LigaCup database ready at {DatabasePath}", databasePath ?? "(non-SQLite provider)");
+        var databasePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(
+            DatabaseConfiguration.GetSqliteConnectionString(app.Configuration));
+        app.Logger.LogInformation("LigaCup database ready at {DatabasePath}", databasePath ?? "(non-SQLite provider)");
 
-    await SeedAdminUserAsync(dbContext, app.Configuration, app.Environment, app.Logger);
+        await SeedAdminUserAsync(dbContext, app.Configuration, app.Environment, app.Logger);
+    }
+    catch (Exception exception)
+    {
+        // Keep IIS alive so the health endpoint and startup log can expose filesystem or migration failures.
+        app.Logger.LogCritical(exception, "LigaCup database initialization failed. The API started without database readiness.");
+    }
 }
 
 app.UseCors();
