@@ -2,15 +2,15 @@ import { Component, input } from '@angular/core';
 import { Skeleton } from './skeleton';
 
 @Component({
-  selector: 'app-heading-skeleton',
-  imports: [Skeleton],
-  template: `
+    selector: 'app-heading-skeleton',
+    imports: [Skeleton],
+    template: `
     <div class="heading">
       <app-skeleton width="60%" height="2rem" />
       <app-skeleton width="40%" height="0.9rem" />
     </div>
   `,
-  styles: `
+    styles: `
     .heading {
       display: grid;
       gap: 0.5rem;
@@ -19,12 +19,12 @@ import { Skeleton } from './skeleton';
     }
   `,
 })
-export class HeadingSkeleton {}
+export class HeadingSkeleton { }
 
 @Component({
-  selector: 'app-card-list-skeleton',
-  imports: [Skeleton],
-  template: `
+    selector: 'app-card-list-skeleton',
+    imports: [Skeleton],
+    template: `
     <div class="grid-auto">
       @for (card of placeholders(); track $index) {
         <div class="card stack">
@@ -44,14 +44,14 @@ export class HeadingSkeleton {}
   `,
 })
 export class CardListSkeleton {
-  readonly count = input(3);
-  placeholders = () => Array.from({ length: this.count() });
+    readonly count = input(3);
+    placeholders = () => Array.from({ length: this.count() });
 }
 
 @Component({
-  selector: 'app-standings-skeleton',
-  imports: [Skeleton],
-  template: `
+    selector: 'app-standings-skeleton',
+    imports: [Skeleton],
+    template: `
     <div class="tables">
       @for (table of placeholders(); track $index) {
         <div class="card stack">
@@ -71,7 +71,7 @@ export class CardListSkeleton {
       }
     </div>
   `,
-  styles: `
+    styles: `
     .tables {
       display: grid;
       gap: 0.75rem;
@@ -93,16 +93,16 @@ export class CardListSkeleton {
   `,
 })
 export class StandingsSkeleton {
-  readonly groups = input(2);
-  readonly rows = input(4);
-  placeholders = () => Array.from({ length: this.groups() });
-  rowPlaceholders = () => Array.from({ length: this.rows() });
+    readonly groups = input(2);
+    readonly rows = input(4);
+    placeholders = () => Array.from({ length: this.groups() });
+    rowPlaceholders = () => Array.from({ length: this.rows() });
 }
 
 @Component({
-  selector: 'app-scoreboard-skeleton',
-  imports: [Skeleton],
-  template: `
+    selector: 'app-scoreboard-skeleton',
+    imports: [Skeleton],
+    template: `
     <div class="card picker">
       <app-skeleton width="4rem" height="0.8rem" />
       <app-skeleton height="2.75rem" radius="10px" />
@@ -131,7 +131,7 @@ export class StandingsSkeleton {
       </div>
     </div>
   `,
-  styles: `
+    styles: `
     .picker {
       display: grid;
       gap: 0.4rem;
@@ -166,12 +166,12 @@ export class StandingsSkeleton {
     }
   `,
 })
-export class ScoreboardSkeleton {}
+export class ScoreboardSkeleton { }
 
 @Component({
-  selector: 'app-form-skeleton',
-  imports: [Skeleton],
-  template: `
+    selector: 'app-form-skeleton',
+    imports: [Skeleton],
+    template: `
     @for (section of placeholders(); track $index) {
       <div class="card stack section">
         <app-skeleton width="30%" height="1.1rem" />
@@ -186,7 +186,7 @@ export class ScoreboardSkeleton {}
       </div>
     }
   `,
-  styles: `
+    styles: `
     .section {
       margin-bottom: 1rem;
     }
@@ -198,8 +198,8 @@ export class ScoreboardSkeleton {}
   `,
 })
 export class FormSkeleton {
-  readonly sections = input(2);
-  readonly fields = input(4);
-  placeholders = () => Array.from({ length: this.sections() });
-  fieldPlaceholders = () => Array.from({ length: this.fields() });
+    readonly sections = input(2);
+    readonly fields = input(4);
+    placeholders = () => Array.from({ length: this.sections() });
+    fieldPlaceholders = () => Array.from({ length: this.fields() });
 }

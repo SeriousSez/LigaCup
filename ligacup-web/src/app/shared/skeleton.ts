@@ -5,15 +5,15 @@ import { Component, input } from '@angular/core';
  * information: pages announce their loading state separately for screen readers.
  */
 @Component({
-  selector: 'app-skeleton',
-  template: '',
-  host: {
-    'aria-hidden': 'true',
-    '[style.width]': 'width()',
-    '[style.height]': 'height()',
-    '[style.border-radius]': 'radius()',
-  },
-  styles: `
+    selector: 'app-skeleton',
+    template: '',
+    host: {
+        'aria-hidden': 'true',
+        '[style.width]': 'width()',
+        '[style.height]': 'height()',
+        '[style.border-radius]': 'radius()',
+    },
+    styles: `
     :host {
       display: block;
       background: linear-gradient(
@@ -43,7 +43,7 @@ import { Component, input } from '@angular/core';
   `,
 })
 export class Skeleton {
-  readonly width = input('100%');
-  readonly height = input('1rem');
-  readonly radius = input('8px');
+    readonly width = input('100%');
+    readonly height = input('1rem');
+    readonly radius = input('8px');
 }
