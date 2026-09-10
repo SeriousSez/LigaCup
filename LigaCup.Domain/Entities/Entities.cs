@@ -14,7 +14,7 @@ public class Tournament
     public string? Rules { get; set; }
     public DateTime? TournamentDateUtc { get; set; }
     public int Season { get; set; }
-    public TournamentFormat Format { get; set; } = TournamentFormat.GroupsThenKnockout;
+    public TournamentFormat Format { get; set; } = TournamentFormat.League;
     public TournamentStatus Status { get; set; } = TournamentStatus.Draft;
 
     public int PointsForWin { get; set; } = 3;
@@ -34,6 +34,7 @@ public class Tournament
 
     /// <summary>When false the app runs in a lightweight teams-and-scores mode with no squads.</summary>
     public bool TrackPlayers { get; set; }
+    public PlayerRegistrationMode PlayerRegistrationMode { get; set; } = PlayerRegistrationMode.NamesAndNumbers;
 
     /// <summary>When false, cards are not recorded and disciplinary tiebreakers are skipped.</summary>
     public bool TrackCards { get; set; }
@@ -48,6 +49,9 @@ public class Tournament
 
     /// <summary>Optional pause between scheduled matches, in minutes.</summary>
     public int? MatchIntervalMinutes { get; set; }
+
+    /// <summary>How many matches start together in each schedule slot.</summary>
+    public int MatchesPerTimeSlot { get; set; } = 4;
 
     /// <summary>When false the organiser records scores without any running clock.</summary>
     public bool TrackMatchClock { get; set; } = true;

@@ -229,6 +229,10 @@ export interface Strings {
         newTournament: string;
         create: string;
         trackPlayers: string;
+        playerRegistration: string;
+        playerRegistrationNames: string;
+        playerRegistrationNumbers: string;
+        playerRegistrationBoth: string;
         yourTournaments: string;
         setup: string;
         view: string;
@@ -252,6 +256,10 @@ export interface Strings {
         advancing: string;
         matchLength: string;
         trackPlayers: string;
+        playerRegistration: string;
+        playerRegistrationNames: string;
+        playerRegistrationNumbers: string;
+        playerRegistrationBoth: string;
         trackCards: string;
         thirdPlace: string;
         periodCount: string;
@@ -259,6 +267,7 @@ export interface Strings {
         breakDuration: string;
         matchInterval: string;
         matchIntervalHelp: string;
+        matchesPerTimeSlot: string;
         trackMatchClock: string;
         allowTimeouts: string;
         useStoppageTime: string;
@@ -296,8 +305,14 @@ export interface Strings {
         squads: string;
         noPlayers: string;
         playerPlaceholder: string;
+        shirtNumberPlaceholder: string;
         fixtures: string;
         fixturesHelp: string;
+        schedule: string;
+        saveSchedule: string;
+        kickoff: string;
+        homeTeam: string;
+        awayTeam: string;
         groupStage: string;
         knockoutBracket: string;
         replaceExisting: string;
@@ -605,6 +620,10 @@ export const danish: Strings = {
         newTournament: 'Ny turnering',
         create: 'Opret turnering',
         trackPlayers: 'Registrer spillere og målscorere',
+        playerRegistration: 'Spillerregistrering',
+        playerRegistrationNames: 'Kun navne',
+        playerRegistrationNumbers: 'Kun numre',
+        playerRegistrationBoth: 'Navne og numre',
         yourTournaments: 'Dine turneringer',
         setup: 'Opsætning',
         view: 'Se',
@@ -628,6 +647,10 @@ export const danish: Strings = {
         advancing: 'Hold videre pr. gruppe',
         matchLength: 'Kamplængde (minutter)',
         trackPlayers: 'Registrer spillere og målscorere',
+        playerRegistration: 'Spillerregistrering',
+        playerRegistrationNames: 'Kun navne',
+        playerRegistrationNumbers: 'Kun numre',
+        playerRegistrationBoth: 'Navne og numre',
         trackCards: 'Registrer kort',
         thirdPlace: 'Bronzekamp',
         periodCount: 'Antal perioder',
@@ -635,6 +658,7 @@ export const danish: Strings = {
         breakDuration: 'Pause mellem perioder (minutter)',
         matchInterval: 'Pause mellem kampe (minutter)',
         matchIntervalHelp: 'Valgfri pause mellem kampe.',
+        matchesPerTimeSlot: 'Kampe pr. tidsslot',
         trackMatchClock: 'Vis kampur',
         allowTimeouts: 'Tillad at uret stoppes undervejs',
         useStoppageTime: 'Tæl tillægstid (45+2)',
@@ -674,7 +698,13 @@ export const danish: Strings = {
         squads: 'Trupper',
         noPlayers: 'Ingen spillere endnu.',
         playerPlaceholder: 'Spillerens navn',
+        shirtNumberPlaceholder: 'Nr.',
         fixtures: 'Kampprogram',
+        schedule: 'Tidspunkter for kampe',
+        saveSchedule: 'Gem tidspunkt',
+        kickoff: 'Starttidspunkt',
+        homeTeam: 'Hjemmehold',
+        awayTeam: 'Udehold',
         fixturesHelp:
             'Gruppekampene er en fuld turnering, hvor alle møder alle. Slutspilsskemaet oprettes med pladsholdere og udfylder sig selv, efterhånden som kampene bliver afgjort.',
         groupStage: 'Gruppespil',
@@ -986,6 +1016,10 @@ export const english: Strings = {
         newTournament: 'New tournament',
         create: 'Create tournament',
         trackPlayers: 'Track players and goalscorers',
+        playerRegistration: 'Player registration',
+        playerRegistrationNames: 'Names only',
+        playerRegistrationNumbers: 'Numbers only',
+        playerRegistrationBoth: 'Names and numbers',
         yourTournaments: 'Your tournaments',
         setup: 'Set up',
         view: 'View',
@@ -1009,6 +1043,10 @@ export const english: Strings = {
         advancing: 'Teams advancing per group',
         matchLength: 'Match length (minutes)',
         trackPlayers: 'Track players and goalscorers',
+        playerRegistration: 'Player registration',
+        playerRegistrationNames: 'Names only',
+        playerRegistrationNumbers: 'Numbers only',
+        playerRegistrationBoth: 'Names and numbers',
         trackCards: 'Track cards',
         thirdPlace: 'Third place play-off',
         periodCount: 'Number of periods',
@@ -1016,6 +1054,7 @@ export const english: Strings = {
         breakDuration: 'Break between periods (minutes)',
         matchInterval: 'Time between matches (minutes)',
         matchIntervalHelp: 'Optional pause between matches.',
+        matchesPerTimeSlot: 'Matches per time slot',
         trackMatchClock: 'Show a match clock',
         allowTimeouts: 'Allow the clock to be stopped mid-period',
         useStoppageTime: 'Count added time (45+2)',
@@ -1055,7 +1094,13 @@ export const english: Strings = {
         squads: 'Squads',
         noPlayers: 'No players yet.',
         playerPlaceholder: 'Player name',
+        shirtNumberPlaceholder: 'No.',
         fixtures: 'Fixtures',
+        schedule: 'Match schedule',
+        saveSchedule: 'Save time',
+        kickoff: 'Kickoff',
+        homeTeam: 'Home team',
+        awayTeam: 'Away team',
         fixturesHelp:
             'Group fixtures are a full round robin. The knockout bracket is created with placeholders and fills itself in as ties are decided.',
         groupStage: 'Group stage',

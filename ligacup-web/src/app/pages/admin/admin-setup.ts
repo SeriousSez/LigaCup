@@ -9,7 +9,7 @@ import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
-import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
+import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
 
 @Component({
   selector: 'app-admin-setup',
@@ -129,6 +129,12 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
             <input type="checkbox" [(ngModel)]="settings.trackPlayers" />
             {{ t().setup.trackPlayers }}
           </label>
+          @if (settings.trackPlayers) {
+            <label>
+              {{ t().setup.playerRegistration }}
+              <app-select [options]="playerRegistrationOptions()" [(ngModel)]="settings.playerRegistrationMode" />
+            </label>
+          }
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="settings.trackCards" />
             {{ t().setup.trackCards }}
@@ -203,6 +209,10 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
                 max="180"
                 [(ngModel)]="settings.matchIntervalMinutes"
               />
+            </label>
+            <label>
+              {{ t().setup.matchesPerTimeSlot }}
+              <input type="number" inputmode="numeric" min="1" max="16" [(ngModel)]="settings.matchesPerTimeSlot" />
             </label>
           </div>
           <p class="muted interval-help">{{ t().setup.matchIntervalHelp }}</p>
@@ -417,7 +427,12 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
                 }
               </div>
               <div class="add-player">
-                <input [(ngModel)]="playerDrafts[team.id]" [placeholder]="t().setup.playerPlaceholder" />
+                @if (data.tournament.playerRegistrationMode !== 'Numbers') {
+                  <input [(ngModel)]="playerDrafts[team.id]" [placeholder]="t().setup.playerPlaceholder" />
+                }
+                @if (data.tournament.playerRegistrationMode !== 'Names') {
+                  <input class="number-input" [(ngModel)]="playerNumberDrafts[team.id]" [placeholder]="t().setup.shirtNumberPlaceholder" inputmode="numeric" />
+                }
                 <button type="button" (click)="addPlayer(team.id)">{{ t().common.add }}</button>
               </div>
             </div>
@@ -453,6 +468,32 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
         </div>
         @if (fixtureMessage()) {
           <p class="muted">{{ fixtureMessage() }}</p>
+        }
+        @if (data.matches.length) {
+          <div class="schedule-list">
+            <h4>{{ t().setup.schedule }}</h4>
+            @for (match of data.matches; track match.id) {
+              <div class="schedule-row">
+                @if (match.stage === 'Group') {
+                  <label>
+                    {{ t().setup.homeTeam }}
+                    <app-select [options]="teamOptions(data.teams, match.awayTeamId)" [(ngModel)]="match.homeTeamId" />
+                  </label>
+                  <label>
+                    {{ t().setup.awayTeam }}
+                    <app-select [options]="teamOptions(data.teams, match.homeTeamId)" [(ngModel)]="match.awayTeamId" />
+                  </label>
+                } @else {
+                  <strong>{{ match.homeTeamName }} - {{ match.awayTeamName }}</strong>
+                }
+                <label>
+                  {{ t().setup.kickoff }}
+                  <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
+                </label>
+                <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
+              </div>
+            }
+          </div>
         }
         </section>
       }
@@ -524,8 +565,12 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
 
     .add-player {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 0.5rem;
+    }
+
+    .number-input {
+      max-width: 5rem;
     }
 
     .team-rows {
@@ -656,6 +701,44 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
     .interval-help {
       margin: -0.45rem 0 0;
       font-size: 0.8rem;
+    }
+
+    .schedule-list {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .schedule-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      background: var(--surface-raised);
+    }
+
+    .schedule-row input {
+      width: 100%;
+    }
+
+    .schedule-row label {
+      font-size: 0.75rem;
+    }
+
+    .schedule-row > button {
+      align-self: end;
+    }
+
+    @media (min-width: 700px) {
+      .schedule-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 13rem auto;
+      }
+
+      .schedule-row > strong {
+        grid-column: 1 / -1;
+      }
     }
 
     .tiny {
@@ -846,12 +929,19 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     ];
   }
 
+  protected readonly playerRegistrationOptions = computed<SelectOption<'Names' | 'Numbers' | 'NamesAndNumbers'>[]>(() => [
+    { value: 'Names', label: this.t().setup.playerRegistrationNames },
+    { value: 'Numbers', label: this.t().setup.playerRegistrationNumbers },
+    { value: 'NamesAndNumbers', label: this.t().setup.playerRegistrationBoth },
+  ]);
+
   protected ruleToAdd: TiebreakerRule | null = null;
   protected newGroupName = '';
   protected newTeamName = '';
   protected newTeamShort = '';
   protected newTeamGroupId: number | null = null;
   protected playerDrafts: Record<number, string> = {};
+  protected playerNumberDrafts: Record<number, string> = {};
   protected generateGroups = true;
   protected generateKnockout = true;
   protected replaceExisting = false;
@@ -873,11 +963,13 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     includeBestThirdPlaced: false,
     hasThirdPlacePlayOff: false,
     trackPlayers: false,
+    playerRegistrationMode: 'NamesAndNumbers',
     trackCards: false,
     periodCount: 1,
     periodDurationMinutes: 10,
     breakDurationMinutes: 5,
     matchIntervalMinutes: 5,
+    matchesPerTimeSlot: 4,
     trackMatchClock: true,
     allowTimeouts: false,
     useStoppageTime: true,
@@ -915,11 +1007,13 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       includeBestThirdPlaced: data.tournament.includeBestThirdPlaced,
       hasThirdPlacePlayOff: data.tournament.hasThirdPlacePlayOff,
       trackPlayers: data.tournament.trackPlayers,
+      playerRegistrationMode: data.tournament.playerRegistrationMode,
       trackCards: data.tournament.trackCards,
       periodCount: data.tournament.periodCount,
       periodDurationMinutes: data.tournament.periodDurationMinutes,
       breakDurationMinutes: data.tournament.breakDurationMinutes,
       matchIntervalMinutes: data.tournament.matchIntervalMinutes,
+      matchesPerTimeSlot: data.tournament.matchesPerTimeSlot,
       trackMatchClock: data.tournament.trackMatchClock,
       allowTimeouts: data.tournament.allowTimeouts,
       useStoppageTime: data.tournament.useStoppageTime,
@@ -1009,6 +1103,42 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
   updateRules(event: Event): void {
     this.settings.rules = (event.target as HTMLElement).innerHTML;
+  }
+
+  localKickoff(value: string | null): string {
+    return value ? value.slice(0, 16) : '';
+  }
+
+  teamOptions(teams: Team[], excludedTeamId: number | null): SelectOption<number | null>[] {
+    return teams
+      .filter((team) => team.id !== excludedTeamId)
+      .map((team) => ({ value: team.id, label: team.name }));
+  }
+
+  setKickoff(match: Match, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    match.kickoffUtc = value || null;
+  }
+
+  async saveSchedule(match: Match): Promise<void> {
+    const data = this.detail();
+    if (!data) {
+      return;
+    }
+
+    await firstValueFrom(this.api.saveMatch(data.tournament.id, match.id, {
+      groupId: match.groupId,
+      stage: match.stage,
+      round: match.round,
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
+      awayPlaceholder: match.awayTeamId === null ? match.awayTeamName : null,
+      kickoffUtc: match.kickoffUtc,
+      venue: match.venue,
+    }));
+    await this.store.reload();
+    this.message.set(this.t().common.saved);
   }
 
   async addGroup(): Promise<void> {
@@ -1113,13 +1243,21 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async addPlayer(teamId: number): Promise<void> {
+    const mode = this.detail()?.tournament.playerRegistrationMode ?? 'NamesAndNumbers';
     const name = (this.playerDrafts[teamId] ?? '').trim();
-    if (!name) {
+    const numberText = (this.playerNumberDrafts[teamId] ?? '').trim();
+    const shirtNumber = numberText ? Number(numberText) : null;
+    if ((mode !== 'Numbers' && !name) || (mode !== 'Names' && (!Number.isInteger(shirtNumber) || shirtNumber! < 0))) {
       return;
     }
 
-    await firstValueFrom(this.api.savePlayer(null, { teamId, name }));
+    await firstValueFrom(this.api.savePlayer(null, {
+      teamId,
+      name: mode === 'Numbers' ? '' : name,
+      shirtNumber: mode === 'Names' ? null : shirtNumber,
+    }));
     this.playerDrafts[teamId] = '';
+    this.playerNumberDrafts[teamId] = '';
     await this.store.reload();
   }
 

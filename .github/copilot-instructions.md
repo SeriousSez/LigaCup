@@ -13,6 +13,10 @@
 - Prefer `dotnet ef migrations add <Name> --project LigaCup.Infrastructure/LigaCup.Infrastructure.csproj --startup-project LigaCup.API/LigaCup.API.csproj` when `dotnet-ef` is available.
 - If `dotnet-ef` is unavailable, a manually created migration must still have an explicit `[Migration("<migration-id>")]` attribute and match the existing namespace/style.
 - Never assume `Database.MigrateAsync()` ran successfully. Verify the active SQLite file with `PRAGMA table_info(Tournaments)` and `__EFMigrationsHistory` when diagnosing `no such column` errors.
+- After every new tournament schema field, verify that its column appears in `PRAGMA table_info(Tournaments)` and that its migration ID appears in `__EFMigrationsHistory`; repeat this for each later field, not only the first migration in a feature.
+- When a migration is created for an already-existing local development database, apply that migration to `LigaCup.API/App_Data/ligacup.dev.db` before testing. Do not stop after creating the migration or rebuilding the API.
+- When a local `no such column` error occurs, inspect the actual `LigaCup.API/App_Data/ligacup.dev.db` file, stop the running `LigaCup.API` process, apply only the already-intended migration/schema repair if needed, restart the API with `ASPNETCORE_ENVIRONMENT=Development` and `http://localhost:5099`, then verify the exact failing endpoint.
+- Do not report a migration as fixed based on a successful compile alone. Confirm the live endpoint and the live database schema after restart.
 - After schema changes, restart the actual `LigaCup.API` process before testing. A running API can keep old binaries locked and can continue serving an old schema/session.
 - Do not repair or alter tournament data as part of a feature unless explicitly requested. A direct local SQLite repair is acceptable only to recover a development database from a migration that was already intended and committed.
 - `BreakDurationMinutes` means the break between periods inside a match. A pause between separate matches requires a separate setting such as `MatchIntervalMinutes`.

@@ -41,8 +41,9 @@ import { I18nService } from '../core/i18n/i18n.service';
     </div>
   `,
     styles: `
-    :host { display: block; position: relative; }
-    .picker-input { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; text-align: left; }
+    :host { display: block; position: relative; width: 100%; align-self: end; }
+    .picker { width: 100%; }
+    .picker-input { width: 100%; min-height: var(--tap); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px solid var(--surface-line); border-radius: 10px; font: inherit; font-size: 16px; text-align: left; color: var(--text); background: var(--pitch-800); }
     .picker-input i { color: var(--accent); }
     .calendar { position: absolute; top: calc(100% + 0.45rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: 0.8rem; border: 1px solid var(--surface-line); border-radius: 12px; background: var(--surface-raised); box-shadow: var(--shadow); z-index: 50; }
     .calendar-header, .weekdays, .days, .calendar-footer { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; }

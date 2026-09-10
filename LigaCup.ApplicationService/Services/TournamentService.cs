@@ -160,6 +160,7 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.IncludeBestThirdPlaced = request.IncludeBestThirdPlaced;
         tournament.HasThirdPlacePlayOff = request.HasThirdPlacePlayOff;
         tournament.TrackPlayers = request.TrackPlayers;
+        tournament.PlayerRegistrationMode = request.PlayerRegistrationMode;
         tournament.TrackCards = request.TrackCards;
         tournament.PeriodCount = Math.Clamp(request.PeriodCount, 1, 4);
         tournament.PeriodDurationMinutes = Math.Clamp(request.PeriodDurationMinutes, 1, 90);
@@ -167,6 +168,7 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.MatchIntervalMinutes = request.MatchIntervalMinutes is null
             ? null
             : Math.Clamp(request.MatchIntervalMinutes.Value, 0, 180);
+        tournament.MatchesPerTimeSlot = Math.Clamp(request.MatchesPerTimeSlot, 1, 16);
         tournament.TrackMatchClock = request.TrackMatchClock;
         tournament.AllowTimeouts = request.AllowTimeouts;
         tournament.UseStoppageTime = request.UseStoppageTime;
@@ -379,9 +381,33 @@ public class TournamentService(LigaCupContext dbContext)
             generated.AddRange(FixtureGenerator.GenerateKnockoutBracket(tournament, slots));
         }
 
+        AssignKickoffTimes(tournament, generated);
+
         dbContext.Matches.AddRange(generated);
         await dbContext.SaveChangesAsync(cancellationToken);
         return generated.Count;
+    }
+
+    private static void AssignKickoffTimes(Tournament tournament, IReadOnlyCollection<Match> matches)
+    {
+        if (tournament.TournamentDateUtc is null)
+        {
+            return;
+        }
+
+        var slotDuration = tournament.PeriodDurationMinutes + (tournament.MatchIntervalMinutes ?? 0);
+        foreach (var roundMatches in matches
+            .Where(match => match.Stage == MatchStage.Group)
+            .GroupBy(match => match.Round))
+        {
+            var ordered = roundMatches.ToList();
+            for (var index = 0; index < ordered.Count; index++)
+            {
+                var slot = index / Math.Max(1, tournament.MatchesPerTimeSlot);
+                ordered[index].KickoffUtc = tournament.TournamentDateUtc.Value
+                    .AddMinutes(((ordered[0].Round - 1) + slot) * slotDuration);
+            }
+        }
     }
 
     private async Task<string> EnsureUniqueSlugAsync(string slug, CancellationToken cancellationToken)

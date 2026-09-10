@@ -15,6 +15,13 @@ public enum TournamentFormat
     League = 3
 }
 
+public enum PlayerRegistrationMode
+{
+    Names = 0,
+    Numbers = 1,
+    NamesAndNumbers = 2
+}
+
 public enum TournamentStatus
 {
     Draft = 0,

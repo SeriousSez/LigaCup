@@ -47,6 +47,8 @@ public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContex
             entity.Property(tournament => tournament.TournamentDateUtc);
             entity.Property(tournament => tournament.TiebreakerOrder).HasMaxLength(400);
             entity.Property(tournament => tournament.MatchIntervalMinutes);
+            entity.Property(tournament => tournament.PlayerRegistrationMode);
+            entity.Property(tournament => tournament.MatchesPerTimeSlot);
             entity.HasIndex(tournament => tournament.Slug).IsUnique();
         });
 

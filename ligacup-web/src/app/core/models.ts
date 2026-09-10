@@ -1,4 +1,5 @@
 export type TournamentFormat = 'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly' | 'League';
+export type PlayerRegistrationMode = 'Names' | 'Numbers' | 'NamesAndNumbers';
 export type TournamentStatus = 'Draft' | 'InProgress' | 'Completed' | 'Archived';
 export type MatchStatus =
     | 'Scheduled'
@@ -81,11 +82,13 @@ export interface TournamentSummary {
     format: TournamentFormat;
     status: TournamentStatus;
     trackPlayers: boolean;
+    playerRegistrationMode: PlayerRegistrationMode;
     trackCards: boolean;
     periodCount: number;
     periodDurationMinutes: number;
     breakDurationMinutes: number;
     matchIntervalMinutes: number | null;
+    matchesPerTimeSlot: number;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
     useStoppageTime: boolean;
@@ -118,11 +121,13 @@ export interface SaveTournamentRequest {
     includeBestThirdPlaced: boolean;
     hasThirdPlacePlayOff: boolean;
     trackPlayers: boolean;
+    playerRegistrationMode: PlayerRegistrationMode;
     trackCards: boolean;
     periodCount: number;
     periodDurationMinutes: number;
     breakDurationMinutes: number;
     matchIntervalMinutes: number | null;
+    matchesPerTimeSlot: number;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
     useStoppageTime: boolean;
