@@ -1,9 +1,12 @@
+using LigaCup.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace LigaCup.Infrastructure.Migrations;
 
+[DbContext(typeof(LigaCupContext))]
 [Migration("20260910200500_MatchInterval")]
 public partial class MatchInterval : Migration
 {

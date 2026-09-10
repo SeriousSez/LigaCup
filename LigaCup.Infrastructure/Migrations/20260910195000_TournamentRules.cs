@@ -1,9 +1,12 @@
+using LigaCup.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace LigaCup.Infrastructure.Migrations;
 
+[DbContext(typeof(LigaCupContext))]
 [Migration("20260910195000_TournamentRules")]
 public partial class TournamentRules : Migration
 {
