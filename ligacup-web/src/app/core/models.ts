@@ -41,6 +41,32 @@ export interface AuthResponse {
     expiresUtc: string;
     username: string;
     role: string;
+    refreshToken: string;
+}
+
+export type UserRole = 'Viewer' | 'Editor' | 'Admin';
+
+export interface User {
+    id: number;
+    username: string;
+    email: string | null;
+    role: UserRole;
+    isActive: boolean;
+    createdUtc: string;
+    lastLoginUtc: string | null;
+}
+
+export interface CreateUserRequest {
+    username: string;
+    email: string | null;
+    password: string;
+    role: UserRole;
+}
+
+export interface UpdateUserRequest {
+    email: string | null;
+    role: UserRole;
+    isActive: boolean;
 }
 
 export interface TournamentSummary {

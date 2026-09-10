@@ -242,4 +242,24 @@ public class User
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginUtc { get; set; }
+
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
+}
+
+/// <summary>
+/// Keeps a session alive without a long-lived access token. Only the hash is stored,
+/// so a leaked database still cannot be used to sign in.
+/// </summary>
+public class RefreshToken
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User? User { get; set; }
+
+    public string TokenHash { get; set; } = string.Empty;
+    public DateTime ExpiresUtc { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? RevokedUtc { get; set; }
+
+    public bool IsActive(DateTime nowUtc) => RevokedUtc is null && ExpiresUtc > nowUtc;
 }

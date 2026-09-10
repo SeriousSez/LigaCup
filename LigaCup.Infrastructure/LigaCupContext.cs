@@ -34,6 +34,7 @@ public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContex
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<MatchEvent> MatchEvents => Set<MatchEvent>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -144,6 +145,17 @@ public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContex
             entity.Property(user => user.Email).HasMaxLength(200);
             entity.Property(user => user.PasswordHash).HasMaxLength(400).IsRequired();
             entity.HasIndex(user => user.Username).IsUnique();
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.Property(token => token.TokenHash).HasMaxLength(200).IsRequired();
+            entity.HasIndex(token => token.TokenHash).IsUnique();
+
+            entity.HasOne(token => token.User)
+                .WithMany(user => user.RefreshTokens)
+                .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         base.OnModelCreating(modelBuilder);

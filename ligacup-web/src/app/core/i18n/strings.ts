@@ -34,6 +34,35 @@ export interface Strings {
         submit: string;
         submitting: string;
         failed: string;
+        showPassword: string;
+        hidePassword: string;
+    };
+    userRole: Record<'Viewer' | 'Editor' | 'Admin', string>;
+    users: {
+        title: string;
+        subtitle: string;
+        manage: string;
+        username: string;
+        email: string;
+        role: string;
+        active: string;
+        lastLogin: string;
+        never: string;
+        newUser: string;
+        password: string;
+        passwordHint: string;
+        create: string;
+        created: string;
+        save: string;
+        saved: string;
+        resetPassword: string;
+        newPassword: string;
+        passwordReset: string;
+        deleteUser: string;
+        confirmDelete: string;
+        empty: string;
+        roleHelp: string;
+        you: string;
     };
     tournamentStatus: Record<'Draft' | 'InProgress' | 'Completed' | 'Archived', string>;
     matchStatus: Record<
@@ -260,11 +289,45 @@ export const danish: Strings = {
     login: {
         title: 'Log ind',
         subtitle: 'Adgang for arrangøren til liveresultater og opsætning.',
-        username: 'Brugernavn',
+        username: 'Brugernavn eller e-mail',
         password: 'Adgangskode',
         submit: 'Log ind',
         submitting: 'Logger ind...',
         failed: 'Brugernavn og adgangskode blev ikke godkendt.',
+        showPassword: 'Vis adgangskode',
+        hidePassword: 'Skjul adgangskode',
+    },
+    userRole: {
+        Viewer: 'Tilskuer',
+        Editor: 'Redaktør',
+        Admin: 'Administrator',
+    },
+    users: {
+        title: 'Brugere',
+        subtitle: 'Opret og administrer adgang til Liga Cup.',
+        manage: 'Brugere',
+        username: 'Brugernavn',
+        email: 'E-mail',
+        role: 'Rolle',
+        active: 'Aktiv',
+        lastLogin: 'Sidst logget ind',
+        never: 'Aldrig',
+        newUser: 'Ny bruger',
+        password: 'Adgangskode',
+        passwordHint: 'Mindst 8 tegn.',
+        create: 'Opret bruger',
+        created: 'Brugeren blev oprettet.',
+        save: 'Gem',
+        saved: 'Gemt.',
+        resetPassword: 'Nulstil adgangskode',
+        newPassword: 'Ny adgangskode',
+        passwordReset: 'Adgangskoden blev nulstillet.',
+        deleteUser: 'Slet',
+        confirmDelete: 'Er du sikker på, at du vil slette denne bruger?',
+        empty: 'Der er ingen andre brugere endnu.',
+        roleHelp:
+            'Tilskuere kan kun se siden. Redaktører kan styre kampe og resultater. Administratorer kan desuden oprette brugere.',
+        you: 'Dig',
     },
     tournamentStatus: {
         Draft: 'Kladde',
@@ -528,11 +591,45 @@ export const english: Strings = {
     login: {
         title: 'Sign in',
         subtitle: 'Organiser access for live scoring and tournament setup.',
-        username: 'Username',
+        username: 'Username or email',
         password: 'Password',
         submit: 'Sign in',
         submitting: 'Signing in...',
         failed: 'That username and password combination was not accepted.',
+        showPassword: 'Show password',
+        hidePassword: 'Hide password',
+    },
+    userRole: {
+        Viewer: 'Viewer',
+        Editor: 'Editor',
+        Admin: 'Administrator',
+    },
+    users: {
+        title: 'Users',
+        subtitle: 'Create and manage access to Liga Cup.',
+        manage: 'Users',
+        username: 'Username',
+        email: 'Email',
+        role: 'Role',
+        active: 'Active',
+        lastLogin: 'Last signed in',
+        never: 'Never',
+        newUser: 'New user',
+        password: 'Password',
+        passwordHint: 'At least 8 characters.',
+        create: 'Create user',
+        created: 'The user was created.',
+        save: 'Save',
+        saved: 'Saved.',
+        resetPassword: 'Reset password',
+        newPassword: 'New password',
+        passwordReset: 'The password was reset.',
+        deleteUser: 'Delete',
+        confirmDelete: 'Are you sure you want to delete this user?',
+        empty: 'There are no other users yet.',
+        roleHelp:
+            'Viewers can only read the site. Editors can run matches and results. Administrators can also create users.',
+        you: 'You',
     },
     tournamentStatus: {
         Draft: 'Draft',

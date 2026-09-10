@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using LigaCup.API;
 using LigaCup.API.Endpoints;
 using LigaCup.API.Hubs;
 using LigaCup.ApplicationService.Security;
@@ -27,6 +28,7 @@ builder.Services.AddLigaCupPersistence(builder.Configuration);
 builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<MatchService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ILiveUpdateBroadcaster, SignalRLiveUpdateBroadcaster>();
 
 builder.Services.AddSignalR().AddJsonProtocol(options =>
@@ -77,7 +79,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddLigaCupPolicies());
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? ["http://localhost:4200"];
@@ -110,6 +112,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", utc = DateTime.U
 app.MapAuthEndpoints();
 app.MapTournamentEndpoints();
 app.MapLiveEndpoints();
+app.MapUserEndpoints();
 app.MapHub<LiveHub>("/hubs/live");
 
 app.Run();

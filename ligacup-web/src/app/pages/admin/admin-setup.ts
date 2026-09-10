@@ -6,11 +6,12 @@ import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
-import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
+import { SelectField, SelectOption } from '../../shared/select-field';
+import { Group, SaveTournamentRequest, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
 
 @Component({
     selector: 'app-admin-setup',
-    imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton],
+    imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField],
     template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -41,20 +42,11 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
           </label>
           <label>
             {{ t().setup.status }}
-            <select [(ngModel)]="settings.status">
-              <option value="Draft">{{ t().tournamentStatus.Draft }}</option>
-              <option value="InProgress">{{ t().tournamentStatus.InProgress }}</option>
-              <option value="Completed">{{ t().tournamentStatus.Completed }}</option>
-              <option value="Archived">{{ t().tournamentStatus.Archived }}</option>
-            </select>
+            <app-select [options]="statusOptions()" [(ngModel)]="settings.status" />
           </label>
           <label>
             {{ t().setup.format }}
-            <select [(ngModel)]="settings.format">
-              <option value="GroupsThenKnockout">{{ t().format.GroupsThenKnockout }}</option>
-              <option value="GroupsOnly">{{ t().format.GroupsOnly }}</option>
-              <option value="KnockoutOnly">{{ t().format.KnockoutOnly }}</option>
-            </select>
+            <app-select [options]="formatOptions()" [(ngModel)]="settings.format" />
           </label>
           <label>
             {{ t().setup.pointsWin }}
@@ -181,11 +173,11 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
             }
           </div>
           <div class="add-rule">
-            <select [ngModel]="ruleToAdd ?? availableRules()[0]" (ngModelChange)="ruleToAdd = $event">
-              @for (rule of availableRules(); track rule) {
-                <option [value]="rule">{{ t().tiebreaker[rule] }}</option>
-              }
-            </select>
+            <app-select
+              [options]="availableRuleOptions()"
+              [ngModel]="ruleToAdd ?? availableRules()[0]"
+              (ngModelChange)="ruleToAdd = $event"
+            />
             <button type="button" (click)="addRule()" [disabled]="!availableRules().length">
               {{ t().common.add }}
             </button>
@@ -236,15 +228,11 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
                 </span>
               </div>
               <div class="controls">
-                <select
+                <app-select
+                  [options]="groupOptions(data.groups)"
                   [ngModel]="team.groupId"
                   (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
-                >
-                  <option [ngValue]="null">{{ t().common.unassigned }}</option>
-                  @for (group of data.groups; track group.id) {
-                    <option [ngValue]="group.id">{{ group.name }}</option>
-                  }
-                </select>
+                />
                 <button type="button" class="danger" (click)="removeTeam(team.id)">
                   {{ t().common.remove }}
                 </button>
@@ -263,12 +251,7 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
             [placeholder]="t().setup.shortPlaceholder"
             maxlength="10"
           />
-          <select [(ngModel)]="newTeamGroupId">
-            <option [ngValue]="null">{{ t().common.unassigned }}</option>
-            @for (group of data.groups; track group.id) {
-              <option [ngValue]="group.id">{{ group.name }}</option>
-            }
-          </select>
+          <app-select [options]="groupOptions(data.groups)" [(ngModel)]="newTeamGroupId" />
           <button type="button" (click)="addTeam()">{{ t().setup.addTeam }}</button>
         </div>
       </section>
@@ -550,6 +533,36 @@ export class AdminSetup implements OnInit {
     protected readonly availableRules = computed(() =>
         this.allRules.filter((rule) => !this.tiebreakers().includes(rule)),
     );
+
+    protected readonly availableRuleOptions = computed<SelectOption<TiebreakerRule>[]>(() =>
+        this.availableRules().map((rule) => ({ value: rule, label: this.t().tiebreaker[rule] })),
+    );
+
+    protected readonly statusOptions = computed<SelectOption<TournamentStatus>[]>(() => {
+        const labels = this.t().tournamentStatus;
+        return [
+            { value: 'Draft', label: labels.Draft },
+            { value: 'InProgress', label: labels.InProgress },
+            { value: 'Completed', label: labels.Completed },
+            { value: 'Archived', label: labels.Archived },
+        ];
+    });
+
+    protected readonly formatOptions = computed<SelectOption<TournamentFormat>[]>(() => {
+        const labels = this.t().format;
+        return [
+            { value: 'GroupsThenKnockout', label: labels.GroupsThenKnockout },
+            { value: 'GroupsOnly', label: labels.GroupsOnly },
+            { value: 'KnockoutOnly', label: labels.KnockoutOnly },
+        ];
+    });
+
+    groupOptions(groups: Group[]): SelectOption<number | null>[] {
+        return [
+            { value: null, label: this.t().common.unassigned },
+            ...groups.map((group) => ({ value: group.id as number | null, label: group.name })),
+        ];
+    }
 
     protected ruleToAdd: TiebreakerRule | null = null;
     protected newGroupName = '';

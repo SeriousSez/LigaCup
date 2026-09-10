@@ -101,7 +101,8 @@ jobs:
               Issuer        = 'LigaCup'
               Audience      = 'LigaCup.Clients'
               Key           = $env:JWT_KEY
-              ExpiryMinutes = 720
+              ExpiryMinutes = 60
+              RefreshExpiryDays = 30
             }
             Admin             = @{
               Username = $env:ADMIN_USERNAME

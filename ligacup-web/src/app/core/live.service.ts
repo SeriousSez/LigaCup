@@ -37,7 +37,7 @@ export class LiveService {
 
         this.connection = new HubConnectionBuilder()
             .withUrl(`${environment.apiBaseUrl}/hubs/live`, {
-                accessTokenFactory: () => this.auth.token() ?? '',
+                accessTokenFactory: async () => (await this.auth.validToken()) ?? '',
             })
             .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
             .configureLogging(environment.production ? LogLevel.Warning : LogLevel.Information)

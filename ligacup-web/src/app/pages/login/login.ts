@@ -17,16 +17,32 @@ import { I18nService } from '../../core/i18n/i18n.service';
           {{ t().login.username }}
           <input name="username" [(ngModel)]="username" autocomplete="username" required />
         </label>
-        <label>
-          {{ t().login.password }}
-          <input
-            type="password"
-            name="password"
-            [(ngModel)]="password"
-            autocomplete="current-password"
-            required
-          />
-        </label>
+        <div class="field">
+          <label for="password">{{ t().login.password }}</label>
+          <div class="password-field">
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              class="reveal"
+              [attr.aria-label]="showPassword() ? t().login.hidePassword : t().login.showPassword"
+              [attr.aria-pressed]="showPassword()"
+              (click)="showPassword.set(!showPassword())"
+            >
+              <i
+                class="fa-duotone fa-solid"
+                [class.fa-eye]="!showPassword()"
+                [class.fa-eye-slash]="showPassword()"
+              ></i>
+            </button>
+          </div>
+        </div>
 
         @if (failed()) {
           <p class="error">{{ t().login.failed }}</p>
@@ -49,6 +65,37 @@ import { I18nService } from '../../core/i18n/i18n.service';
     .login p {
       margin: 0;
     }
+
+    .password-field {
+      position: relative;
+      display: block;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .field label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .password-field input {
+      padding-right: 3rem;
+    }
+
+    .reveal {
+      position: absolute;
+      right: 0.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      border-color: transparent;
+      min-height: 38px;
+      padding-inline: 0.5rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
   `,
 })
 export class Login {
@@ -61,6 +108,7 @@ export class Login {
     protected password = '';
     protected readonly busy = signal(false);
     protected readonly failed = signal(false);
+    protected readonly showPassword = signal(false);
 
     submit(): void {
         if (!this.username || !this.password) {

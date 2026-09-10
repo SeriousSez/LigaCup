@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import {
+    CreateUserRequest,
     Group,
     Match,
     MatchEventType,
@@ -12,6 +13,8 @@ import {
     Team,
     TournamentDetail,
     TournamentSummary,
+    UpdateUserRequest,
+    User,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +24,26 @@ export class ApiService {
 
     getTournaments() {
         return this.http.get<TournamentSummary[]>(`${this.base}/api/tournaments`);
+    }
+
+    getUsers() {
+        return this.http.get<User[]>(`${this.base}/api/admin/users`);
+    }
+
+    createUser(request: CreateUserRequest) {
+        return this.http.post<User>(`${this.base}/api/admin/users`, request);
+    }
+
+    updateUser(id: number, request: UpdateUserRequest) {
+        return this.http.put<User>(`${this.base}/api/admin/users/${id}`, request);
+    }
+
+    resetUserPassword(id: number, password: string) {
+        return this.http.put<void>(`${this.base}/api/admin/users/${id}/password`, { password });
+    }
+
+    deleteUser(id: number) {
+        return this.http.delete<void>(`${this.base}/api/admin/users/${id}`);
     }
 
     getTournament(slug: string) {

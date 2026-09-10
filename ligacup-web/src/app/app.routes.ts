@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from './core/admin.guard';
+import { adminGuard, administratorGuard } from './core/admin.guard';
 
 export const routes: Routes = [
     {
@@ -17,6 +17,12 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () => import('./pages/admin/admin-home').then((module) => module.AdminHome),
         title: 'Admin - Liga Cup',
+    },
+    {
+        path: 'admin/users',
+        canActivate: [administratorGuard],
+        loadComponent: () => import('./pages/admin/admin-users').then((module) => module.AdminUsers),
+        title: 'Brugere - Liga Cup',
     },
     {
         path: 'admin/:slug',

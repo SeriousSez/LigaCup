@@ -1,17 +1,25 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
+import { SelectField, SelectOption } from '../../shared/select-field';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-admin-home',
-    imports: [RouterLink, FormsModule, CardListSkeleton],
+    imports: [RouterLink, FormsModule, CardListSkeleton, SelectField],
     template: `
     <h1>{{ t().adminHome.title }}</h1>
+
+    @if (auth.isAdmin()) {
+      <p>
+        <a routerLink="/admin/users"><button type="button">{{ t().users.manage }}</button></a>
+      </p>
+    }
 
     <section class="card stack create">
       <h3>{{ t().adminHome.newTournament }}</h3>
@@ -26,11 +34,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
         </label>
         <label>
           {{ t().setup.format }}
-          <select [(ngModel)]="draft.format">
-            <option value="GroupsThenKnockout">{{ t().format.GroupsThenKnockout }}</option>
-            <option value="GroupsOnly">{{ t().format.GroupsOnly }}</option>
-            <option value="KnockoutOnly">{{ t().format.KnockoutOnly }}</option>
-          </select>
+          <app-select [options]="formatOptions()" [(ngModel)]="draft.format" />
         </label>
       </div>
       <label class="checkbox">
@@ -96,11 +100,21 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
 export class AdminHome {
     private readonly api = inject(ApiService);
 
+    protected readonly auth = inject(AuthService);
     protected readonly t = inject(I18nService).t;
     protected readonly tournaments = signal<TournamentSummary[]>([]);
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
     protected readonly loading = signal(true);
+
+    protected readonly formatOptions = computed<SelectOption<TournamentFormat>[]>(() => {
+        const labels = this.t().format;
+        return [
+            { value: 'GroupsThenKnockout', label: labels.GroupsThenKnockout },
+            { value: 'GroupsOnly', label: labels.GroupsOnly },
+            { value: 'KnockoutOnly', label: labels.KnockoutOnly },
+        ];
+    });
 
     protected draft = {
         name: '',

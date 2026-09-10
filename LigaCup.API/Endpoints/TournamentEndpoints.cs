@@ -20,7 +20,9 @@ public static class TournamentEndpoints
             return tournament is null ? Results.NotFound() : Results.Ok(service.BuildDetail(tournament));
         });
 
-        var adminApi = app.MapGroup("/api/admin/tournaments").WithTags("Admin").RequireAuthorization();
+        var adminApi = app.MapGroup("/api/admin/tournaments")
+            .WithTags("Admin")
+            .RequireAuthorization(AuthorizationPolicies.Editor);
 
         adminApi.MapPost("/", async (SaveTournamentRequest request, TournamentService service, CancellationToken cancellationToken) =>
         {
@@ -82,7 +84,9 @@ public static class TournamentEndpoints
 
     public static void MapLiveEndpoints(this IEndpointRouteBuilder app)
     {
-        var live = app.MapGroup("/api/live").WithTags("Live").RequireAuthorization();
+        var live = app.MapGroup("/api/live")
+            .WithTags("Live")
+            .RequireAuthorization(AuthorizationPolicies.Editor);
 
         live.MapPut("/matches/{matchId:int}/score", async (int matchId, UpdateScoreRequest request, MatchService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.UpdateScoreAsync(matchId, request, cancellationToken)));
@@ -132,6 +136,24 @@ public static class TournamentEndpoints
         {
             var response = await authService.LoginAsync(request, cancellationToken);
             return response is null ? Results.Unauthorized() : Results.Ok(response);
+        }).WithTags("Auth");
+
+        app.MapPost("/api/auth/refresh", async (
+            [FromBody] RefreshRequest request,
+            LigaCup.ApplicationService.Security.AuthService authService,
+            CancellationToken cancellationToken) =>
+        {
+            var response = await authService.RefreshAsync(request.RefreshToken, cancellationToken);
+            return response is null ? Results.Unauthorized() : Results.Ok(response);
+        }).WithTags("Auth");
+
+        app.MapPost("/api/auth/logout", async (
+            [FromBody] RefreshRequest request,
+            LigaCup.ApplicationService.Security.AuthService authService,
+            CancellationToken cancellationToken) =>
+        {
+            await authService.RevokeAsync(request.RefreshToken, cancellationToken);
+            return Results.NoContent();
         }).WithTags("Auth");
 
         app.MapGet("/api/meta/options", () => Results.Ok(new

@@ -4,7 +4,29 @@ namespace LigaCup.ApplicationService.Contracts;
 
 public record LoginRequest(string Username, string Password);
 
-public record AuthResponse(string Token, DateTime ExpiresUtc, string Username, string Role);
+public record AuthResponse(
+    string Token,
+    DateTime ExpiresUtc,
+    string Username,
+    string Role,
+    string RefreshToken);
+
+public record RefreshRequest(string RefreshToken);
+
+public record UserDto(
+    int Id,
+    string Username,
+    string? Email,
+    UserRole Role,
+    bool IsActive,
+    DateTime CreatedUtc,
+    DateTime? LastLoginUtc);
+
+public record CreateUserRequest(string Username, string? Email, string Password, UserRole Role);
+
+public record UpdateUserRequest(string? Email, UserRole Role, bool IsActive);
+
+public record ResetPasswordRequest(string Password);
 
 public record TournamentSummaryDto(
     int Id,

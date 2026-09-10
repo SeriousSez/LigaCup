@@ -7,11 +7,12 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { MatchClockService } from '../../core/match-clock.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { HeadingSkeleton, ScoreboardSkeleton } from '../../shared/loading-skeletons';
+import { SelectField, SelectOption } from '../../shared/select-field';
 import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-live-console',
-    imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton],
+    imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField],
     template: `
     @if (detail(); as data) {
       <section class="heading">
@@ -43,13 +44,11 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
       <section class="card picker">
         <label>
           {{ t().live.match }}
-          <select [ngModel]="selectedId()" (ngModelChange)="selectedId.set(+$event)">
-            @for (match of data.matches; track match.id) {
-              <option [value]="match.id">
-                {{ matchLabel(match) }}
-              </option>
-            }
-          </select>
+          <app-select
+            [options]="matchOptions(data.matches)"
+            [ngModel]="selectedId()"
+            (ngModelChange)="selectMatch($event)"
+          />
         </label>
       </section>
 
@@ -169,35 +168,19 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
             <div class="form-grid">
               <label>
                 {{ t().live.team }}
-                <select [ngModel]="eventTeamId()" (ngModelChange)="eventTeamId.set(+$event)">
-                  @if (match.homeTeamId) {
-                    <option [value]="match.homeTeamId">{{ match.homeTeamName }}</option>
-                  }
-                  @if (match.awayTeamId) {
-                    <option [value]="match.awayTeamId">{{ match.awayTeamName }}</option>
-                  }
-                </select>
+                <app-select
+                  [options]="teamOptions(match)"
+                  [ngModel]="eventTeamId()"
+                  (ngModelChange)="eventTeamId.set($event)"
+                />
               </label>
               <label>
                 {{ t().live.player }}
-                <select [ngModel]="eventPlayerId" (ngModelChange)="eventPlayerId = $event">
-                  <option [ngValue]="null">{{ t().live.notRecorded }}</option>
-                  @for (player of squad(); track player.id) {
-                    <option [ngValue]="player.id">{{ player.name }}</option>
-                  }
-                </select>
+                <app-select [options]="playerOptions()" [(ngModel)]="eventPlayerId" />
               </label>
               <label>
                 {{ t().live.type }}
-                <select [(ngModel)]="eventType">
-                  <option value="Goal">{{ t().eventType.Goal }}</option>
-                  <option value="PenaltyGoal">{{ t().eventType.PenaltyGoal }}</option>
-                  <option value="OwnGoal">{{ t().eventType.OwnGoal }}</option>
-                  <option value="Assist">{{ t().eventType.Assist }}</option>
-                  <option value="YellowCard">{{ t().eventType.YellowCard }}</option>
-                  <option value="RedCard">{{ t().eventType.RedCard }}</option>
-                  <option value="PenaltyMissed">{{ t().eventType.PenaltyMissed }}</option>
-                </select>
+                <app-select [options]="eventTypeOptions()" [(ngModel)]="eventType" />
               </label>
               <label>
                 {{ t().live.minute }}
@@ -461,6 +444,47 @@ export class LiveConsole implements OnInit {
     protected homePenalties: number | null = null;
     protected awayPenalties: number | null = null;
     protected stoppage = 0;
+
+    protected readonly playerOptions = computed<SelectOption<number | null>[]>(() => [
+        { value: null, label: this.t().live.notRecorded },
+        ...this.squad().map((player) => ({ value: player.id as number | null, label: player.name })),
+    ]);
+
+    protected readonly eventTypeOptions = computed<SelectOption<MatchEventType>[]>(() => {
+        const labels = this.t().eventType;
+        return [
+            { value: 'Goal', label: labels.Goal },
+            { value: 'PenaltyGoal', label: labels.PenaltyGoal },
+            { value: 'OwnGoal', label: labels.OwnGoal },
+            { value: 'Assist', label: labels.Assist },
+            { value: 'YellowCard', label: labels.YellowCard },
+            { value: 'RedCard', label: labels.RedCard },
+            { value: 'PenaltyMissed', label: labels.PenaltyMissed },
+        ];
+    });
+
+    matchOptions(matches: Match[]): SelectOption<number>[] {
+        return matches.map((match) => ({ value: match.id, label: this.matchLabel(match) }));
+    }
+
+    teamOptions(match: Match): SelectOption<number | null>[] {
+        return [
+            { value: match.homeTeamId, label: this.i18n.teamName(match.homeTeamName, match.homeTeamId) },
+            { value: match.awayTeamId, label: this.i18n.teamName(match.awayTeamName, match.awayTeamId) },
+        ].filter((option) => option.value !== null);
+    }
+
+    selectMatch(matchId: number | null): void {
+        this.selectedId.set(matchId);
+
+        const match = this.detail()?.matches.find((candidate) => candidate.id === matchId);
+        if (match) {
+            this.eventTeamId.set(match.homeTeamId);
+            this.homePenalties = match.homePenalties;
+            this.awayPenalties = match.awayPenalties;
+            this.stoppage = match.clock.stoppageMinutes;
+        }
+    }
 
     /** The timeout button only appears when the tournament allows stopping the clock. */
     statuses(tournament: TournamentSummary): MatchStatus[] {
