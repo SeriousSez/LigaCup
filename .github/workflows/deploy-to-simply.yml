@@ -306,7 +306,31 @@ jobs:
         run: sleep 10
 
       - name: Check API health
-        run: curl --fail --retry 5 --retry-delay 5 --retry-all-errors '${{ env.DEFAULT_API_ORIGIN }}/api/health'
+        id: health
+        continue-on-error: true
+        run: curl --fail --retry 5 --retry-delay 5 --retry-all-errors --verbose '${{ env.DEFAULT_API_ORIGIN }}/api/health'
+
+      - name: Download API startup logs after health failure
+        if: steps.health.outcome == 'failure'
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          mkdir -p remote-api-logs
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+            "ftp://$FTP_SERVER/ligacup.api/logs/" --list-only > remote-api-logs/index.txt || true
+          while read -r log; do
+            [ -z "$log" ] && continue
+            curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+              "ftp://$FTP_SERVER/ligacup.api/logs/$log" -o "remote-api-logs/$log" || true
+          done < remote-api-logs/index.txt
+          cat remote-api-logs/*.log 2>/dev/null || true
+
+      - name: Fail when API health check failed
+        if: steps.health.outcome == 'failure'
+        run: exit 1
 
   deploy-web:
     needs: [detect-changes, build-web]
