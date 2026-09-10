@@ -262,19 +262,30 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
           @for (team of data.teams; track team.id) {
             <div class="team-row">
               <div class="team-main">
-                <input [(ngModel)]="team.name" [placeholder]="t().setup.teamPlaceholder" />
-                <div class="team-meta">
-                  <input
-                    class="tiny-input"
-                    [(ngModel)]="team.shortName"
-                    [placeholder]="t().setup.shortPlaceholder"
-                    maxlength="10"
-                  />
-                  @if (team.pointsAdjustment !== 0) {
-                    &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }}
-                    {{ t().setup.pointsSuffix }}
-                  }
-                </div>
+                @if (editingTeamId() === team.id) {
+                  <input [(ngModel)]="team.name" [placeholder]="t().setup.teamPlaceholder" />
+                  <div class="team-meta">
+                    <input
+                      class="tiny-input"
+                      [(ngModel)]="team.shortName"
+                      [placeholder]="t().setup.shortPlaceholder"
+                      maxlength="10"
+                    />
+                    @if (team.pointsAdjustment !== 0) {
+                      &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }}
+                      {{ t().setup.pointsSuffix }}
+                    }
+                  </div>
+                } @else {
+                  <strong>{{ team.name }}</strong>
+                  <span class="muted">
+                    {{ team.shortName ?? t().setup.noShortName }}
+                    @if (team.pointsAdjustment !== 0) {
+                      &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }}
+                      {{ t().setup.pointsSuffix }}
+                    }
+                  </span>
+                }
               </div>
               <div class="controls">
                 <app-select
@@ -282,10 +293,45 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
                   [ngModel]="team.groupId"
                   (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
                 />
-                <button type="button" (click)="saveTeam(team)">{{ t().common.save }}</button>
-                <button type="button" class="danger" (click)="removeTeam(team.id)">
-                  {{ t().common.remove }}
-                </button>
+                @if (editingTeamId() === team.id) {
+                  <button
+                    class="primary icon-button"
+                    type="button"
+                    [attr.aria-label]="t().common.save"
+                    [title]="t().common.save"
+                    (click)="saveTeam(team)"
+                  >
+                    &#10003;
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    [attr.aria-label]="t().common.cancel"
+                    [title]="t().common.cancel"
+                    (click)="cancelTeamEdit()"
+                  >
+                    &times;
+                  </button>
+                } @else {
+                  <button
+                    class="icon-button"
+                    type="button"
+                    [attr.aria-label]="t().common.edit"
+                    [title]="t().common.edit"
+                    (click)="editTeam(team.id)"
+                  >
+                    &#9998;
+                  </button>
+                  <button
+                    type="button"
+                    class="danger icon-button"
+                    [attr.aria-label]="t().common.remove"
+                    [title]="t().common.remove"
+                    (click)="removeTeam(team.id)"
+                  >
+                    &#128465;
+                  </button>
+                }
               </div>
             </div>
           } @empty {
@@ -453,7 +499,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
 
     .team-main {
       display: grid;
-      gap: 0.1rem;
+      gap: 0.5rem;
       min-width: 0;
     }
 
@@ -469,8 +515,17 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
 
     .controls {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       gap: 0.5rem;
+    }
+
+    .icon-button {
+      width: var(--tap);
+      padding-inline: 0;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      line-height: 1;
     }
 
     .tiny-input {
@@ -482,6 +537,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       align-items: center;
       gap: 0.35rem;
       min-width: 0;
+      margin-left: 0.35rem;
     }
 
     .team-meta .tiny-input {
@@ -587,9 +643,19 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       }
 
       .team-row {
-        grid-template-columns: 1fr 200px auto;
+        grid-template-columns: minmax(0, 1fr) 200px auto auto auto;
         align-items: center;
         gap: 1rem;
+      }
+
+      .team-main {
+        grid-template-columns: minmax(0, 1fr) 90px;
+        align-items: center;
+      }
+
+      .team-meta {
+        grid-column: 2;
+        grid-row: 1;
       }
 
       /* display: contents lets the select and button join the parent grid on wide screens. */
@@ -613,6 +679,7 @@ export class AdminSetup implements OnInit {
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
+  protected readonly editingTeamId = signal<number | null>(null);
 
   protected readonly allRules: TiebreakerRule[] = [
     'GoalDifference',
@@ -827,6 +894,15 @@ export class AdminSetup implements OnInit {
     await this.store.reload();
   }
 
+  editTeam(teamId: number): void {
+    this.editingTeamId.set(teamId);
+  }
+
+  async cancelTeamEdit(): Promise<void> {
+    this.editingTeamId.set(null);
+    await this.store.reload();
+  }
+
   async saveTeam(team: Team): Promise<void> {
     const data = this.detail();
     const name = team.name.trim();
@@ -840,6 +916,7 @@ export class AdminSetup implements OnInit {
     try {
       await firstValueFrom(this.api.saveTeam(data.tournament.id, team.id, team));
       await this.store.reload();
+      this.editingTeamId.set(null);
       this.message.set(this.t().common.saved);
     } catch {
       this.message.set(this.t().common.somethingWentWrong);

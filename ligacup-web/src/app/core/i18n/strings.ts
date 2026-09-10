@@ -11,6 +11,8 @@ export interface Strings {
         loading: string;
         save: string;
         saved: string;
+        edit: string;
+        cancel: string;
         add: string;
         remove: string;
         teams: string;
@@ -270,6 +272,8 @@ export const danish: Strings = {
         loading: 'Indlæser...',
         save: 'Gem',
         saved: 'Gemt.',
+        edit: 'Rediger',
+        cancel: 'Annuller',
         add: 'Tilføj',
         remove: 'Fjern',
         teams: 'hold',
@@ -573,6 +577,8 @@ export const english: Strings = {
         loading: 'Loading...',
         save: 'Save',
         saved: 'Saved.',
+        edit: 'Edit',
+        cancel: 'Cancel',
         add: 'Add',
         remove: 'Remove',
         teams: 'teams',
