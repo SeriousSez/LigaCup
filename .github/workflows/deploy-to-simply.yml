@@ -16,6 +16,9 @@ env:
   ANGULAR_DIST_PATH: "./ligacup-web/dist/ligacup-web/browser"
   API_SERVER_DIR: "/ligacup.api/"
   WEB_SERVER_DIR: "/ligacup/"
+  # Used when the WEB_ORIGIN and API_ORIGIN repository variables are not set.
+  DEFAULT_WEB_ORIGIN: "https://ligacup.sezginsahin.dk"
+  DEFAULT_API_ORIGIN: "https://ligacup.api.sezginsahin.dk"
   # Encrypts the FTP session. Change to "ftp" only if the host refuses TLS.
   FTP_PROTOCOL: "ftps"
 
@@ -79,12 +82,17 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:JWT_KEY) -or $env:JWT_KEY.Length -lt 32) {
             throw "The JWT_KEY secret must be set and at least 32 characters long."
           }
 
-          $origin = if ([string]::IsNullOrWhiteSpace($env:WEB_ORIGIN)) { 'https://ligacup.sezginsahin.dk' } else { $env:WEB_ORIGIN }
+          $origin = if ([string]::IsNullOrWhiteSpace($env:WEB_ORIGIN)) { '${{ env.DEFAULT_WEB_ORIGIN }}' } else { $env:WEB_ORIGIN }
+          $apiOrigin = if ([string]::IsNullOrWhiteSpace($env:API_ORIGIN)) { '${{ env.DEFAULT_API_ORIGIN }}' } else { $env:API_ORIGIN }
+
+          # Rejects requests arriving with an unexpected Host header.
+          $apiHost = ([Uri]$apiOrigin).Host
 
           $config = @{
             Database          = @{ Provider = 'Sqlite' }
@@ -102,7 +110,7 @@ jobs:
             }
             Cors              = @{ AllowedOrigins = @($origin) }
             Logging           = @{ LogLevel = @{ Default = 'Warning'; 'LigaCup' = 'Information' } }
-            AllowedHosts      = '*'
+            AllowedHosts      = $apiHost
           }
 
           $config | ConvertTo-Json -Depth 6 | Set-Content -Path 'appsettings.Production.json' -Encoding UTF8
@@ -129,6 +137,7 @@ jobs:
           $json = Get-Content $configPath -Raw | ConvertFrom-Json
           if ([string]::IsNullOrWhiteSpace($json.Jwt.Key)) { throw 'Published config has an empty JWT key.' }
           if ($json.Database.Provider -ne 'Sqlite') { throw 'Published config must pin the provider to Sqlite.' }
+          if ([string]::IsNullOrWhiteSpace($json.Cors.AllowedOrigins)) { throw 'Published config has no CORS origin.' }
 
       - uses: actions/upload-artifact@v4
         with:
@@ -151,6 +160,26 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ env.ANGULAR_WORKING_DIR }}
         run: npm ci
+
+      - name: Point the client at the API origin
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        shell: pwsh
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: |
+          $apiOrigin = if ([string]::IsNullOrWhiteSpace($env:API_ORIGIN)) { '${{ env.DEFAULT_API_ORIGIN }}' } else { $env:API_ORIGIN }
+          $apiOrigin = $apiOrigin.TrimEnd('/')
+
+          # Built as an array rather than a here-string, whose terminator cannot be indented.
+          $lines = @(
+            'export const environment = {',
+            '    production: true,',
+            "    apiBaseUrl: '$apiOrigin',",
+            '};'
+          )
+
+          Set-Content -Path 'src/environments/environment.production.ts' -Value $lines -Encoding UTF8
+          Write-Host "Client will call $apiOrigin"
 
       - name: Build Angular app
         working-directory: ${{ env.ANGULAR_WORKING_DIR }}

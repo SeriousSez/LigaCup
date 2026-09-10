@@ -120,22 +120,27 @@ In the repository settings, add these secrets:
 | `JWT_KEY`                                         | Signing key for tokens, at least 32 characters.                                                                                    |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | Creates the administrator account if it is missing. An existing account is never modified, so changing the password later is safe. |
 
-And one variable:
+And two optional variables, both of which fall back to the defaults in the workflow:
 
-| Variable     | Purpose                                            |
-| ------------ | -------------------------------------------------- |
-| `WEB_ORIGIN` | The public site URL, used for the CORS allow list. |
+| Variable     | Purpose                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| `WEB_ORIGIN` | Where the site is served. Becomes the API's CORS allow list.                                      |
+| `API_ORIGIN` | Where the API is served. Baked into the client build and used as the API's `AllowedHosts` value. |
 
-The API refuses to start in production without a valid `JWT_KEY`, and will not create an administrator without a password, so a misconfigured deploy fails loudly instead of coming up insecure.
+The two origins are deliberately separate. `WEB_ORIGIN` tells the API which browser origin may call it, while `API_ORIGIN` tells the client where to send its requests. Setting one to the other's value will break the deploy.
+
+Neither is stored in the Angular source. The workflow rewrites `environment.production.ts` from `API_ORIGIN` before building, so moving the API to a different host is a variable change rather than a code change. Run `scripts/verify-deploy-config.ps1` to preview exactly what the workflow will generate.
+
+The API refuses to start in production without a valid `JWT_KEY`, and will not create an administrator without a password, so a misconfigured deploy fails loudly instead of coming up insecure. `AllowedHosts` is pinned to the API hostname to reject requests arriving with a spoofed Host header. If the host ever fronts the app with a different internal hostname and you start seeing empty 400 responses, set that back to `*` in the workflow.
 
 ### Before the first deploy
 
 Hosting is split across two subdomains on simply.com:
 
-| Part | Subdomain | FTP directory |
-| --- | --- | --- |
-| Angular client | `ligacup.sezginsahin.dk` | `/ligacup/` |
-| API | `ligacup.api.sezginsahin.dk` | `/ligacup.api/` |
+| Part           | Subdomain                    | FTP directory   |
+| -------------- | ---------------------------- | --------------- |
+| Angular client | `ligacup.sezginsahin.dk`     | `/ligacup/`     |
+| API            | `ligacup.api.sezginsahin.dk` | `/ligacup.api/` |
 
 Those are already set as `WEB_SERVER_DIR` and `API_SERVER_DIR` in the workflow, and the client is built against the API subdomain.
 
