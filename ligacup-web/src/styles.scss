@@ -222,6 +222,12 @@ th.numeric {
   color: var(--accent);
 }
 
+.badge.connected {
+  background: rgb(53 208 127 / 12%);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .pulse {
   width: 7px;
   height: 7px;

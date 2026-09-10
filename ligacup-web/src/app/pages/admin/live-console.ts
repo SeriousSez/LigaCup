@@ -17,7 +17,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
           <p class="muted">{{ data.tournament.name }}</p>
         </div>
         <div class="row">
-          <span class="badge" [class.live]="store.connectionState() === 'connected'">
+          <span class="badge" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
               <span class="pulse"></span> Connected
             } @else {

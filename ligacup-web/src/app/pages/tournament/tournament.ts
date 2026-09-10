@@ -26,7 +26,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
         </div>
 
         <div class="row">
-          <span class="badge" [class.live]="store.connectionState() === 'connected'">
+          <span class="badge" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
               <span class="pulse"></span> Live
             } @else {
@@ -70,7 +70,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
       @switch (tab()) {
         @case ('tables') {
-          <div class="grid-auto">
+          <div class="tables-grid">
             @for (table of data.tables; track table.groupId) {
               <app-standings-table [table]="table" />
             } @empty {
@@ -170,6 +170,18 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
       background: var(--surface-raised);
       border-color: var(--accent);
       color: var(--text);
+    }
+
+    .tables-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+    }
+
+    @media (max-width: 560px) {
+      .tables-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .bracket {
