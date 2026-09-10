@@ -11,7 +11,8 @@ env:
   NODE_VERSION: "22.x"
   PROJECT_PATH: "LigaCup.API/LigaCup.API.csproj"
   PUBLISH_PATH: "./publish"
-  RUNTIME_IDENTIFIER: "win-x64"
+  # Simply.com runs the IIS application pool in 32-bit mode.
+  RUNTIME_IDENTIFIER: "win-x86"
   ANGULAR_WORKING_DIR: "./ligacup-web"
   ANGULAR_DIST_PATH: "./ligacup-web/dist/ligacup-web/browser"
   API_SERVER_DIR: "/ligacup.api/"

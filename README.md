@@ -94,7 +94,7 @@ The match clock is derived from the stored kickoff timestamp rather than counted
 
 ## Deploying to Simply.com
 
-The workflow in `.github/workflows/deploy-to-simply.yml` publishes a self contained `win-x64` build and uploads it over FTP. The Angular app is built separately and deployed to its own directory.
+The workflow in `.github/workflows/deploy-to-simply.yml` publishes a self contained `win-x86` build for Simply.com's 32-bit IIS application pool and uploads it over FTP. The Angular app is built separately and deployed to its own directory.
 
 ### Keeping the database safe
 
