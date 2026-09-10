@@ -124,7 +124,7 @@ And two optional variables, both of which fall back to the defaults in the workf
 
 | Variable     | Purpose                                                                                          |
 | ------------ | ------------------------------------------------------------------------------------------------ |
-| `WEB_ORIGIN` | Where the site is served. Becomes the API's CORS allow list.                                      |
+| `WEB_ORIGIN` | Where the site is served. Becomes the API's CORS allow list.                                     |
 | `API_ORIGIN` | Where the API is served. Baked into the client build and used as the API's `AllowedHosts` value. |
 
 The two origins are deliberately separate. `WEB_ORIGIN` tells the API which browser origin may call it, while `API_ORIGIN` tells the client where to send its requests. Setting one to the other's value will break the deploy.
