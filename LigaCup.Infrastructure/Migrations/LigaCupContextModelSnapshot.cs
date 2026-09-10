@@ -292,6 +292,12 @@ namespace LigaCup.Infrastructure.Migrations
                     b.Property<bool>("IncludeBestThirdPlaced")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("MatchIntervalMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MatchesPerTimeSlot")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -303,6 +309,9 @@ namespace LigaCup.Infrastructure.Migrations
                     b.Property<int>("PeriodDurationMinutes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("PlayerRegistrationMode")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("PointsForDraw")
                         .HasColumnType("INTEGER");
 
@@ -311,6 +320,10 @@ namespace LigaCup.Infrastructure.Migrations
 
                     b.Property<int>("PointsForWin")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Rules")
+                        .HasMaxLength(20000)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Season")
                         .HasColumnType("INTEGER");
@@ -329,6 +342,9 @@ namespace LigaCup.Infrastructure.Migrations
                     b.Property<string>("TiebreakerOrder")
                         .IsRequired()
                         .HasMaxLength(400)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TournamentDateUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("TrackCards")
