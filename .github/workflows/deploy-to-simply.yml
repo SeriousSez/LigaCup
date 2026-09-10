@@ -123,13 +123,29 @@ jobs:
           --configuration Release
           --runtime ${{ env.RUNTIME_IDENTIFIER }}
           --self-contained true
+          -p:CopyLocalLockFileAssemblies=true
           --output ${{ env.PUBLISH_PATH }}
 
-      - name: Guard against shipping a database file
+      - name: Verify API artifact
         shell: pwsh
         run: |
+          $publishDir = '${{ env.PUBLISH_PATH }}'
+          foreach ($required in @('LigaCup.API.exe', 'web.config', 'appsettings.Production.json')) {
+            if (-not (Test-Path (Join-Path $publishDir $required))) {
+              throw "Missing $required in publish output."
+            }
+          }
+
+          $webConfig = Get-Content (Join-Path $publishDir 'web.config') -Raw
+          if ($webConfig -notmatch 'processPath="\.\\LigaCup\.API\.exe"') {
+            throw 'web.config processPath is not set to .\LigaCup.API.exe.'
+          }
+          if ($webConfig -notmatch 'hostingModel="OutOfProcess"') {
+            throw 'web.config hostingModel is not OutOfProcess.'
+          }
+
           # A .db in the publish output would be uploaded and could clobber live results.
-          $strays = Get-ChildItem -Path '${{ env.PUBLISH_PATH }}' -Recurse -Include *.db, *.db-wal, *.db-shm -File
+          $strays = Get-ChildItem -Path $publishDir -Recurse -Include *.db, *.db-wal, *.db-shm -File
           if ($strays) {
             $strays | ForEach-Object { Write-Host "Removing $($_.FullName)" }
             $strays | Remove-Item -Force
