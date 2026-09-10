@@ -3,8 +3,8 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { GroupTable } from '../core/models';
 
 @Component({
-    selector: 'app-standings-table',
-    template: `
+  selector: 'app-standings-table',
+  template: `
     <div class="card stack">
       <h3>{{ table().groupName }}</h3>
       <table>
@@ -64,7 +64,7 @@ import { GroupTable } from '../core/models';
       </table>
     </div>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
     }
@@ -84,6 +84,7 @@ import { GroupTable } from '../core/models';
       width: 100%;
       display: grid;
       gap: 0.2rem;
+      padding-right: 0.45rem;
     }
 
     .team-name {
@@ -106,7 +107,7 @@ import { GroupTable } from '../core/models';
     th.numeric,
     td.numeric {
       width: 3.2ch;
-      padding-inline: 0.2rem;
+      padding-inline: 0.35rem;
     }
 
     tr.qualifying .position {
@@ -164,6 +165,7 @@ import { GroupTable } from '../core/models';
       th.numeric,
       td.numeric {
         width: auto;
+        padding-inline: 0.6rem;
       }
 
       .team {
@@ -179,6 +181,6 @@ import { GroupTable } from '../core/models';
   `,
 })
 export class StandingsTable {
-    readonly table = input.required<GroupTable>();
-    protected readonly t = inject(I18nService).t;
+  readonly table = input.required<GroupTable>();
+  protected readonly t = inject(I18nService).t;
 }
