@@ -5,13 +5,16 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { defaultTournamentRulesWithoutDate } from '../../core/default-rules';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
+import { DateTimePicker } from '../../shared/date-time-picker';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
+
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, FormsModule, CardListSkeleton, SelectField],
+  imports: [RouterLink, FormsModule, CardListSkeleton, SelectField, DateTimePicker],
   template: `
     <h1>{{ t().adminHome.title }}</h1>
 
@@ -21,7 +24,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
       </p>
     }
 
-    <section class="card stack create">
+    <section class="card stack create" data-guide-target="admin-create">
       <h3>{{ t().adminHome.newTournament }}</h3>
       <div class="form-grid">
         <label>
@@ -29,12 +32,12 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
           <input [(ngModel)]="draft.name" placeholder="Liga Cup" />
         </label>
         <label>
-          {{ t().common.season }}
-          <input type="number" inputmode="numeric" [(ngModel)]="draft.season" />
+          {{ t().common.tournamentDateTime }}
+          <app-date-time-picker [(ngModel)]="draft.tournamentDateUtc" />
         </label>
         <label>
           {{ t().setup.format }}
-          <app-select [options]="formatOptions()" [(ngModel)]="draft.format" />
+          <app-select data-guide-target="admin-create-format" [options]="formatOptions()" [(ngModel)]="draft.format" />
         </label>
       </div>
       <label class="checkbox">
@@ -42,7 +45,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
         {{ t().adminHome.trackPlayers }}
       </label>
       <div class="row">
-        <button class="primary" type="button" [disabled]="busy()" (click)="create()">
+        <button class="primary" data-guide-target="admin-create-submit" type="button" [disabled]="busy()" (click)="create()">
           {{ t().adminHome.create }}
         </button>
         @if (error()) {
@@ -119,8 +122,8 @@ export class AdminHome {
 
   protected draft = {
     name: '',
-    season: new Date().getFullYear(),
-    format: 'GroupsThenKnockout' as TournamentFormat,
+    tournamentDateUtc: '2026-09-06T15:00',
+    format: 'League' as TournamentFormat,
     trackPlayers: false,
   };
 
@@ -149,7 +152,9 @@ export class AdminHome {
       name: this.draft.name.trim(),
       slug: null,
       description: null,
-      season: this.draft.season,
+      rules: defaultTournamentRulesWithoutDate,
+      season: new Date(this.draft.tournamentDateUtc).getFullYear(),
+      tournamentDateUtc: this.draft.tournamentDateUtc,
       format: this.draft.format,
       status: 'Draft',
       pointsForWin: 3,
@@ -161,9 +166,10 @@ export class AdminHome {
       hasThirdPlacePlayOff: false,
       trackPlayers: this.draft.trackPlayers,
       trackCards: false,
-      periodCount: 2,
-      periodDurationMinutes: 45,
-      breakDurationMinutes: 15,
+      periodCount: 1,
+      periodDurationMinutes: 10,
+      breakDurationMinutes: 0,
+      matchIntervalMinutes: 5,
       trackMatchClock: true,
       allowTimeouts: false,
       useStoppageTime: true,

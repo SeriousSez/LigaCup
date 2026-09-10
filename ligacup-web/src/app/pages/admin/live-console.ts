@@ -11,9 +11,9 @@ import { SelectField, SelectOption } from '../../shared/select-field';
 import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../core/models';
 
 @Component({
-    selector: 'app-live-console',
-    imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField],
-    template: `
+  selector: 'app-live-console',
+  imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField],
+  template: `
     @if (detail(); as data) {
       <section class="heading">
         <div class="spread">
@@ -41,7 +41,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
         </div>
       </section>
 
-      <section class="card picker">
+      <section class="card picker" data-guide-target="admin-match-picker">
         <label>
           {{ t().live.match }}
           <app-select
@@ -73,7 +73,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
             </div>
           }
 
-          <div class="scorer">
+          <div class="scorer" data-guide-target="admin-score-control">
             <div class="team">
               <span class="name">{{ i18n.teamName(match.homeTeamName, match.homeTeamId) }}</span>
               <div class="counter">
@@ -119,7 +119,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
             </div>
           </div>
 
-          <div class="statuses">
+          <div class="statuses" data-guide-target="admin-status-control">
             @for (status of statuses(data.tournament); track status) {
               <button
                 type="button"
@@ -262,7 +262,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
       <app-scoreboard-skeleton />
     }
   `,
-    styles: `
+  styles: `
     .heading {
       margin-bottom: 1rem;
       display: grid;
@@ -426,169 +426,169 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
   `,
 })
 export class LiveConsole implements OnInit {
-    readonly slug = input.required<string>();
+  readonly slug = input.required<string>();
 
-    private readonly api = inject(ApiService);
-    private readonly clock = inject(MatchClockService);
-    protected readonly i18n = inject(I18nService);
-    protected readonly t = this.i18n.t;
-    protected readonly store = inject(TournamentStore);
-    protected readonly detail = this.store.detail;
+  private readonly api = inject(ApiService);
+  private readonly clock = inject(MatchClockService);
+  protected readonly i18n = inject(I18nService);
+  protected readonly t = this.i18n.t;
+  protected readonly store = inject(TournamentStore);
+  protected readonly detail = this.store.detail;
 
-    protected readonly selectedId = signal<number | null>(null);
-    protected readonly eventTeamId = signal<number | null>(null);
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly eventTeamId = signal<number | null>(null);
 
-    protected eventType: MatchEventType = 'Goal';
-    protected eventPlayerId: number | null = null;
-    protected eventMinute = 1;
-    protected homePenalties: number | null = null;
-    protected awayPenalties: number | null = null;
-    protected stoppage = 0;
+  protected eventType: MatchEventType = 'Goal';
+  protected eventPlayerId: number | null = null;
+  protected eventMinute = 1;
+  protected homePenalties: number | null = null;
+  protected awayPenalties: number | null = null;
+  protected stoppage = 0;
 
-    protected readonly playerOptions = computed<SelectOption<number | null>[]>(() => [
-        { value: null, label: this.t().live.notRecorded },
-        ...this.squad().map((player) => ({ value: player.id as number | null, label: player.name })),
-    ]);
+  protected readonly playerOptions = computed<SelectOption<number | null>[]>(() => [
+    { value: null, label: this.t().live.notRecorded },
+    ...this.squad().map((player) => ({ value: player.id as number | null, label: player.name })),
+  ]);
 
-    protected readonly eventTypeOptions = computed<SelectOption<MatchEventType>[]>(() => {
-        const labels = this.t().eventType;
-        return [
-            { value: 'Goal', label: labels.Goal },
-            { value: 'PenaltyGoal', label: labels.PenaltyGoal },
-            { value: 'OwnGoal', label: labels.OwnGoal },
-            { value: 'Assist', label: labels.Assist },
-            { value: 'YellowCard', label: labels.YellowCard },
-            { value: 'RedCard', label: labels.RedCard },
-            { value: 'PenaltyMissed', label: labels.PenaltyMissed },
-        ];
-    });
+  protected readonly eventTypeOptions = computed<SelectOption<MatchEventType>[]>(() => {
+    const labels = this.t().eventType;
+    return [
+      { value: 'Goal', label: labels.Goal },
+      { value: 'PenaltyGoal', label: labels.PenaltyGoal },
+      { value: 'OwnGoal', label: labels.OwnGoal },
+      { value: 'Assist', label: labels.Assist },
+      { value: 'YellowCard', label: labels.YellowCard },
+      { value: 'RedCard', label: labels.RedCard },
+      { value: 'PenaltyMissed', label: labels.PenaltyMissed },
+    ];
+  });
 
-    matchOptions(matches: Match[]): SelectOption<number>[] {
-        return matches.map((match) => ({ value: match.id, label: this.matchLabel(match) }));
+  matchOptions(matches: Match[]): SelectOption<number>[] {
+    return matches.map((match) => ({ value: match.id, label: this.matchLabel(match) }));
+  }
+
+  teamOptions(match: Match): SelectOption<number | null>[] {
+    return [
+      { value: match.homeTeamId, label: this.i18n.teamName(match.homeTeamName, match.homeTeamId) },
+      { value: match.awayTeamId, label: this.i18n.teamName(match.awayTeamName, match.awayTeamId) },
+    ].filter((option) => option.value !== null);
+  }
+
+  selectMatch(matchId: number | null): void {
+    this.selectedId.set(matchId);
+
+    const match = this.detail()?.matches.find((candidate) => candidate.id === matchId);
+    if (match) {
+      this.eventTeamId.set(match.homeTeamId);
+      this.homePenalties = match.homePenalties;
+      this.awayPenalties = match.awayPenalties;
+      this.stoppage = match.clock.stoppageMinutes;
+    }
+  }
+
+  /** The timeout button only appears when the tournament allows stopping the clock. */
+  statuses(tournament: TournamentSummary): MatchStatus[] {
+    const base: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
+    return tournament.allowTimeouts ? ['Scheduled', 'Live', 'Paused', 'HalfTime', 'Finished'] : base;
+  }
+
+  minuteLabel(match: Match): string {
+    const tournament = this.detail()?.tournament;
+    return tournament ? this.clock.label(match, tournament) : '';
+  }
+
+  breakLabel(match: Match): string {
+    const tournament = this.detail()?.tournament;
+    return tournament ? this.clock.breakLabel(match, tournament) : '';
+  }
+
+  periodLabel(match: Match): string {
+    const tournament = this.detail()?.tournament;
+    return tournament ? this.clock.periodLabel(match, tournament) : '';
+  }
+
+  async saveStoppage(matchId: number): Promise<void> {
+    this.store.patchMatch(await firstValueFrom(this.api.setStoppage(matchId, this.stoppage)));
+  }
+
+  protected readonly selected = computed(
+    () => this.detail()?.matches.find((match) => match.id === this.selectedId()) ?? null,
+  );
+
+  protected readonly squad = computed(() => {
+    const teamId = this.eventTeamId();
+    return this.detail()?.teams.find((team) => team.id === teamId)?.players ?? [];
+  });
+
+  async ngOnInit(): Promise<void> {
+    await this.store.load(this.slug());
+
+    const matches = this.detail()?.matches ?? [];
+    // Jump straight to whatever is in progress, otherwise the next kickoff.
+    const preferred =
+      matches.find((match) => match.status === 'Live' || match.status === 'HalfTime') ??
+      matches.find((match) => match.status === 'Scheduled') ??
+      matches[0];
+
+    if (preferred) {
+      this.selectedId.set(preferred.id);
+      this.eventTeamId.set(preferred.homeTeamId);
+      this.homePenalties = preferred.homePenalties;
+      this.awayPenalties = preferred.awayPenalties;
+      this.stoppage = preferred.clock.stoppageMinutes;
+    }
+  }
+
+  matchLabel(match: Match): string {
+    const stage = match.groupName ?? this.t().stage[match.stage];
+    const home = this.i18n.teamName(match.homeTeamName, match.homeTeamId);
+    const away = this.i18n.teamName(match.awayTeamName, match.awayTeamId);
+    return `${stage} - ${home} ${match.homeScore}-${match.awayScore} ${away}`;
+  }
+
+  isKnockout(match: Match): boolean {
+    return match.stage !== 'Group';
+  }
+
+  async adjust(matchId: number, side: 'home' | 'away', delta: 1 | -1): Promise<void> {
+    this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
+  }
+
+  async setStatus(matchId: number, status: MatchStatus): Promise<void> {
+    this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
+    await this.store.reload();
+  }
+
+  async savePenalties(match: Match): Promise<void> {
+    this.store.patchMatch(
+      await firstValueFrom(
+        this.api.setScore(
+          match.id,
+          match.homeScore,
+          match.awayScore,
+          this.homePenalties,
+          this.awayPenalties,
+        ),
+      ),
+    );
+  }
+
+  async addEvent(matchId: number): Promise<void> {
+    const teamId = this.eventTeamId();
+    if (!teamId) {
+      return;
     }
 
-    teamOptions(match: Match): SelectOption<number | null>[] {
-        return [
-            { value: match.homeTeamId, label: this.i18n.teamName(match.homeTeamName, match.homeTeamId) },
-            { value: match.awayTeamId, label: this.i18n.teamName(match.awayTeamName, match.awayTeamId) },
-        ].filter((option) => option.value !== null);
-    }
-
-    selectMatch(matchId: number | null): void {
-        this.selectedId.set(matchId);
-
-        const match = this.detail()?.matches.find((candidate) => candidate.id === matchId);
-        if (match) {
-            this.eventTeamId.set(match.homeTeamId);
-            this.homePenalties = match.homePenalties;
-            this.awayPenalties = match.awayPenalties;
-            this.stoppage = match.clock.stoppageMinutes;
-        }
-    }
-
-    /** The timeout button only appears when the tournament allows stopping the clock. */
-    statuses(tournament: TournamentSummary): MatchStatus[] {
-        const base: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
-        return tournament.allowTimeouts ? ['Scheduled', 'Live', 'Paused', 'HalfTime', 'Finished'] : base;
-    }
-
-    minuteLabel(match: Match): string {
-        const tournament = this.detail()?.tournament;
-        return tournament ? this.clock.label(match, tournament) : '';
-    }
-
-    breakLabel(match: Match): string {
-        const tournament = this.detail()?.tournament;
-        return tournament ? this.clock.breakLabel(match, tournament) : '';
-    }
-
-    periodLabel(match: Match): string {
-        const tournament = this.detail()?.tournament;
-        return tournament ? this.clock.periodLabel(match, tournament) : '';
-    }
-
-    async saveStoppage(matchId: number): Promise<void> {
-        this.store.patchMatch(await firstValueFrom(this.api.setStoppage(matchId, this.stoppage)));
-    }
-
-    protected readonly selected = computed(
-        () => this.detail()?.matches.find((match) => match.id === this.selectedId()) ?? null,
+    this.store.patchMatch(
+      await firstValueFrom(
+        this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
+      ),
     );
 
-    protected readonly squad = computed(() => {
-        const teamId = this.eventTeamId();
-        return this.detail()?.teams.find((team) => team.id === teamId)?.players ?? [];
-    });
+    this.eventPlayerId = null;
+  }
 
-    async ngOnInit(): Promise<void> {
-        await this.store.load(this.slug());
-
-        const matches = this.detail()?.matches ?? [];
-        // Jump straight to whatever is in progress, otherwise the next kickoff.
-        const preferred =
-            matches.find((match) => match.status === 'Live' || match.status === 'HalfTime') ??
-            matches.find((match) => match.status === 'Scheduled') ??
-            matches[0];
-
-        if (preferred) {
-            this.selectedId.set(preferred.id);
-            this.eventTeamId.set(preferred.homeTeamId);
-            this.homePenalties = preferred.homePenalties;
-            this.awayPenalties = preferred.awayPenalties;
-            this.stoppage = preferred.clock.stoppageMinutes;
-        }
-    }
-
-    matchLabel(match: Match): string {
-        const stage = match.groupName ?? this.t().stage[match.stage];
-        const home = this.i18n.teamName(match.homeTeamName, match.homeTeamId);
-        const away = this.i18n.teamName(match.awayTeamName, match.awayTeamId);
-        return `${stage} - ${home} ${match.homeScore}-${match.awayScore} ${away}`;
-    }
-
-    isKnockout(match: Match): boolean {
-        return match.stage !== 'Group';
-    }
-
-    async adjust(matchId: number, side: 'home' | 'away', delta: 1 | -1): Promise<void> {
-        this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
-    }
-
-    async setStatus(matchId: number, status: MatchStatus): Promise<void> {
-        this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
-        await this.store.reload();
-    }
-
-    async savePenalties(match: Match): Promise<void> {
-        this.store.patchMatch(
-            await firstValueFrom(
-                this.api.setScore(
-                    match.id,
-                    match.homeScore,
-                    match.awayScore,
-                    this.homePenalties,
-                    this.awayPenalties,
-                ),
-            ),
-        );
-    }
-
-    async addEvent(matchId: number): Promise<void> {
-        const teamId = this.eventTeamId();
-        if (!teamId) {
-            return;
-        }
-
-        this.store.patchMatch(
-            await firstValueFrom(
-                this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
-            ),
-        );
-
-        this.eventPlayerId = null;
-    }
-
-    async removeEvent(matchId: number, eventId: number): Promise<void> {
-        this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
-    }
+  async removeEvent(matchId: number, eventId: number): Promise<void> {
+    this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
+  }
 }

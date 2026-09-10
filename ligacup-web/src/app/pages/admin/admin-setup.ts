@@ -1,17 +1,19 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
 import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
+import { DateTimePicker } from '../../shared/date-time-picker';
 import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
 
 @Component({
   selector: 'app-admin-setup',
-  imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField],
+  imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker],
   template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -33,6 +35,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
         <button
           type="button"
           role="tab"
+          data-guide-tab="rules"
           [class.active]="activeTab() === 'rules'"
           [attr.aria-selected]="activeTab() === 'rules'"
           (click)="activeTab.set('rules')"
@@ -42,6 +45,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
         <button
           type="button"
           role="tab"
+          data-guide-tab="structure"
           [class.active]="activeTab() === 'structure'"
           [attr.aria-selected]="activeTab() === 'structure'"
           (click)="activeTab.set('structure')"
@@ -62,6 +66,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
         <button
           type="button"
           role="tab"
+          data-guide-tab="fixtures"
           [class.active]="activeTab() === 'fixtures'"
           [attr.aria-selected]="activeTab() === 'fixtures'"
           (click)="activeTab.set('fixtures')"
@@ -71,16 +76,18 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       </nav>
 
       @if (activeTab() === 'rules') {
-        <section class="card stack">
+        <section class="card stack rules-section" data-guide-target="admin-rules">
         <h3>{{ t().setup.rules }}</h3>
+        <details class="collapsible default-settings" open>
+        <summary class="section-summary">{{ t().setup.defaultSettings }}</summary>
         <div class="form-grid">
           <label>
             {{ t().common.name }}
             <input [(ngModel)]="settings.name" />
           </label>
           <label>
-            {{ t().common.season }}
-            <input type="number" inputmode="numeric" [(ngModel)]="settings.season" />
+            {{ t().common.tournamentDateTime }}
+            <app-date-time-picker [(ngModel)]="settings.tournamentDateUtc" />
           </label>
           <label>
             {{ t().setup.status }}
@@ -131,9 +138,30 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
             {{ t().setup.thirdPlace }}
           </label>
         </div>
+        <div class="stack rules-content-panel">
+          <h4>{{ t().setup.rulesContent }}</h4>
+          <div class="rules-editor">
+            <div class="rules-toolbar" role="toolbar" [attr.aria-label]="t().setup.rulesContent" (mousedown)="$event.preventDefault()">
+              <button type="button" [title]="t().setup.rulesBold" [attr.aria-label]="t().setup.rulesBold" (click)="formatRules('bold')"><strong>B</strong></button>
+              <button type="button" [title]="t().setup.rulesItalic" [attr.aria-label]="t().setup.rulesItalic" (click)="formatRules('italic')"><em>I</em></button>
+              <button type="button" [title]="t().setup.rulesList" [attr.aria-label]="t().setup.rulesList" (click)="formatRules('insertUnorderedList')">&#8226;</button>
+              <button type="button" [title]="t().setup.rulesNumberedList" [attr.aria-label]="t().setup.rulesNumberedList" (click)="formatRules('insertOrderedList')">&#35;</button>
+              <button type="button" [title]="t().setup.rulesHeading" [attr.aria-label]="t().setup.rulesHeading" (click)="formatRules('formatBlock', 'h3')">H</button>
+              <button type="button" [title]="t().setup.rulesUnderline" [attr.aria-label]="t().setup.rulesUnderline" (click)="formatRules('underline')"><u>U</u></button>
+              <button type="button" [title]="t().setup.rulesQuote" [attr.aria-label]="t().setup.rulesQuote" (click)="formatRules('formatBlock', 'blockquote')">&ldquo;</button>
+              <button type="button" [title]="t().setup.rulesUndo" [attr.aria-label]="t().setup.rulesUndo" (click)="formatRules('undo')">&larr;</button>
+              <button type="button" [title]="t().setup.rulesRedo" [attr.aria-label]="t().setup.rulesRedo" (click)="formatRules('redo')">&rarr;</button>
+              <button type="button" [title]="t().setup.rulesClear" [attr.aria-label]="t().setup.rulesClear" (click)="formatRules('removeFormat')">&times;</button>
+            </div>
+            <div #rulesContent class="rules-content" contenteditable="true" (mouseup)="saveRulesSelection()" (keyup)="saveRulesSelection()" (input)="updateRules($event)"></div>
+          </div>
+          <span class="muted">{{ t().setup.rulesContentHelp }}</span>
+        </div>
+        </details>
 
-        <div class="stack">
-          <h4>{{ t().setup.clockSection }}</h4>
+        <details class="collapsible">
+          <summary>{{ t().setup.clockSection }}</summary>
+          <div class="stack collapsible-content">
           <p class="muted">{{ t().setup.clockHelp }}</p>
           <div class="form-grid">
             <label>
@@ -166,7 +194,18 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
                 [(ngModel)]="settings.breakDurationMinutes"
               />
             </label>
+            <label>
+              {{ t().setup.matchInterval }}
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                max="180"
+                [(ngModel)]="settings.matchIntervalMinutes"
+              />
+            </label>
           </div>
+          <p class="muted interval-help">{{ t().setup.matchIntervalHelp }}</p>
           <div class="row toggles">
             <label class="checkbox">
               <input type="checkbox" [(ngModel)]="settings.trackMatchClock" />
@@ -181,10 +220,12 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
               {{ t().setup.allowTimeouts }}
             </label>
           </div>
-        </div>
+          </div>
+        </details>
 
-        <div class="stack">
-          <h4>{{ t().setup.tiebreakersTitle }}</h4>
+        <details class="collapsible">
+          <summary>{{ t().setup.tiebreakersTitle }}</summary>
+          <div class="stack collapsible-content">
           <p class="muted">{{ t().setup.tiebreakersHelp }}</p>
           <div class="tiebreakers">
             @for (rule of tiebreakers(); track rule; let index = $index) {
@@ -224,7 +265,8 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
               {{ t().common.add }}
             </button>
           </div>
-        </div>
+          </div>
+        </details>
 
         <div class="row">
           <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy()">
@@ -238,7 +280,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       }
 
       @if (activeTab() === 'structure') {
-        <section class="card stack">
+        <section class="card stack" data-guide-target="admin-structure">
         <h3>{{ t().setup.groups }}</h3>
         <div class="row">
           @for (group of data.groups; track group.id) {
@@ -384,7 +426,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       }
 
       @if (activeTab() === 'fixtures') {
-        <section class="card stack">
+        <section class="card stack" data-guide-target="admin-fixtures">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
         <div class="row">
@@ -544,6 +586,78 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
       width: 100%;
     }
 
+    .rules-editor {
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--pitch-800);
+    }
+
+    .rules-content-panel {
+      margin-top: 0.5rem;
+    }
+
+    .rules-section > .row:last-child {
+      margin-top: 0.5rem;
+    }
+
+    .rules-toolbar {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.35rem;
+      border-bottom: 1px solid var(--surface-line);
+      background: var(--surface-raised);
+    }
+
+    .rules-toolbar button {
+      width: 2.25rem;
+      min-height: 2.25rem;
+      padding: 0;
+    }
+
+    .rules-content {
+      min-height: 220px;
+      padding: 0.7rem;
+      outline: none;
+    }
+
+    .rules-content:focus {
+      box-shadow: inset 0 0 0 2px var(--accent);
+    }
+
+    .collapsible {
+      border-top: 1px solid var(--surface-line);
+      padding-top: 0.75rem;
+    }
+
+    .collapsible summary {
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 700;
+      list-style-position: inside;
+    }
+
+    .rules-section > .section-summary {
+      cursor: pointer;
+      color: var(--text);
+      font-size: 1.25rem;
+      font-weight: 700;
+      list-style-position: inside;
+    }
+
+    .collapsible-content {
+      margin-top: 0.75rem;
+    }
+
+    .default-settings > .form-grid {
+      margin-top: 0.75rem;
+    }
+
+    .interval-help {
+      margin: -0.45rem 0 0;
+      font-size: 0.8rem;
+    }
+
     .tiny {
       padding: 0 0.35rem;
       min-height: 0;
@@ -665,7 +779,7 @@ import { Group, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, T
     }
   `,
 })
-export class AdminSetup implements OnInit {
+export class AdminSetup implements OnInit, AfterViewChecked {
   readonly slug = input.required<string>();
 
   private readonly api = inject(ApiService);
@@ -679,6 +793,9 @@ export class AdminSetup implements OnInit {
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
+  @ViewChild('rulesContent') private rulesContent?: ElementRef<HTMLElement>;
+  private rulesContentInitialized = false;
+  private rulesSelection: Range | null = null;
   protected readonly editingTeamId = signal<number | null>(null);
 
   protected readonly allRules: TiebreakerRule[] = [
@@ -691,6 +808,7 @@ export class AdminSetup implements OnInit {
     'HeadToHeadGoalsScored',
     'DisciplinaryPoints',
     'TeamName',
+    'Lottery',
   ];
 
   protected readonly availableRules = computed(() =>
@@ -742,8 +860,10 @@ export class AdminSetup implements OnInit {
     name: '',
     slug: null,
     description: null,
+    rules: defaultTournamentRulesWithoutDate,
+    tournamentDateUtc: '2026-09-06T15:00',
     season: new Date().getFullYear(),
-    format: 'GroupsThenKnockout',
+    format: 'League',
     status: 'Draft',
     pointsForWin: 3,
     pointsForDraw: 1,
@@ -754,9 +874,10 @@ export class AdminSetup implements OnInit {
     hasThirdPlacePlayOff: false,
     trackPlayers: false,
     trackCards: false,
-    periodCount: 2,
-    periodDurationMinutes: 45,
-    breakDurationMinutes: 15,
+    periodCount: 1,
+    periodDurationMinutes: 10,
+    breakDurationMinutes: 5,
+    matchIntervalMinutes: 5,
     trackMatchClock: true,
     allowTimeouts: false,
     useStoppageTime: true,
@@ -775,20 +896,44 @@ export class AdminSetup implements OnInit {
       name: data.tournament.name,
       slug: data.tournament.slug,
       description: data.tournament.description,
-      season: data.tournament.season,
+      rules: data.tournament.rules
+        ? removeLegacyDefaultDateTime(data.tournament.rules)
+        : defaultTournamentRulesWithoutDate,
+      tournamentDateUtc: data.tournament.tournamentDateUtc
+        ? data.tournament.tournamentDateUtc.slice(0, 16)
+        : null,
+      season: data.tournament.tournamentDateUtc
+        ? new Date(data.tournament.tournamentDateUtc).getFullYear()
+        : data.tournament.season,
       format: data.tournament.format,
       status: data.tournament.status,
+      pointsForWin: data.tournament.pointsForWin,
+      pointsForDraw: data.tournament.pointsForDraw,
+      pointsForLoss: data.tournament.pointsForLoss,
+      groupRounds: data.tournament.groupRounds,
+      teamsAdvancingPerGroup: data.tournament.teamsAdvancingPerGroup,
+      includeBestThirdPlaced: data.tournament.includeBestThirdPlaced,
+      hasThirdPlacePlayOff: data.tournament.hasThirdPlacePlayOff,
       trackPlayers: data.tournament.trackPlayers,
       trackCards: data.tournament.trackCards,
       periodCount: data.tournament.periodCount,
       periodDurationMinutes: data.tournament.periodDurationMinutes,
       breakDurationMinutes: data.tournament.breakDurationMinutes,
+      matchIntervalMinutes: data.tournament.matchIntervalMinutes,
       trackMatchClock: data.tournament.trackMatchClock,
       allowTimeouts: data.tournament.allowTimeouts,
       useStoppageTime: data.tournament.useStoppageTime,
     };
 
-    this.tiebreakers.set(['GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'Wins', 'TeamName']);
+    this.tiebreakers.set(data.tournament.tiebreakers);
+  }
+
+  ngAfterViewChecked(): void {
+    const editor = this.rulesContent?.nativeElement;
+    if (editor && !this.rulesContentInitialized && document.activeElement !== editor) {
+      editor.innerHTML = this.settings.rules ?? '';
+      this.rulesContentInitialized = true;
+    }
   }
 
   addRule(): void {
@@ -835,6 +980,35 @@ export class AdminSetup implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  formatRules(command: string, value?: string): void {
+    const selection = window.getSelection();
+    if (this.rulesSelection && selection) {
+      selection.removeAllRanges();
+      selection.addRange(this.rulesSelection);
+    }
+    this.rulesContent?.nativeElement.focus();
+    document.execCommand(command, false, value);
+    this.saveRulesSelection();
+    this.updateRules({ target: this.rulesContent?.nativeElement } as unknown as Event);
+  }
+
+  saveRulesSelection(): void {
+    const selection = window.getSelection();
+    const editor = this.rulesContent?.nativeElement;
+    if (!selection || !editor || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) {
+      this.rulesSelection = range.cloneRange();
+    }
+  }
+
+  updateRules(event: Event): void {
+    this.settings.rules = (event.target as HTMLElement).innerHTML;
   }
 
   async addGroup(): Promise<void> {

@@ -185,6 +185,11 @@ public static class StandingsCalculator
             return rows.OrderBy(row => row.TeamName, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
+        if (rule == TiebreakerRule.Lottery)
+        {
+            return rows;
+        }
+
         var keys = BuildKeys(rows, matches, rule.Value);
 
         return rows

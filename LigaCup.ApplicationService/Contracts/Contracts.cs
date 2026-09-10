@@ -33,6 +33,8 @@ public record TournamentSummaryDto(
     string Name,
     string Slug,
     string? Description,
+    string? Rules,
+    DateTime? TournamentDateUtc,
     int Season,
     TournamentFormat Format,
     TournamentStatus Status,
@@ -41,9 +43,18 @@ public record TournamentSummaryDto(
     int PeriodCount,
     int PeriodDurationMinutes,
     int BreakDurationMinutes,
+    int? MatchIntervalMinutes,
     bool TrackMatchClock,
     bool AllowTimeouts,
     bool UseStoppageTime,
+    int PointsForWin,
+    int PointsForDraw,
+    int PointsForLoss,
+    int GroupRounds,
+    int TeamsAdvancingPerGroup,
+    bool IncludeBestThirdPlaced,
+    bool HasThirdPlacePlayOff,
+    IReadOnlyList<TiebreakerRule> Tiebreakers,
     int TeamCount,
     int MatchCount);
 
@@ -51,6 +62,8 @@ public record SaveTournamentRequest(
     string Name,
     string? Slug,
     string? Description,
+    string? Rules,
+    DateTime? TournamentDateUtc,
     int Season,
     TournamentFormat Format,
     TournamentStatus Status,
@@ -66,6 +79,7 @@ public record SaveTournamentRequest(
     int PeriodCount,
     int PeriodDurationMinutes,
     int BreakDurationMinutes,
+    int? MatchIntervalMinutes,
     bool TrackMatchClock,
     bool AllowTimeouts,
     bool UseStoppageTime,
@@ -201,7 +215,8 @@ public record TournamentDetailDto(
     IReadOnlyList<MatchDto> Matches,
     IReadOnlyList<GroupTableDto> Tables,
     IReadOnlyList<BracketMatchDto> Bracket,
-    IReadOnlyList<ScorerDto> TopScorers);
+    IReadOnlyList<ScorerDto> TopScorers,
+    string? Rules);
 
 public record GenerateFixturesRequest(bool IncludeGroupStage, bool IncludeKnockoutStage, bool ReplaceExisting);
 

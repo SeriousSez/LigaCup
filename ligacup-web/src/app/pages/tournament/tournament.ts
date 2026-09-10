@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -6,13 +7,12 @@ import { TournamentStore } from '../../core/tournament.store';
 import { HeadingSkeleton, StandingsSkeleton } from '../../shared/loading-skeletons';
 import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
-import { TournamentGuide } from '../../shared/tournament-guide';
 
-type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
+type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules';
 
 @Component({
   selector: 'app-tournament',
-  imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton, TournamentGuide],
+  imports: [DatePipe, RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
   template: `
     @if (store.loading()) {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
@@ -27,6 +27,9 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
           <p class="muted">
             {{ data.tournament.season }} &middot; {{ data.teams.length }} {{ t().common.teams }}
             &middot; {{ t().format[data.tournament.format] }}
+            @if (data.tournament.tournamentDateUtc) {
+              &middot; {{ data.tournament.tournamentDateUtc | date: 'd MMM yyyy HH:mm' : undefined : locale() }}
+            }
           </p>
         </div>
 
@@ -153,8 +156,17 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
             </table>
           </div>
         }
+        @case ('rules') {
+          <article class="card rules-page">
+            <h2>{{ t().setup.rulesContent }}</h2>
+            @if (data.rules; as rules) {
+              <div class="rules-content" [innerHTML]="rules"></div>
+            } @else {
+              <p class="muted">{{ t().tournament.noRules }}</p>
+            }
+          </article>
+        }
       }
-      <app-tournament-guide />
     }
   `,
   styles: `
@@ -224,6 +236,16 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
       align-content: start;
     }
 
+    .rules-page {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .rules-page p {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
     @media (min-width: 700px) {
       .heading {
         margin-bottom: 1.5rem;
@@ -252,7 +274,9 @@ export class Tournament implements OnInit {
 
   protected readonly store = inject(TournamentStore);
   protected readonly auth = inject(AuthService);
-  protected readonly t = inject(I18nService).t;
+  private readonly i18n = inject(I18nService);
+  protected readonly t = this.i18n.t;
+  protected readonly locale = this.i18n.locale;
   protected readonly tab = signal<Tab>('tables');
 
   protected readonly tabs = computed<{ id: Tab; label: string }[]>(() => {
@@ -262,6 +286,7 @@ export class Tournament implements OnInit {
       { id: 'fixtures', label: labels.fixtures },
       { id: 'bracket', label: labels.bracket },
       { id: 'scorers', label: labels.scorers },
+      { id: 'rules', label: labels.rules },
     ];
   });
 

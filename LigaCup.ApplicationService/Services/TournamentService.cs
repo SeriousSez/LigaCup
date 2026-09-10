@@ -64,7 +64,8 @@ public class TournamentService(LigaCupContext dbContext)
             matches.Select(match => DtoMapper.ToDto(match, tournament)).ToList(),
             BuildTables(tournament),
             BuildBracket(tournament),
-            BuildTopScorers(tournament));
+            BuildTopScorers(tournament),
+            tournament.Rules);
     }
 
     public IReadOnlyList<GroupTableDto> BuildTables(Tournament tournament)
@@ -146,6 +147,8 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.Name = request.Name.Trim();
         tournament.Slug = Slugify(string.IsNullOrWhiteSpace(request.Slug) ? request.Name : request.Slug);
         tournament.Description = request.Description;
+        tournament.Rules = string.IsNullOrWhiteSpace(request.Rules) ? null : request.Rules.Trim();
+        tournament.TournamentDateUtc = request.TournamentDateUtc;
         tournament.Season = request.Season;
         tournament.Format = request.Format;
         tournament.Status = request.Status;
@@ -161,6 +164,9 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.PeriodCount = Math.Clamp(request.PeriodCount, 1, 4);
         tournament.PeriodDurationMinutes = Math.Clamp(request.PeriodDurationMinutes, 1, 90);
         tournament.BreakDurationMinutes = Math.Clamp(request.BreakDurationMinutes, 0, 60);
+        tournament.MatchIntervalMinutes = request.MatchIntervalMinutes is null
+            ? null
+            : Math.Clamp(request.MatchIntervalMinutes.Value, 0, 180);
         tournament.TrackMatchClock = request.TrackMatchClock;
         tournament.AllowTimeouts = request.AllowTimeouts;
         tournament.UseStoppageTime = request.UseStoppageTime;

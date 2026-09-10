@@ -11,6 +11,8 @@ public class Tournament
     public string Slug { get; set; } = string.Empty;
 
     public string? Description { get; set; }
+    public string? Rules { get; set; }
+    public DateTime? TournamentDateUtc { get; set; }
     public int Season { get; set; }
     public TournamentFormat Format { get; set; } = TournamentFormat.GroupsThenKnockout;
     public TournamentStatus Status { get; set; } = TournamentStatus.Draft;
@@ -44,6 +46,9 @@ public class Tournament
     /// <summary>Shown as a countdown during the interval. Does not affect the match clock.</summary>
     public int BreakDurationMinutes { get; set; } = 15;
 
+    /// <summary>Optional pause between scheduled matches, in minutes.</summary>
+    public int? MatchIntervalMinutes { get; set; }
+
     /// <summary>When false the organiser records scores without any running clock.</summary>
     public bool TrackMatchClock { get; set; } = true;
 
@@ -56,7 +61,7 @@ public class Tournament
     public int TotalDurationMinutes => Math.Max(1, PeriodCount) * Math.Max(1, PeriodDurationMinutes);
 
     /// <summary>Tiebreaker rules serialised in priority order, applied after points.</summary>
-    public string TiebreakerOrder { get; set; } = "GoalDifference,GoalsScored,HeadToHeadPoints,Wins,TeamName";
+    public string TiebreakerOrder { get; set; } = "GoalDifference,GoalsScored,Lottery";
 
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
@@ -69,7 +74,7 @@ public class Tournament
     {
         if (string.IsNullOrWhiteSpace(TiebreakerOrder))
         {
-            return [TiebreakerRule.GoalDifference, TiebreakerRule.GoalsScored, TiebreakerRule.TeamName];
+            return [TiebreakerRule.GoalDifference, TiebreakerRule.GoalsScored, TiebreakerRule.Lottery];
         }
 
         return TiebreakerOrder

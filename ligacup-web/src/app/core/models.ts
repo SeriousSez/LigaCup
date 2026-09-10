@@ -34,7 +34,8 @@ export type TiebreakerRule =
     | 'HeadToHeadGoalDifference'
     | 'HeadToHeadGoalsScored'
     | 'DisciplinaryPoints'
-    | 'TeamName';
+    | 'TeamName'
+    | 'Lottery';
 
 export interface AuthResponse {
     token: string;
@@ -74,6 +75,8 @@ export interface TournamentSummary {
     name: string;
     slug: string;
     description: string | null;
+    rules: string | null;
+    tournamentDateUtc: string | null;
     season: number;
     format: TournamentFormat;
     status: TournamentStatus;
@@ -82,9 +85,18 @@ export interface TournamentSummary {
     periodCount: number;
     periodDurationMinutes: number;
     breakDurationMinutes: number;
+    matchIntervalMinutes: number | null;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
     useStoppageTime: boolean;
+    pointsForWin: number;
+    pointsForDraw: number;
+    pointsForLoss: number;
+    groupRounds: number;
+    teamsAdvancingPerGroup: number;
+    includeBestThirdPlaced: boolean;
+    hasThirdPlacePlayOff: boolean;
+    tiebreakers: TiebreakerRule[];
     teamCount: number;
     matchCount: number;
 }
@@ -93,6 +105,8 @@ export interface SaveTournamentRequest {
     name: string;
     slug: string | null;
     description: string | null;
+    rules: string | null;
+    tournamentDateUtc: string | null;
     season: number;
     format: TournamentFormat;
     status: TournamentStatus;
@@ -108,6 +122,7 @@ export interface SaveTournamentRequest {
     periodCount: number;
     periodDurationMinutes: number;
     breakDurationMinutes: number;
+    matchIntervalMinutes: number | null;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
     useStoppageTime: boolean;
@@ -240,6 +255,7 @@ export interface TournamentDetail {
     tables: GroupTable[];
     bracket: BracketMatch[];
     topScorers: Scorer[];
+    rules: string | null;
 }
 
 export interface LiveUpdate {

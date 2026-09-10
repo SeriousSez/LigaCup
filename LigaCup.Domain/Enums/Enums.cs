@@ -72,7 +72,8 @@ public enum TiebreakerRule
     HeadToHeadGoalDifference = 5,
     HeadToHeadGoalsScored = 6,
     DisciplinaryPoints = 7,
-    TeamName = 8
+    TeamName = 8,
+    Lottery = 9
 }
 
 public enum UserRole

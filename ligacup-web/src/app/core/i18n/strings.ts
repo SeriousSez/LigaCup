@@ -1,3 +1,11 @@
+type AdminGuideKey =
+    | 'open' | 'close' | 'kicker' | 'title' | 'libraryTitle' | 'libraryText' | 'start' | 'restart' | 'completed' | 'allGuides'
+    | 'hintTitle' | 'hintText' | 'show' | 'dismiss' | 'back' | 'next' | 'done' | 'createTitle' | 'createText' | 'createNameTitle' | 'createNameText'
+    | 'createFormatTitle' | 'createFormatText' | 'createSubmitTitle' | 'createSubmitText' | 'setupTitle'
+    | 'setupText' | 'setupRulesTitle' | 'setupRulesText' | 'setupTeamsTitle' | 'setupTeamsText'
+    | 'setupFixturesTitle' | 'setupFixturesText' | 'liveTitle' | 'liveText' | 'livePickerTitle'
+    | 'livePickerText' | 'liveScoreTitle' | 'liveScoreText' | 'liveStatusTitle' | 'liveStatusText';
+
 export interface Strings {
     nav: {
         tournaments: string;
@@ -19,8 +27,19 @@ export interface Strings {
         matches: string;
         season: string;
         name: string;
+        tournamentDateTime: string;
         unassigned: string;
         somethingWentWrong: string;
+    };
+    datePicker: {
+        placeholder: string;
+        ariaLabel: string;
+        previousMonth: string;
+        nextMonth: string;
+        time: string;
+        clear: string;
+        today: string;
+        weekdays: string[];
     };
     guide: {
         open: string;
@@ -61,6 +80,7 @@ export interface Strings {
         knockoutMatchTitle: string;
         knockoutMatchText: string;
     };
+    adminGuide: Record<AdminGuideKey, string>;
     home: {
         tagline: string;
         openAdmin: string;
@@ -148,7 +168,8 @@ export interface Strings {
         | 'HeadToHeadGoalDifference'
         | 'HeadToHeadGoalsScored'
         | 'DisciplinaryPoints'
-        | 'TeamName',
+        | 'TeamName'
+        | 'Lottery',
         string
     >;
     connection: {
@@ -184,9 +205,10 @@ export interface Strings {
         playingNow: string;
         setup: string;
         liveConsole: string;
-        tabs: { tables: string; fixtures: string; bracket: string; scorers: string };
+        tabs: { tables: string; fixtures: string; bracket: string; scorers: string; rules: string };
         noTables: string;
         noFixtures: string;
+        noRules: string;
         matchday: string;
         league: string;
         scorers: { player: string; team: string; goals: string; assists: string; empty: string };
@@ -220,6 +242,7 @@ export interface Strings {
         subtitle: string;
         publicPage: string;
         rules: string;
+        defaultSettings: string;
         status: string;
         format: string;
         pointsWin: string;
@@ -234,9 +257,23 @@ export interface Strings {
         periodCount: string;
         periodDuration: string;
         breakDuration: string;
+        matchInterval: string;
+        matchIntervalHelp: string;
         trackMatchClock: string;
         allowTimeouts: string;
         useStoppageTime: string;
+        rulesContent: string;
+        rulesContentHelp: string;
+        rulesBold: string;
+        rulesItalic: string;
+        rulesList: string;
+        rulesHeading: string;
+        rulesNumberedList: string;
+        rulesUnderline: string;
+        rulesQuote: string;
+        rulesUndo: string;
+        rulesRedo: string;
+        rulesClear: string;
         clockSection: string;
         clockHelp: string;
         tiebreakersTitle: string;
@@ -320,8 +357,19 @@ export const danish: Strings = {
         matches: 'kampe',
         season: 'Sæson',
         name: 'Navn',
+        tournamentDateTime: 'Dato og tidspunkt',
         unassigned: 'Ingen gruppe',
         somethingWentWrong: 'Noget gik galt.',
+    },
+    datePicker: {
+        placeholder: 'Vælg dato og tidspunkt',
+        ariaLabel: 'Dato og tidspunkt',
+        previousMonth: 'Forrige måned',
+        nextMonth: 'Næste måned',
+        time: 'Tidspunkt',
+        clear: 'Ryd',
+        today: 'I dag',
+        weekdays: ['M', 'T', 'O', 'T', 'F', 'L', 'S'],
     },
     guide: {
         open: 'Åbn guide',
@@ -361,6 +409,13 @@ export const danish: Strings = {
         knockoutBracketText: 'Skemaet viser vejen fra de første knockoutkampe til finalen.',
         knockoutMatchTitle: 'Se knockoutkampen',
         knockoutMatchText: 'Kampkortet viser hold, resultat og status for hver kamp i slutspillet.',
+    },
+    adminGuide: {
+        open: 'Åbn arrangørguide', close: 'Luk guide', kicker: 'Arrangørguide', title: 'Kom godt i gang',
+        libraryTitle: 'Hvad vil du gøre?', libraryText: 'Vælg en guide til de vigtigste arrangøropgaver.', start: 'Start guide', restart: 'Start igen', completed: 'Gennemført', allGuides: 'Alle guider', hintTitle: 'Ny til Liga Cup?', hintText: 'Se en kort guide til de vigtigste funktioner.', show: 'Vis guide', dismiss: 'Luk guide', back: 'Tilbage', next: 'Næste', done: 'Færdig',
+        createTitle: 'Opret turnering', createText: 'Opret en ny turnering fra administrationsforsiden.', createNameTitle: 'Giv turneringen et navn', createNameText: 'Skriv turneringens navn og vælg sæsonen, så den er let at finde.', createFormatTitle: 'Vælg format', createFormatText: 'Vælg liga, grupper eller knockout efter den turnering, du vil afvikle.', createSubmitTitle: 'Opret turneringen', createSubmitText: 'Tryk på Opret for at gemme turneringen og åbne den i administrationen.',
+        setupTitle: 'Konfigurer turnering', setupText: 'Tilføj hold, grupper og regler, før kampene spilles.', setupRulesTitle: 'Start med reglerne', setupRulesText: 'Vælg format, point, tiebreakere og eventuelt kampur.', setupTeamsTitle: 'Tilføj hold og grupper', setupTeamsText: 'Opret grupper og tilføj hold med navn og forkortelse.', setupFixturesTitle: 'Generer kampprogrammet', setupFixturesText: 'Når holdene er klar, genererer du gruppekampe og eventuelt slutspil.',
+        liveTitle: 'Opdater live-resultater', liveText: 'Brug livekonsollen under kampene.', livePickerTitle: 'Vælg kampen', livePickerText: 'Vælg den kamp, du vil styre, fra kampvælgeren.', liveScoreTitle: 'Opdater stillingen', liveScoreText: 'Brug plus- og minusknapperne til at registrere mål for hvert hold.', liveStatusTitle: 'Styr kampens status', liveStatusText: 'Start kampen, sæt den på pause eller afslut den, når dommeren fløjter.',
     },
     home: {
         tagline:
@@ -479,6 +534,7 @@ export const danish: Strings = {
         HeadToHeadGoalsScored: 'Scorede mål i indbyrdes opgør',
         DisciplinaryPoints: 'Færrest disciplinærpoint',
         TeamName: 'Alfabetisk',
+        Lottery: 'Lodtrækning',
     },
     connection: {
         live: 'Live',
@@ -518,9 +574,11 @@ export const danish: Strings = {
             fixtures: 'Kampe og resultater',
             bracket: 'Slutspil',
             scorers: 'Topscorere',
+            rules: 'Regler',
         },
         noTables: 'Ingen gruppetabeller endnu. Tilføj hold og generer kampprogrammet.',
         noFixtures: 'Der er ikke genereret et kampprogram endnu.',
+        noRules: 'Turneringsreglerne er ikke offentliggjort endnu.',
         matchday: 'spillerunde',
         league: 'Række',
         scorers: {
@@ -560,6 +618,7 @@ export const danish: Strings = {
         subtitle: 'Opsætning og regler',
         publicPage: 'Offentlig side',
         rules: 'Regler',
+        defaultSettings: 'Standardindstillinger',
         status: 'Status',
         format: 'Format',
         pointsWin: 'Point for sejr',
@@ -574,9 +633,23 @@ export const danish: Strings = {
         periodCount: 'Antal perioder',
         periodDuration: 'Minutter pr. periode',
         breakDuration: 'Pause mellem perioder (minutter)',
+        matchInterval: 'Pause mellem kampe (minutter)',
+        matchIntervalHelp: 'Valgfri pause mellem kampe.',
         trackMatchClock: 'Vis kampur',
         allowTimeouts: 'Tillad at uret stoppes undervejs',
         useStoppageTime: 'Tæl tillægstid (45+2)',
+        rulesContent: 'Turneringsregler',
+        rulesContentHelp: 'Skriv regler og praktiske oplysninger, som deltagerne skal kunne se på den offentlige side.',
+        rulesBold: 'Fed tekst',
+        rulesItalic: 'Kursiv tekst',
+        rulesList: 'Punktopstilling',
+        rulesHeading: 'Overskrift',
+        rulesNumberedList: 'Nummereret liste',
+        rulesUnderline: 'Understreget tekst',
+        rulesQuote: 'Citat',
+        rulesUndo: 'Fortryd',
+        rulesRedo: 'Gentag',
+        rulesClear: 'Fjern formatering',
         clockSection: 'Kampur',
         clockHelp:
             'Uret starter, når du trykker Live, og står stille i pausen. To perioder à 45 minutter giver en almindelig fodboldkamp.',
@@ -665,8 +738,19 @@ export const english: Strings = {
         matches: 'matches',
         season: 'Season',
         name: 'Name',
+        tournamentDateTime: 'Date and time',
         unassigned: 'Unassigned',
         somethingWentWrong: 'Something went wrong.',
+    },
+    datePicker: {
+        placeholder: 'Choose date and time',
+        ariaLabel: 'Date and time',
+        previousMonth: 'Previous month',
+        nextMonth: 'Next month',
+        time: 'Time',
+        clear: 'Clear',
+        today: 'Today',
+        weekdays: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
     },
     guide: {
         open: 'Open guide',
@@ -706,6 +790,13 @@ export const english: Strings = {
         knockoutBracketText: 'The bracket shows the route from the first knockout ties to the final.',
         knockoutMatchTitle: 'View a knockout match',
         knockoutMatchText: 'Each match card shows the teams, result and status for a knockout tie.',
+    },
+    adminGuide: {
+        open: 'Open organiser guide', close: 'Close guide', kicker: 'Organiser guide', title: 'Getting started',
+        libraryTitle: 'What would you like to do?', libraryText: 'Choose a guide for the most important organiser tasks.', start: 'Start guide', restart: 'Restart guide', completed: 'Completed', allGuides: 'All guides', hintTitle: 'New to Liga Cup?', hintText: 'Take a short tour of the most important features.', show: 'Show me', dismiss: 'Dismiss guide', back: 'Back', next: 'Next', done: 'Done',
+        createTitle: 'Create a tournament', createText: 'Create a new tournament from the admin home.', createNameTitle: 'Name the tournament', createNameText: 'Enter the tournament name and season so it is easy to find.', createFormatTitle: 'Choose the format', createFormatText: 'Choose league, groups or knockout for the tournament you want to run.', createSubmitTitle: 'Create the tournament', createSubmitText: 'Press Create to save the tournament and open it in admin.',
+        setupTitle: 'Set up the tournament', setupText: 'Add teams, groups and rules before matches are played.', setupRulesTitle: 'Start with the rules', setupRulesText: 'Choose the format, points, tiebreakers and optional match clock.', setupTeamsTitle: 'Add teams and groups', setupTeamsText: 'Create groups and add teams with a name and short name.', setupFixturesTitle: 'Generate fixtures', setupFixturesText: 'When teams are ready, generate group fixtures and optionally the knockout stage.',
+        liveTitle: 'Update live results', liveText: 'Use the live console during matches.', livePickerTitle: 'Choose the match', livePickerText: 'Select the match you want to control from the match picker.', liveScoreTitle: 'Update the score', liveScoreText: 'Use the plus and minus buttons to record goals for each team.', liveStatusTitle: 'Control match status', liveStatusText: 'Start, pause or finish the match as the referee calls it.',
     },
     home: {
         tagline:
@@ -824,6 +915,7 @@ export const english: Strings = {
         HeadToHeadGoalsScored: 'Head-to-head goals scored',
         DisciplinaryPoints: 'Fewest disciplinary points',
         TeamName: 'Alphabetical',
+        Lottery: 'Lottery',
     },
     connection: {
         live: 'Live',
@@ -863,9 +955,11 @@ export const english: Strings = {
             fixtures: 'Fixtures & results',
             bracket: 'Knockout',
             scorers: 'Top scorers',
+            rules: 'Rules',
         },
         noTables: 'No group tables yet. Add teams and generate the fixtures.',
         noFixtures: 'No fixtures have been generated yet.',
+        noRules: 'Tournament rules have not been published yet.',
         matchday: 'matchday',
         league: 'League',
         scorers: {
@@ -905,6 +999,7 @@ export const english: Strings = {
         subtitle: 'Setup and rules',
         publicPage: 'Public page',
         rules: 'Rules',
+        defaultSettings: 'Default settings',
         status: 'Status',
         format: 'Format',
         pointsWin: 'Points for a win',
@@ -919,9 +1014,23 @@ export const english: Strings = {
         periodCount: 'Number of periods',
         periodDuration: 'Minutes per period',
         breakDuration: 'Break between periods (minutes)',
+        matchInterval: 'Time between matches (minutes)',
+        matchIntervalHelp: 'Optional pause between matches.',
         trackMatchClock: 'Show a match clock',
         allowTimeouts: 'Allow the clock to be stopped mid-period',
         useStoppageTime: 'Count added time (45+2)',
+        rulesContent: 'Tournament rules',
+        rulesContentHelp: 'Write rules and practical information for participants to read on the public page.',
+        rulesBold: 'Bold text',
+        rulesItalic: 'Italic text',
+        rulesList: 'Bullet list',
+        rulesHeading: 'Heading',
+        rulesNumberedList: 'Numbered list',
+        rulesUnderline: 'Underlined text',
+        rulesQuote: 'Quote',
+        rulesUndo: 'Undo',
+        rulesRedo: 'Redo',
+        rulesClear: 'Clear formatting',
         clockSection: 'Match clock',
         clockHelp:
             'The clock starts when you press Live and stands still during the interval. Two periods of 45 minutes gives a normal football match.',
