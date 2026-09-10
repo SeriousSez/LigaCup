@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: "8.0.x"
+  DOTNET_VERSION: "10.0.x"
   NODE_VERSION: "22.x"
   PROJECT_PATH: "LigaCup.API/LigaCup.API.csproj"
   PUBLISH_PATH: "./publish"
   # Simply.com runs the IIS application pool in 32-bit mode.
-  RUNTIME_IDENTIFIER: "win-x86"
+  RUNTIME_IDENTIFIER: "win-x64"
   ANGULAR_WORKING_DIR: "./ligacup-web"
   ANGULAR_DIST_PATH: "./ligacup-web/dist/ligacup-web/browser"
   API_SERVER_DIR: "/ligacup.api/"
@@ -112,7 +112,7 @@ jobs:
             }
             Cors              = @{ AllowedOrigins = @($origin) }
             Logging           = @{ LogLevel = @{ Default = 'Warning'; 'LigaCup' = 'Information' } }
-            AllowedHosts      = $apiHost
+            AllowedHosts      = '*'
           }
 
           $config | ConvertTo-Json -Depth 6 | Set-Content -Path 'appsettings.Production.json' -Encoding UTF8
