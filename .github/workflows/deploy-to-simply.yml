@@ -91,6 +91,8 @@ jobs:
 
           $origin = if ([string]::IsNullOrWhiteSpace($env:WEB_ORIGIN)) { '${{ env.DEFAULT_WEB_ORIGIN }}' } else { $env:WEB_ORIGIN }
           $apiOrigin = if ([string]::IsNullOrWhiteSpace($env:API_ORIGIN)) { '${{ env.DEFAULT_API_ORIGIN }}' } else { $env:API_ORIGIN }
+          $origin = $origin.Trim().TrimEnd('/').TrimEnd('.')
+          $apiOrigin = $apiOrigin.Trim().TrimEnd('/').TrimEnd('.')
 
           # Rejects requests arriving with an unexpected Host header.
           $apiHost = ([Uri]$apiOrigin).Host
@@ -192,7 +194,7 @@ jobs:
           API_ORIGIN: ${{ vars.API_ORIGIN }}
         run: |
           $apiOrigin = if ([string]::IsNullOrWhiteSpace($env:API_ORIGIN)) { '${{ env.DEFAULT_API_ORIGIN }}' } else { $env:API_ORIGIN }
-          $apiOrigin = $apiOrigin.TrimEnd('/')
+          $apiOrigin = $apiOrigin.Trim().TrimEnd('/').TrimEnd('.')
 
           # Built as an array rather than a here-string, whose terminator cannot be indented.
           $lines = @(
