@@ -8,14 +8,14 @@ A live tournament site for the Liga Cup. The organiser updates scores from a pho
 
 ## How it is put together
 
-| Project | What lives there |
-| --- | --- |
-| `LigaCup.Domain` | Entities, plus the standings calculator and fixture generator. Pure logic with no dependencies, so it is fully unit tested. |
-| `LigaCup.Infrastructure` | EF Core context, migrations and the database provider configuration. |
-| `LigaCup.ApplicationService` | Services, DTOs, JWT auth and password hashing. |
-| `LigaCup.API` | Minimal API endpoints and the SignalR hub. |
-| `LigaCup.Domain.Tests` | xUnit tests for the football rules. |
-| `ligacup-web` | The Angular client. |
+| Project                      | What lives there                                                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `LigaCup.Domain`             | Entities, plus the standings calculator and fixture generator. Pure logic with no dependencies, so it is fully unit tested. |
+| `LigaCup.Infrastructure`     | EF Core context, migrations and the database provider configuration.                                                        |
+| `LigaCup.ApplicationService` | Services, DTOs, JWT auth and password hashing.                                                                              |
+| `LigaCup.API`                | Minimal API endpoints and the SignalR hub.                                                                                  |
+| `LigaCup.Domain.Tests`       | xUnit tests for the football rules.                                                                                         |
+| `ligacup-web`                | The Angular client.                                                                                                         |
 
 ## Running it locally
 
@@ -26,7 +26,7 @@ cd LigaCup.API
 dotnet run
 ```
 
-It listens on `http://localhost:5099`, creates `App_Data/ligacup.dev.db` on first run and seeds an administrator using the credentials in `appsettings.Development.json` (`admin` / `ligacup-local-dev`). Those are local development values only and are never used in production.
+It listens on `http://localhost:5099`, creates `App_Data/ligacup.dev.db` on first run and seeds an administrator using the credentials in `appsettings.Development.json` (`admin` / `ligacup-local-dev`). That file also holds a fixed token signing key so a restart does not sign you out. Everything in it is a local development value that production never loads.
 
 Start the frontend in a second terminal:
 
@@ -90,16 +90,16 @@ Take a copy of the file over FTP before a tournament if you want a backup. It is
 
 In the repository settings, add these secrets:
 
-| Secret | Purpose |
-| --- | --- |
-| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Simply.com FTP credentials. |
-| `JWT_KEY` | Signing key for tokens, at least 32 characters. |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Seeds the first administrator on a fresh database. |
+| Secret                                       | Purpose                                            |
+| -------------------------------------------- | -------------------------------------------------- |
+| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Simply.com FTP credentials.                        |
+| `JWT_KEY`                                    | Signing key for tokens, at least 32 characters.    |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD`           | Seeds the first administrator on a fresh database. |
 
 And one variable:
 
-| Variable | Purpose |
-| --- | --- |
+| Variable     | Purpose                                            |
+| ------------ | -------------------------------------------------- |
 | `WEB_ORIGIN` | The public site URL, used for the CORS allow list. |
 
 The API refuses to start in production without a valid `JWT_KEY`, and will not create an administrator without a password, so a misconfigured deploy fails loudly instead of coming up insecure.

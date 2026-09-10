@@ -6,14 +6,14 @@ $auth = Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType 'appl
 $headers = @{ Authorization = "Bearer $($auth.token)" }
 
 $slug = Invoke-RestMethod "$base/api/admin/tournaments" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-    name = 'Liga Cup'; slug = $null; description = 'The annual back garden showdown'; season = 2026
-    format = 'GroupsThenKnockout'; status = 'InProgress'
-    pointsForWin = 3; pointsForDraw = 1; pointsForLoss = 0
-    groupRounds = 1; teamsAdvancingPerGroup = 2
-    includeBestThirdPlaced = $false; hasThirdPlacePlayOff = $true
-    trackPlayers = $true; trackCards = $true; matchDurationMinutes = 90
-    tiebreakers = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
-} | ConvertTo-Json)
+        name = 'Liga Cup'; slug = $null; description = 'The annual back garden showdown'; season = 2026
+        format = 'GroupsThenKnockout'; status = 'InProgress'
+        pointsForWin = 3; pointsForDraw = 1; pointsForLoss = 0
+        groupRounds = 1; teamsAdvancingPerGroup = 2
+        includeBestThirdPlaced = $false; hasThirdPlacePlayOff = $true
+        trackPlayers = $true; trackCards = $true; matchDurationMinutes = 90
+        tiebreakers = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
+    } | ConvertTo-Json)
 
 $id = (Invoke-RestMethod "$base/api/tournaments/$slug").tournament.id
 
@@ -38,15 +38,15 @@ $teams = @{}
 $players = @{}
 foreach ($entry in $roster) {
     $team = Invoke-RestMethod "$base/api/admin/tournaments/$id/teams" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-        name = $entry.name; shortName = $entry.short; colorHex = $null; logoUrl = $null; manager = $null
-        groupId = $groups[$entry.group]; pointsAdjustment = 0
-    } | ConvertTo-Json)
+            name = $entry.name; shortName = $entry.short; colorHex = $null; logoUrl = $null; manager = $null
+            groupId = $groups[$entry.group]; pointsAdjustment = 0
+        } | ConvertTo-Json)
     $teams[$entry.name] = $team.id
 
     foreach ($playerName in $entry.players) {
         $player = Invoke-RestMethod "$base/api/admin/tournaments/players" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-            teamId = $team.id; name = $playerName; shirtNumber = $null; position = $null; isActive = $true
-        } | ConvertTo-Json)
+                teamId = $team.id; name = $playerName; shirtNumber = $null; position = $null; isActive = $true
+            } | ConvertTo-Json)
         $players["$($entry.name)|$playerName"] = $player.id
     }
 }
@@ -83,8 +83,8 @@ foreach ($goal in @(
         @{ team = 'Real Sofa'; player = 'Emre'; minute = 78 })) {
     if ($scorerMatch.homeTeamId -eq $teams[$goal.team] -or $scorerMatch.awayTeamId -eq $teams[$goal.team]) {
         Invoke-RestMethod "$base/api/live/matches/$($scorerMatch.id)/events" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-            teamId = $teams[$goal.team]; playerId = $players["$($goal.team)|$($goal.player)"]; type = 'Goal'; minute = $goal.minute; note = $null
-        } | ConvertTo-Json) | Out-Null
+                teamId = $teams[$goal.team]; playerId = $players["$($goal.team)|$($goal.player)"]; type = 'Goal'; minute = $goal.minute; note = $null
+            } | ConvertTo-Json) | Out-Null
     }
 }
 

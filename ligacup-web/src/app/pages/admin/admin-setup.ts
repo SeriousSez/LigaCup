@@ -7,9 +7,9 @@ import { TournamentStore } from '../../core/tournament.store';
 import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
 
 @Component({
-  selector: 'app-admin-setup',
-  imports: [FormsModule, RouterLink],
-  template: `
+    selector: 'app-admin-setup',
+    imports: [FormsModule, RouterLink],
+    template: `
     @if (detail(); as data) {
       <section class="spread heading">
         <div>
@@ -119,8 +119,8 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
               </div>
             }
           </div>
-          <div class="row">
-            <select [(ngModel)]="ruleToAdd">
+          <div class="add-rule">
+            <select [ngModel]="ruleToAdd ?? availableRules()[0]" (ngModelChange)="ruleToAdd = $event">
               @for (rule of availableRules(); track rule) {
                 <option [value]="rule">{{ tiebreakerLabel(rule) }}</option>
               }
@@ -151,57 +151,48 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
             <span class="muted">No groups. Teams without a group form one combined league.</span>
           }
         </div>
-        <div class="row">
-          <input class="narrow" [(ngModel)]="newGroupName" placeholder="Group A" />
+        <div class="add-player">
+          <input [(ngModel)]="newGroupName" placeholder="Group A" />
           <button type="button" (click)="addGroup()">Add group</button>
         </div>
       </section>
 
       <section class="card stack">
         <h3>Teams</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>Short</th>
-              <th>Group</th>
-              <th class="numeric">Points adj.</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (team of data.teams; track team.id) {
-              <tr>
-                <td>{{ team.name }}</td>
-                <td class="muted">{{ team.shortName ?? '-' }}</td>
-                <td>
-                  <select
-                    [ngModel]="team.groupId"
-                    (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
-                  >
-                    <option [ngValue]="null">Unassigned</option>
-                    @for (group of data.groups; track group.id) {
-                      <option [ngValue]="group.id">{{ group.name }}</option>
-                    }
-                  </select>
-                </td>
-                <td class="numeric">{{ team.pointsAdjustment }}</td>
-                <td>
-                  <button type="button" class="danger" (click)="removeTeam(team.id)">Remove</button>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="muted">No teams yet.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <div class="team-rows">
+          @for (team of data.teams; track team.id) {
+            <div class="team-row">
+              <div class="team-main">
+                <strong>{{ team.name }}</strong>
+                <span class="muted">
+                  {{ team.shortName ?? 'No short name' }}
+                  @if (team.pointsAdjustment !== 0) {
+                    &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }} pts
+                  }
+                </span>
+              </div>
+              <div class="controls">
+                <select
+                  [ngModel]="team.groupId"
+                  (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
+                >
+                  <option [ngValue]="null">Unassigned</option>
+                  @for (group of data.groups; track group.id) {
+                    <option [ngValue]="group.id">{{ group.name }}</option>
+                  }
+                </select>
+                <button type="button" class="danger" (click)="removeTeam(team.id)">Remove</button>
+              </div>
+            </div>
+          } @empty {
+            <p class="muted">No teams yet.</p>
+          }
+        </div>
 
-        <div class="row">
-          <input class="narrow" [(ngModel)]="newTeamName" placeholder="Team name" />
+        <div class="add-team">
+          <input [(ngModel)]="newTeamName" placeholder="Team name" />
           <input class="tiny-input" [(ngModel)]="newTeamShort" placeholder="ABC" maxlength="10" />
-          <select [(ngModel)]="newTeamGroupId" class="narrow">
+          <select [(ngModel)]="newTeamGroupId">
             <option [ngValue]="null">Unassigned</option>
             @for (group of data.groups; track group.id) {
               <option [ngValue]="group.id">{{ group.name }}</option>
@@ -232,9 +223,9 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
                   <span class="muted">No players yet.</span>
                 }
               </div>
-              <div class="row">
-                <input class="narrow" [(ngModel)]="playerDrafts[team.id]" placeholder="Player name" />
-                <button type="button" (click)="addPlayer(team.id)">Add player</button>
+              <div class="add-player">
+                <input [(ngModel)]="playerDrafts[team.id]" placeholder="Player name" />
+                <button type="button" (click)="addPlayer(team.id)">Add</button>
               </div>
             </div>
           }
@@ -277,7 +268,7 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
       <p class="muted">Loading...</p>
     }
   `,
-  styles: `
+    styles: `
     .heading {
       margin-bottom: 1.25rem;
     }
@@ -287,23 +278,75 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
     }
 
     section.card {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
     }
 
     .toggles {
-      gap: 1.25rem;
+      gap: 0.5rem;
+      display: grid;
     }
 
     .narrow {
-      max-width: 220px;
+      width: 100%;
+    }
+
+    .add-team {
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 0.5rem;
+    }
+
+    .add-team button,
+    .add-team select {
+      grid-column: 1 / -1;
+    }
+
+    .add-player {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+    }
+
+    .team-rows {
+      display: grid;
+    }
+
+    .team-row {
+      display: grid;
+      gap: 0.5rem;
+      padding-block: 0.7rem;
+      border-bottom: 1px solid var(--surface-line);
+    }
+
+    .team-main {
+      display: grid;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+
+    .team-main strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .team-main span {
+      font-size: 0.8rem;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
     }
 
     .tiny-input {
-      max-width: 90px;
+      max-width: 100%;
     }
 
     .tiny {
-      padding: 0 0.25rem;
+      padding: 0 0.35rem;
+      min-height: 0;
       border: none;
       background: transparent;
       line-height: 1;
@@ -317,14 +360,26 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
     .rule {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.35rem;
       background: var(--surface-raised);
       border-radius: 10px;
-      padding: 0.35rem 0.6rem;
+      padding: 0.35rem 0.5rem;
     }
 
     .rule span {
       flex: 1;
+      font-size: 0.9rem;
+    }
+
+    .rule button {
+      min-height: 38px;
+      padding-inline: 0.6rem;
+    }
+
+    .add-rule {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
     }
 
     .squad {
@@ -341,279 +396,334 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
     h4 {
       margin: 0;
     }
+
+    @media (min-width: 700px) {
+      section.card {
+        margin-bottom: 1.25rem;
+      }
+
+      .toggles {
+        display: flex;
+        gap: 1.25rem;
+      }
+
+      .narrow {
+        max-width: 220px;
+      }
+
+      .add-team {
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .add-team input,
+      .add-team select {
+        max-width: 220px;
+      }
+
+      .add-team .tiny-input {
+        max-width: 90px;
+      }
+
+      .add-team button,
+      .add-team select {
+        grid-column: auto;
+      }
+
+      .add-player {
+        max-width: 420px;
+      }
+
+      .add-rule {
+        max-width: 420px;
+      }
+
+      .team-row {
+        grid-template-columns: 1fr 200px auto;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      /* display: contents lets the select and button join the parent grid on wide screens. */
+      .controls {
+        display: contents;
+      }
+    }
   `,
 })
 export class AdminSetup implements OnInit {
-  readonly slug = input.required<string>();
+    readonly slug = input.required<string>();
 
-  private readonly api = inject(ApiService);
-  protected readonly store = inject(TournamentStore);
-  protected readonly detail = this.store.detail;
+    private readonly api = inject(ApiService);
+    protected readonly store = inject(TournamentStore);
+    protected readonly detail = this.store.detail;
 
-  protected readonly busy = signal(false);
-  protected readonly message = signal<string | null>(null);
-  protected readonly fixtureMessage = signal<string | null>(null);
-  protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
+    protected readonly busy = signal(false);
+    protected readonly message = signal<string | null>(null);
+    protected readonly fixtureMessage = signal<string | null>(null);
+    protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
 
-  protected readonly allRules: TiebreakerRule[] = [
-    'GoalDifference',
-    'GoalsScored',
-    'GoalsConceded',
-    'Wins',
-    'HeadToHeadPoints',
-    'HeadToHeadGoalDifference',
-    'HeadToHeadGoalsScored',
-    'DisciplinaryPoints',
-    'TeamName',
-  ];
+    protected readonly allRules: TiebreakerRule[] = [
+        'GoalDifference',
+        'GoalsScored',
+        'GoalsConceded',
+        'Wins',
+        'HeadToHeadPoints',
+        'HeadToHeadGoalDifference',
+        'HeadToHeadGoalsScored',
+        'DisciplinaryPoints',
+        'TeamName',
+    ];
 
-  protected readonly availableRules = computed(() =>
-    this.allRules.filter((rule) => !this.tiebreakers().includes(rule)),
-  );
-
-  protected ruleToAdd: TiebreakerRule = 'GoalDifference';
-  protected newGroupName = '';
-  protected newTeamName = '';
-  protected newTeamShort = '';
-  protected newTeamGroupId: number | null = null;
-  protected playerDrafts: Record<number, string> = {};
-  protected generateGroups = true;
-  protected generateKnockout = true;
-  protected replaceExisting = false;
-
-  protected settings: SaveTournamentRequest = {
-    name: '',
-    slug: null,
-    description: null,
-    season: new Date().getFullYear(),
-    format: 'GroupsThenKnockout',
-    status: 'Draft',
-    pointsForWin: 3,
-    pointsForDraw: 1,
-    pointsForLoss: 0,
-    groupRounds: 1,
-    teamsAdvancingPerGroup: 2,
-    includeBestThirdPlaced: false,
-    hasThirdPlacePlayOff: false,
-    trackPlayers: false,
-    trackCards: false,
-    matchDurationMinutes: 90,
-    tiebreakers: null,
-  };
-
-  async ngOnInit(): Promise<void> {
-    await this.store.load(this.slug());
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
-
-    this.settings = {
-      ...this.settings,
-      name: data.tournament.name,
-      slug: data.tournament.slug,
-      description: data.tournament.description,
-      season: data.tournament.season,
-      format: data.tournament.format,
-      status: data.tournament.status,
-      trackPlayers: data.tournament.trackPlayers,
-    };
-
-    this.tiebreakers.set(['GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'Wins', 'TeamName']);
-  }
-
-  tiebreakerLabel(rule: TiebreakerRule): string {
-    const labels: Record<TiebreakerRule, string> = {
-      GoalDifference: 'Goal difference',
-      GoalsScored: 'Goals scored',
-      GoalsConceded: 'Fewest goals conceded',
-      Wins: 'Most wins',
-      HeadToHeadPoints: 'Head-to-head points',
-      HeadToHeadGoalDifference: 'Head-to-head goal difference',
-      HeadToHeadGoalsScored: 'Head-to-head goals scored',
-      DisciplinaryPoints: 'Fewest disciplinary points',
-      TeamName: 'Alphabetical',
-    };
-
-    return labels[rule];
-  }
-
-  addRule(): void {
-    if (this.ruleToAdd && !this.tiebreakers().includes(this.ruleToAdd)) {
-      this.tiebreakers.update((rules) => [...rules, this.ruleToAdd]);
-    }
-  }
-
-  removeRule(index: number): void {
-    this.tiebreakers.update((rules) => rules.filter((_, position) => position !== index));
-  }
-
-  moveRule(index: number, offset: number): void {
-    this.tiebreakers.update((rules) => {
-      const next = [...rules];
-      const target = index + offset;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
-  async saveSettings(): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
-
-    this.busy.set(true);
-    this.message.set(null);
-
-    try {
-      await firstValueFrom(
-        this.api.updateTournament(data.tournament.id, {
-          ...this.settings,
-          tiebreakers: this.tiebreakers(),
-        }),
-      );
-      await this.store.reload();
-      this.message.set('Saved.');
-    } catch {
-      this.message.set('Could not save the rules.');
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async addGroup(): Promise<void> {
-    const data = this.detail();
-    if (!data || !this.newGroupName.trim()) {
-      return;
-    }
-
-    await firstValueFrom(
-      this.api.createGroup(data.tournament.id, this.newGroupName.trim(), data.groups.length),
-    );
-    this.newGroupName = '';
-    await this.store.reload();
-  }
-
-  async removeGroup(groupId: number): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
-
-    await firstValueFrom(this.api.deleteGroup(data.tournament.id, groupId));
-    await this.store.reload();
-  }
-
-  async addTeam(): Promise<void> {
-    const data = this.detail();
-    if (!data || !this.newTeamName.trim()) {
-      return;
-    }
-
-    await firstValueFrom(
-      this.api.saveTeam(data.tournament.id, null, {
-        name: this.newTeamName.trim(),
-        shortName: this.newTeamShort.trim() || null,
-        groupId: this.newTeamGroupId,
-      }),
+    protected readonly availableRules = computed(() =>
+        this.allRules.filter((rule) => !this.tiebreakers().includes(rule)),
     );
 
-    this.newTeamName = '';
-    this.newTeamShort = '';
-    await this.store.reload();
-  }
+    protected ruleToAdd: TiebreakerRule | null = null;
+    protected newGroupName = '';
+    protected newTeamName = '';
+    protected newTeamShort = '';
+    protected newTeamGroupId: number | null = null;
+    protected playerDrafts: Record<number, string> = {};
+    protected generateGroups = true;
+    protected generateKnockout = true;
+    protected replaceExisting = false;
 
-  async assignGroup(
-    teamId: number,
-    name: string,
-    shortName: string | null,
-    groupId: number | null,
-  ): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
+    protected settings: SaveTournamentRequest = {
+        name: '',
+        slug: null,
+        description: null,
+        season: new Date().getFullYear(),
+        format: 'GroupsThenKnockout',
+        status: 'Draft',
+        pointsForWin: 3,
+        pointsForDraw: 1,
+        pointsForLoss: 0,
+        groupRounds: 1,
+        teamsAdvancingPerGroup: 2,
+        includeBestThirdPlaced: false,
+        hasThirdPlacePlayOff: false,
+        trackPlayers: false,
+        trackCards: false,
+        matchDurationMinutes: 90,
+        tiebreakers: null,
+    };
+
+    async ngOnInit(): Promise<void> {
+        await this.store.load(this.slug());
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        this.settings = {
+            ...this.settings,
+            name: data.tournament.name,
+            slug: data.tournament.slug,
+            description: data.tournament.description,
+            season: data.tournament.season,
+            format: data.tournament.format,
+            status: data.tournament.status,
+            trackPlayers: data.tournament.trackPlayers,
+        };
+
+        this.tiebreakers.set(['GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'Wins', 'TeamName']);
     }
 
-    await firstValueFrom(this.api.saveTeam(data.tournament.id, teamId, { name, shortName, groupId }));
-    await this.store.reload();
-  }
+    tiebreakerLabel(rule: TiebreakerRule): string {
+        const labels: Record<TiebreakerRule, string> = {
+            GoalDifference: 'Goal difference',
+            GoalsScored: 'Goals scored',
+            GoalsConceded: 'Fewest goals conceded',
+            Wins: 'Most wins',
+            HeadToHeadPoints: 'Head-to-head points',
+            HeadToHeadGoalDifference: 'Head-to-head goal difference',
+            HeadToHeadGoalsScored: 'Head-to-head goals scored',
+            DisciplinaryPoints: 'Fewest disciplinary points',
+            TeamName: 'Alphabetical',
+        };
 
-  async removeTeam(teamId: number): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
+        return labels[rule];
     }
 
-    try {
-      await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
-      await this.store.reload();
-    } catch {
-      this.message.set('Delete the team fixtures before removing the team.');
-    }
-  }
-
-  async addPlayer(teamId: number): Promise<void> {
-    const name = (this.playerDrafts[teamId] ?? '').trim();
-    if (!name) {
-      return;
+    addRule(): void {
+        const rule = this.ruleToAdd ?? this.availableRules()[0];
+        if (rule && !this.tiebreakers().includes(rule)) {
+            this.tiebreakers.update((rules) => [...rules, rule]);
+            this.ruleToAdd = null;
+        }
     }
 
-    await firstValueFrom(this.api.savePlayer(null, { teamId, name }));
-    this.playerDrafts[teamId] = '';
-    await this.store.reload();
-  }
-
-  async removePlayer(playerId: number): Promise<void> {
-    await firstValueFrom(this.api.deletePlayer(playerId));
-    await this.store.reload();
-  }
-
-  async generate(): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
+    removeRule(index: number): void {
+        this.tiebreakers.update((rules) => rules.filter((_, position) => position !== index));
     }
 
-    this.busy.set(true);
-    this.fixtureMessage.set(null);
-
-    try {
-      const result = await firstValueFrom(
-        this.api.generateFixtures(
-          data.tournament.id,
-          this.generateGroups,
-          this.generateKnockout,
-          this.replaceExisting,
-        ),
-      );
-      await this.store.reload();
-      this.fixtureMessage.set(`Generated ${result.generated} fixtures.`);
-    } catch {
-      this.fixtureMessage.set(
-        'Fixtures already exist. Tick "replace existing fixtures" to regenerate them.',
-      );
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async seedKnockout(): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
+    moveRule(index: number, offset: number): void {
+        this.tiebreakers.update((rules) => {
+            const next = [...rules];
+            const target = index + offset;
+            [next[index], next[target]] = [next[target], next[index]];
+            return next;
+        });
     }
 
-    this.busy.set(true);
+    async saveSettings(): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
 
-    try {
-      const result = await firstValueFrom(this.api.seedKnockout(data.tournament.id));
-      await this.store.reload();
-      this.fixtureMessage.set(`Filled ${result.seeded} knockout ties from the group tables.`);
-    } catch {
-      this.fixtureMessage.set('The knockout bracket could not be seeded.');
-    } finally {
-      this.busy.set(false);
+        this.busy.set(true);
+        this.message.set(null);
+
+        try {
+            await firstValueFrom(
+                this.api.updateTournament(data.tournament.id, {
+                    ...this.settings,
+                    tiebreakers: this.tiebreakers(),
+                }),
+            );
+            await this.store.reload();
+            this.message.set('Saved.');
+        } catch {
+            this.message.set('Could not save the rules.');
+        } finally {
+            this.busy.set(false);
+        }
     }
-  }
+
+    async addGroup(): Promise<void> {
+        const data = this.detail();
+        if (!data || !this.newGroupName.trim()) {
+            return;
+        }
+
+        await firstValueFrom(
+            this.api.createGroup(data.tournament.id, this.newGroupName.trim(), data.groups.length),
+        );
+        this.newGroupName = '';
+        await this.store.reload();
+    }
+
+    async removeGroup(groupId: number): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        await firstValueFrom(this.api.deleteGroup(data.tournament.id, groupId));
+        await this.store.reload();
+    }
+
+    async addTeam(): Promise<void> {
+        const data = this.detail();
+        if (!data || !this.newTeamName.trim()) {
+            return;
+        }
+
+        await firstValueFrom(
+            this.api.saveTeam(data.tournament.id, null, {
+                name: this.newTeamName.trim(),
+                shortName: this.newTeamShort.trim() || null,
+                groupId: this.newTeamGroupId,
+            }),
+        );
+
+        this.newTeamName = '';
+        this.newTeamShort = '';
+        await this.store.reload();
+    }
+
+    async assignGroup(
+        teamId: number,
+        name: string,
+        shortName: string | null,
+        groupId: number | null,
+    ): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        await firstValueFrom(this.api.saveTeam(data.tournament.id, teamId, { name, shortName, groupId }));
+        await this.store.reload();
+    }
+
+    async removeTeam(teamId: number): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        try {
+            await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
+            await this.store.reload();
+        } catch {
+            this.message.set('Delete the team fixtures before removing the team.');
+        }
+    }
+
+    async addPlayer(teamId: number): Promise<void> {
+        const name = (this.playerDrafts[teamId] ?? '').trim();
+        if (!name) {
+            return;
+        }
+
+        await firstValueFrom(this.api.savePlayer(null, { teamId, name }));
+        this.playerDrafts[teamId] = '';
+        await this.store.reload();
+    }
+
+    async removePlayer(playerId: number): Promise<void> {
+        await firstValueFrom(this.api.deletePlayer(playerId));
+        await this.store.reload();
+    }
+
+    async generate(): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        this.busy.set(true);
+        this.fixtureMessage.set(null);
+
+        try {
+            const result = await firstValueFrom(
+                this.api.generateFixtures(
+                    data.tournament.id,
+                    this.generateGroups,
+                    this.generateKnockout,
+                    this.replaceExisting,
+                ),
+            );
+            await this.store.reload();
+            this.fixtureMessage.set(`Generated ${result.generated} fixtures.`);
+        } catch {
+            this.fixtureMessage.set(
+                'Fixtures already exist. Tick "replace existing fixtures" to regenerate them.',
+            );
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    async seedKnockout(): Promise<void> {
+        const data = this.detail();
+        if (!data) {
+            return;
+        }
+
+        this.busy.set(true);
+
+        try {
+            const result = await firstValueFrom(this.api.seedKnockout(data.tournament.id));
+            await this.store.reload();
+            this.fixtureMessage.set(`Filled ${result.seeded} knockout ties from the group tables.`);
+        } catch {
+            this.fixtureMessage.set('The knockout bracket could not be seeded.');
+        } finally {
+            this.busy.set(false);
+        }
+    }
 }

@@ -3,9 +3,9 @@ import { Component, input } from '@angular/core';
 import { Match } from '../core/models';
 
 @Component({
-  selector: 'app-match-card',
-  imports: [DatePipe],
-  template: `
+    selector: 'app-match-card',
+    imports: [DatePipe],
+    template: `
     <article class="match" [class.is-live]="isLive()">
       <div class="meta">
         <span>{{ match().groupName ?? stageLabel() }}</span>
@@ -58,7 +58,7 @@ import { Match } from '../core/models';
       }
     </article>
   `,
-  styles: `
+    styles: `
     .match {
       background: var(--surface);
       border: 1px solid var(--surface-line);
@@ -136,45 +136,45 @@ import { Match } from '../core/models';
   `,
 })
 export class MatchCard {
-  readonly match = input.required<Match>();
+    readonly match = input.required<Match>();
 
-  isLive(): boolean {
-    return this.match().status === 'Live' || this.match().status === 'HalfTime';
-  }
+    isLive(): boolean {
+        return this.match().status === 'Live' || this.match().status === 'HalfTime';
+    }
 
-  minuteLabel(): string {
-    const minute = this.match().liveMinute;
-    return minute === null ? 'Live' : `${minute}'`;
-  }
+    minuteLabel(): string {
+        const minute = this.match().liveMinute;
+        return minute === null ? 'Live' : `${minute}'`;
+    }
 
-  statusLabel(): string {
-    const labels: Record<string, string> = {
-      Scheduled: 'Scheduled',
-      Finished: 'Full time',
-      Postponed: 'Postponed',
-      Abandoned: 'Abandoned',
-    };
+    statusLabel(): string {
+        const labels: Record<string, string> = {
+            Scheduled: 'Scheduled',
+            Finished: 'Full time',
+            Postponed: 'Postponed',
+            Abandoned: 'Abandoned',
+        };
 
-    return labels[this.match().status] ?? this.match().status;
-  }
+        return labels[this.match().status] ?? this.match().status;
+    }
 
-  stageLabel(): string {
-    const labels: Record<string, string> = {
-      Group: 'Group stage',
-      RoundOf32: 'Round of 32',
-      RoundOf16: 'Round of 16',
-      QuarterFinal: 'Quarter-final',
-      SemiFinal: 'Semi-final',
-      ThirdPlacePlayOff: 'Third place',
-      Final: 'Final',
-    };
+    stageLabel(): string {
+        const labels: Record<string, string> = {
+            Group: 'Group stage',
+            RoundOf32: 'Round of 32',
+            RoundOf16: 'Round of 16',
+            QuarterFinal: 'Quarter-final',
+            SemiFinal: 'Semi-final',
+            ThirdPlacePlayOff: 'Third place',
+            Final: 'Final',
+        };
 
-    return labels[this.match().stage] ?? this.match().stage;
-  }
+        return labels[this.match().stage] ?? this.match().stage;
+    }
 
-  goalEvents() {
-    return this.match().events.filter(
-      (event) => event.type === 'Goal' || event.type === 'OwnGoal' || event.type === 'PenaltyGoal',
-    );
-  }
+    goalEvents() {
+        return this.match().events.filter(
+            (event) => event.type === 'Goal' || event.type === 'OwnGoal' || event.type === 'PenaltyGoal',
+        );
+    }
 }

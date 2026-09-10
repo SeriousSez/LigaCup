@@ -8,9 +8,9 @@ import { StandingsTable } from '../../shared/standings-table';
 type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
 @Component({
-  selector: 'app-tournament',
-  imports: [RouterLink, StandingsTable, MatchCard],
-  template: `
+    selector: 'app-tournament',
+    imports: [RouterLink, StandingsTable, MatchCard],
+    template: `
     @if (store.loading()) {
       <p class="muted">Loading...</p>
     } @else if (store.error()) {
@@ -139,31 +139,48 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
       }
     }
   `,
-  styles: `
+    styles: `
     .heading {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .heading p {
       margin: 0;
+      font-size: 0.9rem;
     }
 
     .live-strip {
-      margin-bottom: 1.75rem;
+      margin-bottom: 1.25rem;
     }
 
+    /* Sticks under the site header so switching view never needs a scroll back up. */
     .tabs {
       display: flex;
-      gap: 0.4rem;
-      margin-bottom: 1.25rem;
+      gap: 0.35rem;
+      margin-bottom: 1rem;
       overflow-x: auto;
-      padding-bottom: 0.25rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      position: sticky;
+      top: var(--header-h);
+      z-index: 5;
+      background: var(--pitch-900);
+      padding-block: 0.5rem;
+      margin-inline: calc(var(--gutter) * -1);
+      padding-inline: var(--gutter);
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
     }
 
     .tabs button {
       background: transparent;
       border-color: transparent;
       color: var(--text-muted);
+      white-space: nowrap;
+      flex: none;
+      padding-inline: 0.75rem;
     }
 
     .tabs button.active {
@@ -174,99 +191,112 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
     .tables-grid {
       display: grid;
-      gap: 1rem;
-      grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
-    }
-
-    @media (max-width: 560px) {
-      .tables-grid {
-        grid-template-columns: 1fr;
-      }
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(min(520px, 100%), 1fr));
     }
 
     .bracket {
-      display: flex;
-      gap: 1rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
+      display: grid;
+      gap: 1.25rem;
     }
 
     .stage {
-      min-width: 280px;
       display: grid;
       gap: 0.75rem;
       align-content: start;
     }
+
+    @media (min-width: 700px) {
+      .heading {
+        margin-bottom: 1.5rem;
+      }
+
+      .tables-grid {
+        gap: 1rem;
+      }
+
+      /* Wide screens show the rounds side by side like a real bracket. */
+      .bracket {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+
+      .stage {
+        min-width: 280px;
+      }
+    }
   `,
 })
 export class Tournament implements OnInit {
-  readonly slug = input.required<string>();
+    readonly slug = input.required<string>();
 
-  protected readonly store = inject(TournamentStore);
-  protected readonly auth = inject(AuthService);
-  protected readonly tab = signal<Tab>('tables');
+    protected readonly store = inject(TournamentStore);
+    protected readonly auth = inject(AuthService);
+    protected readonly tab = signal<Tab>('tables');
 
-  protected readonly tabs: { id: Tab; label: string }[] = [
-    { id: 'tables', label: 'Tables' },
-    { id: 'fixtures', label: 'Fixtures & results' },
-    { id: 'bracket', label: 'Knockout' },
-    { id: 'scorers', label: 'Top scorers' },
-  ];
+    protected readonly tabs: { id: Tab; label: string }[] = [
+        { id: 'tables', label: 'Tables' },
+        { id: 'fixtures', label: 'Fixtures & results' },
+        { id: 'bracket', label: 'Knockout' },
+        { id: 'scorers', label: 'Top scorers' },
+    ];
 
-  protected readonly detail = this.store.detail;
-  protected readonly liveMatches = this.store.liveMatches;
+    protected readonly detail = this.store.detail;
+    protected readonly liveMatches = this.store.liveMatches;
 
-  protected readonly fixtureRounds = computed(() => {
-    const matches = this.detail()?.matches ?? [];
-    const buckets = new Map<string, typeof matches>();
+    protected readonly fixtureRounds = computed(() => {
+        const matches = this.detail()?.matches ?? [];
+        const buckets = new Map<string, typeof matches>();
 
-    for (const match of matches) {
-      const key =
-        match.stage === 'Group'
-          ? `${match.groupName ?? 'League'} - matchday ${match.round}`
-          : this.stageLabel(match.stage);
+        for (const match of matches) {
+            const key =
+                match.stage === 'Group'
+                    ? `${match.groupName ?? 'League'} - matchday ${match.round}`
+                    : this.stageLabel(match.stage);
 
-      buckets.set(key, [...(buckets.get(key) ?? []), match]);
+            buckets.set(key, [...(buckets.get(key) ?? []), match]);
+        }
+
+        return [...buckets.entries()].map(([key, group]) => ({ key, matches: group }));
+    });
+
+    protected readonly bracketStages = computed(() => {
+        const bracket = this.detail()?.bracket ?? [];
+        const buckets = new Map<string, typeof bracket>();
+
+        for (const item of bracket) {
+            buckets.set(item.stageName, [...(buckets.get(item.stageName) ?? []), item]);
+        }
+
+        return [...buckets.entries()].map(([key, matches]) => ({ key, matches }));
+    });
+
+    ngOnInit(): void {
+        void this.store.load(this.slug());
     }
 
-    return [...buckets.entries()].map(([key, group]) => ({ key, matches: group }));
-  });
+    formatLabel(format: string): string {
+        const labels: Record<string, string> = {
+            GroupsOnly: 'Group stage only',
+            GroupsThenKnockout: 'Groups then knockout',
+            KnockoutOnly: 'Straight knockout',
+        };
 
-  protected readonly bracketStages = computed(() => {
-    const bracket = this.detail()?.bracket ?? [];
-    const buckets = new Map<string, typeof bracket>();
-
-    for (const item of bracket) {
-      buckets.set(item.stageName, [...(buckets.get(item.stageName) ?? []), item]);
+        return labels[format] ?? format;
     }
 
-    return [...buckets.entries()].map(([key, matches]) => ({ key, matches }));
-  });
+    private stageLabel(stage: string): string {
+        const labels: Record<string, string> = {
+            RoundOf32: 'Round of 32',
+            RoundOf16: 'Round of 16',
+            QuarterFinal: 'Quarter-finals',
+            SemiFinal: 'Semi-finals',
+            ThirdPlacePlayOff: 'Third place play-off',
+            Final: 'Final',
+        };
 
-  ngOnInit(): void {
-    void this.store.load(this.slug());
-  }
-
-  formatLabel(format: string): string {
-    const labels: Record<string, string> = {
-      GroupsOnly: 'Group stage only',
-      GroupsThenKnockout: 'Groups then knockout',
-      KnockoutOnly: 'Straight knockout',
-    };
-
-    return labels[format] ?? format;
-  }
-
-  private stageLabel(stage: string): string {
-    const labels: Record<string, string> = {
-      RoundOf32: 'Round of 32',
-      RoundOf16: 'Round of 16',
-      QuarterFinal: 'Quarter-finals',
-      SemiFinal: 'Semi-finals',
-      ThirdPlacePlayOff: 'Third place play-off',
-      Final: 'Final',
-    };
-
-    return labels[stage] ?? stage;
-  }
+        return labels[stage] ?? stage;
+    }
 }

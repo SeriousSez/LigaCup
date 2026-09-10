@@ -5,9 +5,9 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
-  selector: 'app-home',
-  imports: [RouterLink],
-  template: `
+    selector: 'app-home',
+    imports: [RouterLink],
+    template: `
     <section class="hero card">
       <h1>Liga Cup</h1>
       <p class="muted">
@@ -44,7 +44,7 @@ import { AuthService } from '../../core/auth.service';
       <p class="muted">Loading tournaments...</p>
     }
   `,
-  styles: `
+    styles: `
     .hero {
       margin-bottom: 1.5rem;
       display: grid;
@@ -80,12 +80,12 @@ import { AuthService } from '../../core/auth.service';
   `,
 })
 export class Home {
-  protected readonly auth = inject(AuthService);
-  private readonly api = inject(ApiService);
+    protected readonly auth = inject(AuthService);
+    private readonly api = inject(ApiService);
 
-  protected readonly tournaments = toSignal(this.api.getTournaments());
+    protected readonly tournaments = toSignal(this.api.getTournaments());
 
-  statusLabel(status: string): string {
-    return status === 'InProgress' ? 'In progress' : status;
-  }
+    statusLabel(status: string): string {
+        return status === 'InProgress' ? 'In progress' : status;
+    }
 }

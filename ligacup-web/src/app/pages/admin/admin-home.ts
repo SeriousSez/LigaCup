@@ -6,9 +6,9 @@ import { ApiService } from '../../core/api.service';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 @Component({
-  selector: 'app-admin-home',
-  imports: [RouterLink, FormsModule],
-  template: `
+    selector: 'app-admin-home',
+    imports: [RouterLink, FormsModule],
+    template: `
     <h1>Admin</h1>
 
     <section class="card stack create">
@@ -69,7 +69,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
       </div>
     </section>
   `,
-  styles: `
+    styles: `
     .create {
       margin-bottom: 1.75rem;
     }
@@ -80,64 +80,64 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
   `,
 })
 export class AdminHome {
-  private readonly api = inject(ApiService);
+    private readonly api = inject(ApiService);
 
-  protected readonly tournaments = signal<TournamentSummary[]>([]);
-  protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+    protected readonly tournaments = signal<TournamentSummary[]>([]);
+    protected readonly busy = signal(false);
+    protected readonly error = signal<string | null>(null);
 
-  protected draft = {
-    name: '',
-    season: new Date().getFullYear(),
-    format: 'GroupsThenKnockout' as TournamentFormat,
-    trackPlayers: false,
-  };
-
-  constructor() {
-    void this.refresh();
-  }
-
-  async refresh(): Promise<void> {
-    this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
-  }
-
-  async create(): Promise<void> {
-    if (!this.draft.name.trim()) {
-      this.error.set('Give the tournament a name first.');
-      return;
-    }
-
-    this.busy.set(true);
-    this.error.set(null);
-
-    const request: SaveTournamentRequest = {
-      name: this.draft.name.trim(),
-      slug: null,
-      description: null,
-      season: this.draft.season,
-      format: this.draft.format,
-      status: 'Draft',
-      pointsForWin: 3,
-      pointsForDraw: 1,
-      pointsForLoss: 0,
-      groupRounds: 1,
-      teamsAdvancingPerGroup: 2,
-      includeBestThirdPlaced: false,
-      hasThirdPlacePlayOff: false,
-      trackPlayers: this.draft.trackPlayers,
-      trackCards: false,
-      matchDurationMinutes: 90,
-      tiebreakers: null,
+    protected draft = {
+        name: '',
+        season: new Date().getFullYear(),
+        format: 'GroupsThenKnockout' as TournamentFormat,
+        trackPlayers: false,
     };
 
-    try {
-      await firstValueFrom(this.api.createTournament(request));
-      this.draft.name = '';
-      await this.refresh();
-    } catch {
-      this.error.set('The tournament could not be created.');
-    } finally {
-      this.busy.set(false);
+    constructor() {
+        void this.refresh();
     }
-  }
+
+    async refresh(): Promise<void> {
+        this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
+    }
+
+    async create(): Promise<void> {
+        if (!this.draft.name.trim()) {
+            this.error.set('Give the tournament a name first.');
+            return;
+        }
+
+        this.busy.set(true);
+        this.error.set(null);
+
+        const request: SaveTournamentRequest = {
+            name: this.draft.name.trim(),
+            slug: null,
+            description: null,
+            season: this.draft.season,
+            format: this.draft.format,
+            status: 'Draft',
+            pointsForWin: 3,
+            pointsForDraw: 1,
+            pointsForLoss: 0,
+            groupRounds: 1,
+            teamsAdvancingPerGroup: 2,
+            includeBestThirdPlaced: false,
+            hasThirdPlacePlayOff: false,
+            trackPlayers: this.draft.trackPlayers,
+            trackCards: false,
+            matchDurationMinutes: 90,
+            tiebreakers: null,
+        };
+
+        try {
+            await firstValueFrom(this.api.createTournament(request));
+            this.draft.name = '';
+            await this.refresh();
+        } catch {
+            this.error.set('The tournament could not be created.');
+        } finally {
+            this.busy.set(false);
+        }
+    }
 }

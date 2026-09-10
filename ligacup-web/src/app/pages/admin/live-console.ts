@@ -7,23 +7,23 @@ import { TournamentStore } from '../../core/tournament.store';
 import { Match, MatchEventType, MatchStatus } from '../../core/models';
 
 @Component({
-  selector: 'app-live-console',
-  imports: [FormsModule, RouterLink],
-  template: `
+    selector: 'app-live-console',
+    imports: [FormsModule, RouterLink],
+    template: `
     @if (detail(); as data) {
-      <section class="spread heading">
-        <div>
+      <section class="heading">
+        <div class="spread">
           <h1>Live console</h1>
-          <p class="muted">{{ data.tournament.name }}</p>
-        </div>
-        <div class="row">
           <span class="badge" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
-              <span class="pulse"></span> Connected
+              <span class="pulse"></span> Live
             } @else {
               {{ store.connectionState() === 'connecting' ? 'Connecting' : 'Offline' }}
             }
           </span>
+        </div>
+        <p class="muted">{{ data.tournament.name }}</p>
+        <div class="links">
           <a [routerLink]="['/admin', data.tournament.slug]"><button type="button">Setup</button></a>
           <a [routerLink]="['/', data.tournament.slug]">
             <button class="ghost" type="button">Public page</button>
@@ -31,7 +31,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
         </div>
       </section>
 
-      <section class="card stack picker">
+      <section class="card picker">
         <label>
           Match
           <select [ngModel]="selectedId()" (ngModelChange)="selectedId.set(+$event)">
@@ -46,35 +46,43 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
 
       @if (selected(); as match) {
         <section class="card control">
+          <div class="clock">
+            @if (match.status === 'Live') {
+              <span class="badge live"><span class="pulse"></span> {{ match.liveMinute }}'</span>
+            } @else {
+              <span class="badge">{{ statusLabel(match.status) }}</span>
+            }
+          </div>
+
           <div class="scorer">
             <div class="team">
               <span class="name">{{ match.homeTeamName }}</span>
               <div class="counter">
-                <button type="button" (click)="adjust(match.id, 'home', -1)">&minus;</button>
+                <button type="button" aria-label="Remove a home goal" (click)="adjust(match.id, 'home', -1)">
+                  &minus;
+                </button>
                 <span class="value">{{ match.homeScore }}</span>
-                <button class="primary" type="button" (click)="adjust(match.id, 'home', 1)">+</button>
+                <button class="primary" type="button" aria-label="Add a home goal" (click)="adjust(match.id, 'home', 1)">
+                  +
+                </button>
               </div>
-            </div>
-
-            <div class="clock">
-              @if (match.status === 'Live') {
-                <span class="badge live"><span class="pulse"></span> {{ match.liveMinute }}'</span>
-              } @else {
-                <span class="badge">{{ match.status }}</span>
-              }
             </div>
 
             <div class="team">
               <span class="name">{{ match.awayTeamName }}</span>
               <div class="counter">
-                <button type="button" (click)="adjust(match.id, 'away', -1)">&minus;</button>
+                <button type="button" aria-label="Remove an away goal" (click)="adjust(match.id, 'away', -1)">
+                  &minus;
+                </button>
                 <span class="value">{{ match.awayScore }}</span>
-                <button class="primary" type="button" (click)="adjust(match.id, 'away', 1)">+</button>
+                <button class="primary" type="button" aria-label="Add an away goal" (click)="adjust(match.id, 'away', 1)">
+                  +
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="row statuses">
+          <div class="statuses">
             @for (status of statuses; track status) {
               <button
                 type="button"
@@ -90,11 +98,11 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
             <div class="form-grid">
               <label>
                 Home penalties
-                <input type="number" min="0" [(ngModel)]="homePenalties" />
+                <input type="number" inputmode="numeric" min="0" [(ngModel)]="homePenalties" />
               </label>
               <label>
                 Away penalties
-                <input type="number" min="0" [(ngModel)]="awayPenalties" />
+                <input type="number" inputmode="numeric" min="0" [(ngModel)]="awayPenalties" />
               </label>
               <div class="align-end">
                 <button type="button" (click)="savePenalties(match)">Save shootout</button>
@@ -157,32 +165,34 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
         @if (match.events.length) {
           <section class="card stack">
             <h3>Event feed</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th class="numeric">Min</th>
-                  <th>Type</th>
-                  <th>Team</th>
-                  <th>Player</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (event of match.events; track event.id) {
+            <div class="scroll-x">
+              <table>
+                <thead>
                   <tr>
-                    <td class="numeric">{{ event.minute }}'</td>
-                    <td>{{ event.type }}</td>
-                    <td>{{ event.teamName }}</td>
-                    <td class="muted">{{ event.playerName ?? '-' }}</td>
-                    <td>
-                      <button type="button" class="danger" (click)="removeEvent(match.id, event.id)">
-                        Undo
-                      </button>
-                    </td>
+                    <th class="numeric">Min</th>
+                    <th>Type</th>
+                    <th>Team</th>
+                    <th>Player</th>
+                    <th></th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (event of match.events; track event.id) {
+                    <tr>
+                      <td class="numeric">{{ event.minute }}'</td>
+                      <td>{{ event.type }}</td>
+                      <td>{{ event.teamName }}</td>
+                      <td class="muted">{{ event.playerName ?? '-' }}</td>
+                      <td>
+                        <button type="button" class="danger" (click)="removeEvent(match.id, event.id)">
+                          Undo
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           </section>
         }
 
@@ -216,33 +226,58 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
       <p class="muted">Loading...</p>
     }
   `,
-  styles: `
+    styles: `
     .heading {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .heading h1 {
+      margin: 0;
     }
 
     .heading p {
       margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .links {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .links a {
+      flex: 1;
+    }
+
+    .links button {
+      width: 100%;
     }
 
     section.card {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
     }
 
     .picker label {
       max-width: 520px;
     }
 
+    .clock {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 0.9rem;
+    }
+
+    /* Each team gets its own full-width row so the buttons stay thumb-sized. */
     .scorer {
       display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: 1rem;
+      gap: 0.9rem;
     }
 
     .team {
       display: grid;
-      gap: 0.6rem;
+      gap: 0.5rem;
       justify-items: center;
       text-align: center;
     }
@@ -250,37 +285,49 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
     .name {
       font-weight: 700;
       font-size: 1.05rem;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .counter {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 3ch 1fr;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.75rem;
+      width: 100%;
     }
 
     .counter button {
-      width: 46px;
-      height: 46px;
-      font-size: 1.3rem;
+      height: 60px;
+      font-size: 1.6rem;
       font-weight: 700;
+      width: 100%;
     }
 
     .value {
-      font-size: 2.4rem;
+      font-size: 2.6rem;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
-      min-width: 2ch;
       text-align: center;
+      line-height: 1;
     }
 
     .statuses {
-      justify-content: center;
-      margin-top: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      margin-top: 1.1rem;
     }
 
     .align-end {
       display: flex;
       align-items: flex-end;
+    }
+
+    .align-end button {
+      width: 100%;
     }
 
     .note {
@@ -295,104 +342,130 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
     h4 {
       margin-top: 0;
     }
+
+    @media (min-width: 700px) {
+      .heading {
+        margin-bottom: 1.25rem;
+      }
+
+      .links a {
+        flex: none;
+      }
+
+      .scorer {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+
+      .counter button {
+        height: 52px;
+        font-size: 1.4rem;
+      }
+
+      .statuses {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
   `,
 })
 export class LiveConsole implements OnInit {
-  readonly slug = input.required<string>();
+    readonly slug = input.required<string>();
 
-  private readonly api = inject(ApiService);
-  protected readonly store = inject(TournamentStore);
-  protected readonly detail = this.store.detail;
+    private readonly api = inject(ApiService);
+    protected readonly store = inject(TournamentStore);
+    protected readonly detail = this.store.detail;
 
-  protected readonly selectedId = signal<number | null>(null);
-  protected readonly eventTeamId = signal<number | null>(null);
+    protected readonly selectedId = signal<number | null>(null);
+    protected readonly eventTeamId = signal<number | null>(null);
 
-  protected readonly statuses: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
-  protected eventType: MatchEventType = 'Goal';
-  protected eventPlayerId: number | null = null;
-  protected eventMinute = 1;
-  protected homePenalties: number | null = null;
-  protected awayPenalties: number | null = null;
+    protected readonly statuses: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
+    protected eventType: MatchEventType = 'Goal';
+    protected eventPlayerId: number | null = null;
+    protected eventMinute = 1;
+    protected homePenalties: number | null = null;
+    protected awayPenalties: number | null = null;
 
-  protected readonly selected = computed(
-    () => this.detail()?.matches.find((match) => match.id === this.selectedId()) ?? null,
-  );
-
-  protected readonly squad = computed(() => {
-    const teamId = this.eventTeamId();
-    return this.detail()?.teams.find((team) => team.id === teamId)?.players ?? [];
-  });
-
-  async ngOnInit(): Promise<void> {
-    await this.store.load(this.slug());
-
-    const matches = this.detail()?.matches ?? [];
-    // Jump straight to whatever is in progress, otherwise the next kickoff.
-    const preferred =
-      matches.find((match) => match.status === 'Live' || match.status === 'HalfTime') ??
-      matches.find((match) => match.status === 'Scheduled') ??
-      matches[0];
-
-    if (preferred) {
-      this.selectedId.set(preferred.id);
-      this.eventTeamId.set(preferred.homeTeamId);
-      this.homePenalties = preferred.homePenalties;
-      this.awayPenalties = preferred.awayPenalties;
-    }
-  }
-
-  matchLabel(match: Match): string {
-    const stage = match.groupName ?? match.stage;
-    return `${stage} - ${match.homeTeamName} ${match.homeScore}-${match.awayScore} ${match.awayTeamName}`;
-  }
-
-  statusLabel(status: MatchStatus): string {
-    return status === 'HalfTime' ? 'Half time' : status;
-  }
-
-  isKnockout(match: Match): boolean {
-    return match.stage !== 'Group';
-  }
-
-  async adjust(matchId: number, side: 'home' | 'away', delta: 1 | -1): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
-  }
-
-  async setStatus(matchId: number, status: MatchStatus): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
-    await this.store.reload();
-  }
-
-  async savePenalties(match: Match): Promise<void> {
-    this.store.patchMatch(
-      await firstValueFrom(
-        this.api.setScore(
-          match.id,
-          match.homeScore,
-          match.awayScore,
-          this.homePenalties,
-          this.awayPenalties,
-        ),
-      ),
-    );
-  }
-
-  async addEvent(matchId: number): Promise<void> {
-    const teamId = this.eventTeamId();
-    if (!teamId) {
-      return;
-    }
-
-    this.store.patchMatch(
-      await firstValueFrom(
-        this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
-      ),
+    protected readonly selected = computed(
+        () => this.detail()?.matches.find((match) => match.id === this.selectedId()) ?? null,
     );
 
-    this.eventPlayerId = null;
-  }
+    protected readonly squad = computed(() => {
+        const teamId = this.eventTeamId();
+        return this.detail()?.teams.find((team) => team.id === teamId)?.players ?? [];
+    });
 
-  async removeEvent(matchId: number, eventId: number): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
-  }
+    async ngOnInit(): Promise<void> {
+        await this.store.load(this.slug());
+
+        const matches = this.detail()?.matches ?? [];
+        // Jump straight to whatever is in progress, otherwise the next kickoff.
+        const preferred =
+            matches.find((match) => match.status === 'Live' || match.status === 'HalfTime') ??
+            matches.find((match) => match.status === 'Scheduled') ??
+            matches[0];
+
+        if (preferred) {
+            this.selectedId.set(preferred.id);
+            this.eventTeamId.set(preferred.homeTeamId);
+            this.homePenalties = preferred.homePenalties;
+            this.awayPenalties = preferred.awayPenalties;
+        }
+    }
+
+    matchLabel(match: Match): string {
+        const stage = match.groupName ?? match.stage;
+        return `${stage} - ${match.homeTeamName} ${match.homeScore}-${match.awayScore} ${match.awayTeamName}`;
+    }
+
+    statusLabel(status: MatchStatus): string {
+        return status === 'HalfTime' ? 'Half time' : status;
+    }
+
+    isKnockout(match: Match): boolean {
+        return match.stage !== 'Group';
+    }
+
+    async adjust(matchId: number, side: 'home' | 'away', delta: 1 | -1): Promise<void> {
+        this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
+    }
+
+    async setStatus(matchId: number, status: MatchStatus): Promise<void> {
+        this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
+        await this.store.reload();
+    }
+
+    async savePenalties(match: Match): Promise<void> {
+        this.store.patchMatch(
+            await firstValueFrom(
+                this.api.setScore(
+                    match.id,
+                    match.homeScore,
+                    match.awayScore,
+                    this.homePenalties,
+                    this.awayPenalties,
+                ),
+            ),
+        );
+    }
+
+    async addEvent(matchId: number): Promise<void> {
+        const teamId = this.eventTeamId();
+        if (!teamId) {
+            return;
+        }
+
+        this.store.patchMatch(
+            await firstValueFrom(
+                this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
+            ),
+        );
+
+        this.eventPlayerId = null;
+    }
+
+    async removeEvent(matchId: number, eventId: number): Promise<void> {
+        this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
+    }
 }

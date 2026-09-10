@@ -14,24 +14,24 @@ Show 'user' $auth.username
 
 Write-Host 'Creating tournament...' -ForegroundColor Cyan
 $slug = Invoke-RestMethod "$base/api/admin/tournaments" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-    name                   = 'Liga Cup Smoke Test'
-    slug                   = $null
-    description            = 'Automated end to end check'
-    season                 = 2026
-    format                 = 'GroupsThenKnockout'
-    status                 = 'InProgress'
-    pointsForWin           = 3
-    pointsForDraw          = 1
-    pointsForLoss          = 0
-    groupRounds            = 1
-    teamsAdvancingPerGroup = 2
-    includeBestThirdPlaced = $false
-    hasThirdPlacePlayOff   = $true
-    trackPlayers           = $true
-    trackCards             = $true
-    matchDurationMinutes   = 90
-    tiebreakers            = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
-} | ConvertTo-Json)
+        name                   = 'Liga Cup Smoke Test'
+        slug                   = $null
+        description            = 'Automated end to end check'
+        season                 = 2026
+        format                 = 'GroupsThenKnockout'
+        status                 = 'InProgress'
+        pointsForWin           = 3
+        pointsForDraw          = 1
+        pointsForLoss          = 0
+        groupRounds            = 1
+        teamsAdvancingPerGroup = 2
+        includeBestThirdPlaced = $false
+        hasThirdPlacePlayOff   = $true
+        trackPlayers           = $true
+        trackCards             = $true
+        matchDurationMinutes   = 90
+        tiebreakers            = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
+    } | ConvertTo-Json)
 Show 'slug' $slug
 
 $detail = Invoke-RestMethod "$base/api/tournaments/$slug"
@@ -48,17 +48,17 @@ foreach ($entry in @(
         @{ name = 'Inter Balcony'; group = $groupB.id }, @{ name = 'Sporting Shed'; group = $groupB.id },
         @{ name = 'Bayern Basement'; group = $groupB.id }, @{ name = 'AC Attic'; group = $groupB.id })) {
     $team = Invoke-RestMethod "$base/api/admin/tournaments/$id/teams" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-        name = $entry.name; shortName = $null; colorHex = $null; logoUrl = $null; manager = $null
-        groupId = $entry.group; pointsAdjustment = 0
-    } | ConvertTo-Json)
+            name = $entry.name; shortName = $null; colorHex = $null; logoUrl = $null; manager = $null
+            groupId = $entry.group; pointsAdjustment = 0
+        } | ConvertTo-Json)
     $teams[$entry.name] = $team.id
 }
 Show 'teams' $teams.Count
 
 Write-Host 'Adding a player...' -ForegroundColor Cyan
 $player = Invoke-RestMethod "$base/api/admin/tournaments/players" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-    teamId = $teams['Real Sofa']; name = 'Sezgin'; shirtNumber = 10; position = 'ST'; isActive = $true
-} | ConvertTo-Json)
+        teamId = $teams['Real Sofa']; name = 'Sezgin'; shirtNumber = 10; position = 'ST'; isActive = $true
+    } | ConvertTo-Json)
 
 Write-Host 'Generating fixtures...' -ForegroundColor Cyan
 $generated = Invoke-RestMethod "$base/api/admin/tournaments/$id/fixtures" -Method Post -Headers $headers -ContentType 'application/json' `
@@ -90,8 +90,8 @@ if ($leader.points -ne 3 -or $leader.played -ne 1) { throw "Expected the winner 
 Write-Host 'Recording a goal against a player...' -ForegroundColor Cyan
 $second = $groupMatches | Where-Object { $_.homeTeamId -eq $teams['Real Sofa'] -or $_.awayTeamId -eq $teams['Real Sofa'] } | Select-Object -First 1
 Invoke-RestMethod "$base/api/live/matches/$($second.id)/events" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
-    teamId = $teams['Real Sofa']; playerId = $player.id; type = 'Goal'; minute = 23; note = $null
-} | ConvertTo-Json) | Out-Null
+        teamId = $teams['Real Sofa']; playerId = $player.id; type = 'Goal'; minute = 23; note = $null
+    } | ConvertTo-Json) | Out-Null
 
 $detail = Invoke-RestMethod "$base/api/tournaments/$slug"
 $detail.topScorers | ForEach-Object { Show 'scorer' "$($_.playerName) ($($_.teamName)) $($_.goals) goals" }
