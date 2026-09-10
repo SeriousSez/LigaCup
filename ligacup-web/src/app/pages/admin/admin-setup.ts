@@ -5,11 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
+import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
 
 @Component({
     selector: 'app-admin-setup',
-    imports: [FormsModule, RouterLink],
+    imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton],
     template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -332,7 +333,9 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
         }
       </section>
     } @else {
-      <p class="muted">{{ t().common.loading }}</p>
+      <p class="sr-only" role="status">{{ t().common.loading }}</p>
+      <app-heading-skeleton />
+      <app-form-skeleton [sections]="2" [fields]="4" />
     }
   `,
     styles: `

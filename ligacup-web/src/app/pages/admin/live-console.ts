@@ -6,11 +6,12 @@ import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { MatchClockService } from '../../core/match-clock.service';
 import { TournamentStore } from '../../core/tournament.store';
+import { HeadingSkeleton, ScoreboardSkeleton } from '../../shared/loading-skeletons';
 import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-live-console',
-    imports: [FormsModule, RouterLink],
+    imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton],
     template: `
     @if (detail(); as data) {
       <section class="heading">
@@ -273,7 +274,9 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
         </section>
       }
     } @else {
-      <p class="muted">{{ t().common.loading }}</p>
+      <p class="sr-only" role="status">{{ t().common.loading }}</p>
+      <app-heading-skeleton />
+      <app-scoreboard-skeleton />
     }
   `,
     styles: `

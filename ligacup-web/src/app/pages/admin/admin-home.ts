@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { CardListSkeleton } from '../../shared/loading-skeletons';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-admin-home',
-    imports: [RouterLink, FormsModule],
+    imports: [RouterLink, FormsModule, CardListSkeleton],
     template: `
     <h1>{{ t().adminHome.title }}</h1>
 
@@ -48,7 +49,11 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
 
     <section class="stack">
       <h3>{{ t().adminHome.yourTournaments }}</h3>
-      <div class="grid-auto">
+      @if (loading()) {
+        <p class="sr-only" role="status">{{ t().common.loading }}</p>
+        <app-card-list-skeleton [count]="2" />
+      } @else {
+        <div class="grid-auto">
         @for (tournament of tournaments(); track tournament.id) {
           <div class="card stack">
             <div class="spread">
@@ -74,7 +79,8 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
         } @empty {
           <p class="muted">{{ t().adminHome.empty }}</p>
         }
-      </div>
+        </div>
+      }
     </section>
   `,
     styles: `
@@ -94,6 +100,7 @@ export class AdminHome {
     protected readonly tournaments = signal<TournamentSummary[]>([]);
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
+    protected readonly loading = signal(true);
 
     protected draft = {
         name: '',
@@ -107,7 +114,11 @@ export class AdminHome {
     }
 
     async refresh(): Promise<void> {
-        this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
+        try {
+            this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
+        } finally {
+            this.loading.set(false);
+        }
     }
 
     async create(): Promise<void> {

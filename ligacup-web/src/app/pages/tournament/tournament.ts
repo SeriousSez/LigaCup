@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
+import { HeadingSkeleton, StandingsSkeleton } from '../../shared/loading-skeletons';
 import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
 
@@ -10,10 +11,12 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
 @Component({
     selector: 'app-tournament',
-    imports: [RouterLink, StandingsTable, MatchCard],
+    imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
     template: `
     @if (store.loading()) {
-      <p class="muted">{{ t().common.loading }}</p>
+      <p class="sr-only" role="status">{{ t().common.loading }}</p>
+      <app-heading-skeleton />
+      <app-standings-skeleton [groups]="2" [rows]="4" />
     } @else if (store.error()) {
       <p class="error">{{ t().tournament.notFound }}</p>
     } @else if (detail(); as data) {

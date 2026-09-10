@@ -4,10 +4,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { CardListSkeleton } from '../../shared/loading-skeletons';
 
 @Component({
     selector: 'app-home',
-    imports: [RouterLink],
+    imports: [RouterLink, CardListSkeleton],
     template: `
     <section class="hero card">
       <h1>Liga Cup</h1>
@@ -39,7 +40,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
         }
       </div>
     } @else {
-      <p class="muted">{{ t().home.loading }}</p>
+      <p class="sr-only" role="status">{{ t().home.loading }}</p>
+      <app-card-list-skeleton [count]="3" />
     }
   `,
     styles: `
