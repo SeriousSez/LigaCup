@@ -22,6 +22,45 @@ export interface Strings {
         unassigned: string;
         somethingWentWrong: string;
     };
+    guide: {
+        open: string;
+        close: string;
+        kicker: string;
+        title: string;
+        libraryTitle: string;
+        libraryText: string;
+        start: string;
+        overviewTitle: string;
+        overviewText: string;
+        fixturesTitle: string;
+        fixturesText: string;
+        knockoutTitle: string;
+        knockoutText: string;
+        skip: string;
+        back: string;
+        next: string;
+        done: string;
+        headerTitle: string;
+        headerText: string;
+        statusTitle: string;
+        statusText: string;
+        tabsTitle: string;
+        tabsText: string;
+        tableTitle: string;
+        tableText: string;
+        fixturesTabsTitle: string;
+        fixturesTabsText: string;
+        fixturesListTitle: string;
+        fixturesListText: string;
+        fixturesMatchTitle: string;
+        fixturesMatchText: string;
+        knockoutTabsTitle: string;
+        knockoutTabsText: string;
+        knockoutBracketTitle: string;
+        knockoutBracketText: string;
+        knockoutMatchTitle: string;
+        knockoutMatchText: string;
+    };
     home: {
         tagline: string;
         openAdmin: string;
@@ -283,6 +322,45 @@ export const danish: Strings = {
         name: 'Navn',
         unassigned: 'Ingen gruppe',
         somethingWentWrong: 'Noget gik galt.',
+    },
+    guide: {
+        open: 'Åbn guide',
+        close: 'Luk guide',
+        kicker: 'Liga Cup guide',
+        title: 'Sådan følger du turneringen',
+        libraryTitle: 'Hvad vil du vide?',
+        libraryText: 'Vælg en kort guide, og gå gennem funktionerne trin for trin.',
+        start: 'Start guide',
+        overviewTitle: 'Kom godt i gang',
+        overviewText: 'Lær det vigtigste om turneringens side og stillingen.',
+        fixturesTitle: 'Kampe og resultater',
+        fixturesText: 'Se kampprogrammet og følg resultaterne efterhånden som de kommer.',
+        knockoutTitle: 'Slutspillet',
+        knockoutText: 'Få overblik over knockoutkampe og vejen mod finalen.',
+        skip: 'Luk',
+        back: 'Tilbage',
+        next: 'Næste',
+        done: 'Færdig',
+        headerTitle: 'Turneringens overblik',
+        headerText: 'Her kan du se sæsonen, antal hold og hvilken turneringsform der bruges.',
+        statusTitle: 'Live-status',
+        statusText: 'Den grønne status viser, om siden modtager liveopdateringer fra turneringen.',
+        tabsTitle: 'Skift visning',
+        tabsText: 'Brug fanerne til at skifte mellem stilling, kampe, resultater og slutspil.',
+        tableTitle: 'Læs stillingen',
+        tableText: 'Tabellen opdateres automatisk med kampe, point, mål og form, når resultater registreres.',
+        fixturesTabsTitle: 'Find kampprogrammet',
+        fixturesTabsText: 'Åbn fanen Kampe og resultater for at se hele turneringens kampprogram.',
+        fixturesListTitle: 'Se spillerunderne',
+        fixturesListText: 'Kampene er samlet efter spillerunde, så du hurtigt kan finde den rigtige dag.',
+        fixturesMatchTitle: 'Følg en kamp',
+        fixturesMatchText: 'På kampkortet kan du se resultat, status og registrerede hændelser.',
+        knockoutTabsTitle: 'Åbn slutspillet',
+        knockoutTabsText: 'Når der er slutspilskampe, vises fanen Slutspil ved siden af de andre visninger.',
+        knockoutBracketTitle: 'Læs slutspilsskemaet',
+        knockoutBracketText: 'Skemaet viser vejen fra de første knockoutkampe til finalen.',
+        knockoutMatchTitle: 'Se knockoutkampen',
+        knockoutMatchText: 'Kampkortet viser hold, resultat og status for hver kamp i slutspillet.',
     },
     home: {
         tagline:
@@ -589,6 +667,45 @@ export const english: Strings = {
         name: 'Name',
         unassigned: 'Unassigned',
         somethingWentWrong: 'Something went wrong.',
+    },
+    guide: {
+        open: 'Open guide',
+        close: 'Close guide',
+        kicker: 'Liga Cup guide',
+        title: 'Following a tournament',
+        libraryTitle: 'What would you like to explore?',
+        libraryText: 'Choose a short guide and walk through the features step by step.',
+        start: 'Start guide',
+        overviewTitle: 'Getting started',
+        overviewText: 'Learn the essentials of the tournament page and table.',
+        fixturesTitle: 'Fixtures and results',
+        fixturesText: 'Find the schedule and follow results as they arrive.',
+        knockoutTitle: 'The knockout stage',
+        knockoutText: 'Understand the bracket and the route to the final.',
+        skip: 'Close',
+        back: 'Back',
+        next: 'Next',
+        done: 'Done',
+        headerTitle: 'Tournament overview',
+        headerText: 'See the season, number of teams and tournament format at a glance.',
+        statusTitle: 'Live status',
+        statusText: 'The status badge shows whether this page is receiving live tournament updates.',
+        tabsTitle: 'Change views',
+        tabsText: 'Use the tabs to switch between the table, fixtures, results and knockout bracket.',
+        tableTitle: 'Read the table',
+        tableText: 'The table updates automatically with matches, points, goals and form as results are recorded.',
+        fixturesTabsTitle: 'Find the fixtures',
+        fixturesTabsText: 'Open Fixtures & results to see the tournament schedule.',
+        fixturesListTitle: 'Browse matchdays',
+        fixturesListText: 'Matches are grouped by matchday so you can quickly find the right date.',
+        fixturesMatchTitle: 'Follow a match',
+        fixturesMatchText: 'The match card shows its result, status and recorded events.',
+        knockoutTabsTitle: 'Open the knockout stage',
+        knockoutTabsText: 'When knockout matches exist, the Knockout tab appears beside the other views.',
+        knockoutBracketTitle: 'Read the bracket',
+        knockoutBracketText: 'The bracket shows the route from the first knockout ties to the final.',
+        knockoutMatchTitle: 'View a knockout match',
+        knockoutMatchText: 'Each match card shows the teams, result and status for a knockout tie.',
     },
     home: {
         tagline:

@@ -6,12 +6,13 @@ import { TournamentStore } from '../../core/tournament.store';
 import { HeadingSkeleton, StandingsSkeleton } from '../../shared/loading-skeletons';
 import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
+import { TournamentGuide } from '../../shared/tournament-guide';
 
 type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
 @Component({
   selector: 'app-tournament',
-  imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
+  imports: [RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton, TournamentGuide],
   template: `
     @if (store.loading()) {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
@@ -20,7 +21,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
     } @else if (store.error()) {
       <p class="error">{{ t().tournament.notFound }}</p>
     } @else if (detail(); as data) {
-      <section class="spread heading">
+      <section class="spread heading" data-guide-target="tournament-header">
         <div>
           <h1>{{ data.tournament.name }}</h1>
           <p class="muted">
@@ -30,7 +31,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
         </div>
 
         <div class="row">
-          <span class="badge" [class.connected]="store.connectionState() === 'connected'">
+          <span class="badge" data-guide-target="tournament-status" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
               <span class="pulse"></span> {{ t().connection.live }}
             } @else {
@@ -63,12 +64,13 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
         </section>
       }
 
-      <nav class="tabs">
+      <nav class="tabs" data-guide-target="tournament-tabs">
         @for (option of tabs(); track option.id) {
           @if (option.id !== 'bracket' || data.bracket.length) {
             @if (option.id !== 'scorers' || data.tournament.trackPlayers) {
               <button
                 type="button"
+                [attr.data-guide-tab]="option.id"
                 [class.active]="tab() === option.id"
                 (click)="tab.set(option.id)"
               >
@@ -81,7 +83,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
       @switch (tab()) {
         @case ('tables') {
-          <div class="tables-grid">
+          <div class="tables-grid" data-guide-target="tournament-table">
             @for (table of data.tables; track table.groupId) {
               <app-standings-table [table]="table" />
             } @empty {
@@ -90,13 +92,15 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
           </div>
         }
         @case ('fixtures') {
-          <div class="stack">
+          <div class="stack" data-guide-target="tournament-fixtures">
             @for (round of fixtureRounds(); track round.key) {
               <section class="stack">
                 <h3>{{ round.key }}</h3>
                 <div class="grid-auto">
                   @for (match of round.matches; track match.id) {
-                    <app-match-card [match]="match" [tournament]="data.tournament" />
+                    <div data-guide-target="tournament-match">
+                      <app-match-card [match]="match" [tournament]="data.tournament" />
+                    </div>
                   }
                 </div>
               </section>
@@ -106,12 +110,14 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
           </div>
         }
         @case ('bracket') {
-          <div class="bracket">
+          <div class="bracket" data-guide-target="tournament-bracket">
             @for (stage of bracketStages(); track stage.key) {
               <section class="stage">
                 <h3>{{ stage.key }}</h3>
                 @for (item of stage.matches; track item.match.id) {
-                  <app-match-card [match]="item.match" [tournament]="data.tournament" />
+                  <div data-guide-target="tournament-match">
+                    <app-match-card [match]="item.match" [tournament]="data.tournament" />
+                  </div>
                 }
               </section>
             }
@@ -148,6 +154,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
           </div>
         }
       }
+      <app-tournament-guide />
     }
   `,
   styles: `
