@@ -9,7 +9,10 @@ public enum TournamentFormat
     GroupsThenKnockout = 1,
 
     /// <summary>Straight knockout bracket, no group stage.</summary>
-    KnockoutOnly = 2
+    KnockoutOnly = 2,
+
+    /// <summary>One combined round-robin table with no groups or knockout stage.</summary>
+    League = 3
 }
 
 public enum TournamentStatus

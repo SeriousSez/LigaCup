@@ -10,9 +10,9 @@ import { SelectField, SelectOption } from '../../shared/select-field';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 @Component({
-    selector: 'app-admin-home',
-    imports: [RouterLink, FormsModule, CardListSkeleton, SelectField],
-    template: `
+  selector: 'app-admin-home',
+  imports: [RouterLink, FormsModule, CardListSkeleton, SelectField],
+  template: `
     <h1>{{ t().adminHome.title }}</h1>
 
     @if (auth.isAdmin()) {
@@ -87,7 +87,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
       }
     </section>
   `,
-    styles: `
+  styles: `
     .create {
       margin-bottom: 1.75rem;
     }
@@ -98,85 +98,86 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
   `,
 })
 export class AdminHome {
-    private readonly api = inject(ApiService);
+  private readonly api = inject(ApiService);
 
-    protected readonly auth = inject(AuthService);
-    protected readonly t = inject(I18nService).t;
-    protected readonly tournaments = signal<TournamentSummary[]>([]);
-    protected readonly busy = signal(false);
-    protected readonly error = signal<string | null>(null);
-    protected readonly loading = signal(true);
+  protected readonly auth = inject(AuthService);
+  protected readonly t = inject(I18nService).t;
+  protected readonly tournaments = signal<TournamentSummary[]>([]);
+  protected readonly busy = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly loading = signal(true);
 
-    protected readonly formatOptions = computed<SelectOption<TournamentFormat>[]>(() => {
-        const labels = this.t().format;
-        return [
-            { value: 'GroupsThenKnockout', label: labels.GroupsThenKnockout },
-            { value: 'GroupsOnly', label: labels.GroupsOnly },
-            { value: 'KnockoutOnly', label: labels.KnockoutOnly },
-        ];
-    });
+  protected readonly formatOptions = computed<SelectOption<TournamentFormat>[]>(() => {
+    const labels = this.t().format;
+    return [
+      { value: 'League', label: labels.League },
+      { value: 'GroupsThenKnockout', label: labels.GroupsThenKnockout },
+      { value: 'GroupsOnly', label: labels.GroupsOnly },
+      { value: 'KnockoutOnly', label: labels.KnockoutOnly },
+    ];
+  });
 
-    protected draft = {
-        name: '',
-        season: new Date().getFullYear(),
-        format: 'GroupsThenKnockout' as TournamentFormat,
-        trackPlayers: false,
+  protected draft = {
+    name: '',
+    season: new Date().getFullYear(),
+    format: 'GroupsThenKnockout' as TournamentFormat,
+    trackPlayers: false,
+  };
+
+  constructor() {
+    void this.refresh();
+  }
+
+  async refresh(): Promise<void> {
+    try {
+      this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async create(): Promise<void> {
+    if (!this.draft.name.trim()) {
+      this.error.set(this.t().adminHome.nameRequired);
+      return;
+    }
+
+    this.busy.set(true);
+    this.error.set(null);
+
+    const request: SaveTournamentRequest = {
+      name: this.draft.name.trim(),
+      slug: null,
+      description: null,
+      season: this.draft.season,
+      format: this.draft.format,
+      status: 'Draft',
+      pointsForWin: 3,
+      pointsForDraw: 1,
+      pointsForLoss: 0,
+      groupRounds: 1,
+      teamsAdvancingPerGroup: 2,
+      includeBestThirdPlaced: false,
+      hasThirdPlacePlayOff: false,
+      trackPlayers: this.draft.trackPlayers,
+      trackCards: false,
+      periodCount: 2,
+      periodDurationMinutes: 45,
+      breakDurationMinutes: 15,
+      trackMatchClock: true,
+      allowTimeouts: false,
+      useStoppageTime: true,
+      tiebreakers: null,
     };
 
-    constructor() {
-        void this.refresh();
+    try {
+      await firstValueFrom(this.api.createTournament(request));
+      this.draft.name = '';
+      await this.refresh();
+    } catch {
+      this.error.set(this.t().adminHome.createFailed);
+    } finally {
+      this.busy.set(false);
     }
-
-    async refresh(): Promise<void> {
-        try {
-            this.tournaments.set(await firstValueFrom(this.api.getTournaments()));
-        } finally {
-            this.loading.set(false);
-        }
-    }
-
-    async create(): Promise<void> {
-        if (!this.draft.name.trim()) {
-            this.error.set(this.t().adminHome.nameRequired);
-            return;
-        }
-
-        this.busy.set(true);
-        this.error.set(null);
-
-        const request: SaveTournamentRequest = {
-            name: this.draft.name.trim(),
-            slug: null,
-            description: null,
-            season: this.draft.season,
-            format: this.draft.format,
-            status: 'Draft',
-            pointsForWin: 3,
-            pointsForDraw: 1,
-            pointsForLoss: 0,
-            groupRounds: 1,
-            teamsAdvancingPerGroup: 2,
-            includeBestThirdPlaced: false,
-            hasThirdPlacePlayOff: false,
-            trackPlayers: this.draft.trackPlayers,
-            trackCards: false,
-            periodCount: 2,
-            periodDurationMinutes: 45,
-            breakDurationMinutes: 15,
-            trackMatchClock: true,
-            allowTimeouts: false,
-            useStoppageTime: true,
-            tiebreakers: null,
-        };
-
-        try {
-            await firstValueFrom(this.api.createTournament(request));
-            this.draft.name = '';
-            await this.refresh();
-        } catch {
-            this.error.set(this.t().adminHome.createFailed);
-        } finally {
-            this.busy.set(false);
-        }
-    }
+  }
 }

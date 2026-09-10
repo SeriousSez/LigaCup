@@ -87,7 +87,7 @@ public static class StandingsCalculator
         for (var index = 0; index < ordered.Count; index++)
         {
             ordered[index].Position = index + 1;
-            ordered[index].IsQualifying = tournament.Format != TournamentFormat.GroupsOnly
+            ordered[index].IsQualifying = tournament.Format is not (TournamentFormat.GroupsOnly or TournamentFormat.League)
                 && index < tournament.TeamsAdvancingPerGroup;
         }
 

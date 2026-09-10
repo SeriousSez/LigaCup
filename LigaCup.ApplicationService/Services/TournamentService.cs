@@ -73,7 +73,7 @@ public class TournamentService(LigaCupContext dbContext)
         var matches = tournament.Matches.ToList();
         var tables = new List<GroupTableDto>();
 
-        if (tournament.Groups.Count == 0)
+        if (tournament.Format == TournamentFormat.League || tournament.Groups.Count == 0)
         {
             // Ungrouped tournaments still get a single combined table.
             if (tournament.Format != TournamentFormat.KnockoutOnly && teams.Count > 0)
@@ -337,7 +337,7 @@ public class TournamentService(LigaCupContext dbContext)
 
         if (request.IncludeGroupStage && tournament.Format != TournamentFormat.KnockoutOnly)
         {
-            if (tournament.Groups.Count == 0)
+            if (tournament.Format == TournamentFormat.League || tournament.Groups.Count == 0)
             {
                 // No groups configured, so treat the whole field as one league.
                 var placeholder = new TournamentGroup { Id = 0, TournamentId = tournament.Id, Name = "League" };

@@ -78,7 +78,7 @@ export interface Strings {
         addedTime: string;
         noClock: string;
     };
-    format: Record<'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly', string>;
+    format: Record<'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly' | 'League', string>;
     stage: Record<
         'Group' | 'RoundOf32' | 'RoundOf16' | 'QuarterFinal' | 'SemiFinal' | 'ThirdPlacePlayOff' | 'Final',
         string
@@ -354,6 +354,7 @@ export const danish: Strings = {
         noClock: 'Uret er slået fra for denne turnering.',
     },
     format: {
+        League: 'Liga',
         GroupsOnly: 'Kun gruppespil',
         GroupsThenKnockout: 'Gruppespil og slutspil',
         KnockoutOnly: 'Rent slutspil',
@@ -656,6 +657,7 @@ export const english: Strings = {
         noClock: 'The clock is switched off for this tournament.',
     },
     format: {
+        League: 'League',
         GroupsOnly: 'Group stage only',
         GroupsThenKnockout: 'Groups then knockout',
         KnockoutOnly: 'Straight knockout',

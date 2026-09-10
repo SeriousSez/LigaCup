@@ -55,7 +55,18 @@ public static class TournamentEndpoints
             Results.Ok(await service.SaveTeamAsync(id, teamId, request, cancellationToken)));
 
         adminApi.MapDelete("/{id:int}/teams/{teamId:int}", async (int id, int teamId, TournamentService service, CancellationToken cancellationToken) =>
-            await service.DeleteTeamAsync(id, teamId, cancellationToken) ? Results.NoContent() : Results.NotFound());
+        {
+            try
+            {
+                return await service.DeleteTeamAsync(id, teamId, cancellationToken)
+                    ? Results.NoContent()
+                    : Results.NotFound();
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+        });
 
         adminApi.MapPost("/players", async (SavePlayerRequest request, TournamentService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.SavePlayerAsync(null, request, cancellationToken)));

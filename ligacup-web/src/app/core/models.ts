@@ -1,4 +1,4 @@
-export type TournamentFormat = 'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly';
+export type TournamentFormat = 'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly' | 'League';
 export type TournamentStatus = 'Draft' | 'InProgress' | 'Completed' | 'Archived';
 export type MatchStatus =
     | 'Scheduled'
