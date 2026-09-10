@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: "8.0.x"
+  DOTNET_VERSION: "10.0.x"
   NODE_VERSION: "22.x"
   PROJECT_PATH: "LigaCup.API/LigaCup.API.csproj"
   PUBLISH_PATH: "./publish"
@@ -145,7 +145,7 @@ jobs:
           # shared IIS hosting can create stdout logs before the application starts.
           $logsPath = Join-Path '${{ env.PUBLISH_PATH }}' 'logs'
           New-Item -ItemType Directory -Path $logsPath -Force | Out-Null
-          Set-Content -Path (Join-Path $logsPath '.gitkeep') -Value '' -Encoding UTF8
+          Set-Content -Path (Join-Path $logsPath 'keep.txt') -Value '' -Encoding UTF8
 
       - uses: actions/upload-artifact@v4
         with:
