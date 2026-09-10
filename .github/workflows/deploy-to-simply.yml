@@ -141,6 +141,12 @@ jobs:
           if ($json.Database.Provider -ne 'Sqlite') { throw 'Published config must pin the provider to Sqlite.' }
           if ([string]::IsNullOrWhiteSpace($json.Cors.AllowedOrigins)) { throw 'Published config has no CORS origin.' }
 
+          # ANCM writes startup failures here. Keep the directory in the artifact so
+          # shared IIS hosting can create stdout logs before the application starts.
+          $logsPath = Join-Path '${{ env.PUBLISH_PATH }}' 'logs'
+          New-Item -ItemType Directory -Path $logsPath -Force | Out-Null
+          Set-Content -Path (Join-Path $logsPath '.gitkeep') -Value '' -Encoding UTF8
+
       - uses: actions/upload-artifact@v4
         with:
           name: api-publish
@@ -224,9 +230,19 @@ jobs:
             **/*.db
             **/*.db-shm
             **/*.db-wal
-            **/logs/**
             **/.git*
             **/node_modules/**
+
+  verify-api:
+    needs: deploy-api
+    if: needs.deploy-api.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the API to restart
+        run: sleep 10
+
+      - name: Check API health
+        run: curl --fail --retry 5 --retry-delay 5 --retry-all-errors '${{ env.DEFAULT_API_ORIGIN }}/api/health'
 
   deploy-web:
     needs: [detect-changes, build-web]
