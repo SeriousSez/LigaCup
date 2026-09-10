@@ -97,26 +97,6 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<LigaCupContext>();
-        await dbContext.Database.MigrateAsync();
-
-        var databasePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(
-            DatabaseConfiguration.GetSqliteConnectionString(app.Configuration));
-        app.Logger.LogInformation("LigaCup database ready at {DatabasePath}", databasePath ?? "(non-SQLite provider)");
-
-        await SeedAdminUserAsync(dbContext, app.Configuration, app.Environment, app.Logger);
-    }
-    catch (Exception exception)
-    {
-        // Keep IIS alive so the health endpoint and startup log can expose filesystem or migration failures.
-        app.Logger.LogCritical(exception, "LigaCup database initialization failed. The API started without database readiness.");
-    }
-}
-
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -128,7 +108,32 @@ app.MapLiveEndpoints();
 app.MapUserEndpoints();
 app.MapHub<LiveHub>("/hubs/live");
 
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = InitializeDatabaseAsync(app);
+});
+
 app.Run();
+
+static async Task InitializeDatabaseAsync(WebApplication app)
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LigaCupContext>();
+        await dbContext.Database.MigrateAsync();
+
+        var databasePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(
+            DatabaseConfiguration.GetSqliteConnectionString(app.Configuration));
+        app.Logger.LogInformation("LigaCup database ready at {DatabasePath}", databasePath ?? "(non-SQLite provider)");
+
+        await SeedAdminUserAsync(dbContext, app.Configuration, app.Environment, app.Logger);
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogCritical(exception, "LigaCup database initialization failed after startup.");
+    }
+}
 
 static async Task SeedAdminUserAsync(LigaCupContext dbContext, IConfiguration configuration, IHostEnvironment environment, ILogger logger)
 {
