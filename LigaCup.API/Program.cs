@@ -108,10 +108,7 @@ app.MapLiveEndpoints();
 app.MapUserEndpoints();
 app.MapHub<LiveHub>("/hubs/live");
 
-app.Lifetime.ApplicationStarted.Register(() =>
-{
-    _ = InitializeDatabaseAsync(app);
-});
+await InitializeDatabaseAsync(app);
 
 app.Run();
 
@@ -131,7 +128,8 @@ static async Task InitializeDatabaseAsync(WebApplication app)
     }
     catch (Exception exception)
     {
-        app.Logger.LogCritical(exception, "LigaCup database initialization failed after startup.");
+        app.Logger.LogCritical(exception, "LigaCup database initialization failed during startup.");
+        throw;
     }
 }
 
