@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+publish/
+artifacts/
+dist/
+node_modules/
+.angular/
+
+# The tournament database is data, never source. Keep it out of the repo.
+App_Data/
+*.db
+*.db-shm
+*.db-wal
+
+# Local secrets and machine specific settings
+appsettings.Local.json
+appsettings.Production.json
+*.user
+.env
+.env.*
+
+# Editor and OS noise
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*

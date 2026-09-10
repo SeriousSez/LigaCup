@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="LigaCup.API/LigaCup.API.csproj" />
+  <Project Path="LigaCup.ApplicationService/LigaCup.ApplicationService.csproj" />
+  <Project Path="LigaCup.Domain.Tests/LigaCup.Domain.Tests.csproj" />
+  <Project Path="LigaCup.Domain/LigaCup.Domain.csproj" />
+  <Project Path="LigaCup.Infrastructure/LigaCup.Infrastructure.csproj" />
+</Solution>

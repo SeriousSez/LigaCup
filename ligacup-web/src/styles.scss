@@ -1,0 +1,268 @@
+:root {
+  --pitch-900: #04140b;
+  --pitch-800: #072617;
+  --pitch-700: #0b3a23;
+  --surface: #0f1b14;
+  --surface-raised: #16261d;
+  --surface-line: #1f3a2b;
+  --text: #eef7f1;
+  --text-muted: #9ab5a6;
+  --accent: #35d07f;
+  --accent-strong: #12b76a;
+  --warn: #f5a524;
+  --danger: #f4485b;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgb(0 0 0 / 35%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, var(--pitch-700), transparent 70%),
+    var(--pitch-900);
+  color: var(--text);
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  width: min(1180px, 100% - 2rem);
+  margin-inline: auto;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.spread {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid var(--surface-line);
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 0.5rem 0.9rem;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #04140b;
+  font-weight: 600;
+}
+
+button.danger {
+  border-color: transparent;
+  color: var(--danger);
+}
+
+button.ghost {
+  background: transparent;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--pitch-800);
+  border: 1px solid var(--surface-line);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid var(--surface-line);
+  white-space: nowrap;
+}
+
+th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+td.numeric,
+th.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-line);
+  color: var(--text-muted);
+}
+
+.badge.live {
+  background: rgb(244 72 91 / 15%);
+  border-color: var(--danger);
+  color: #ff8a97;
+}
+
+.badge.qualifying {
+  background: rgb(53 208 127 / 15%);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.grid-auto {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+}
+
+.checkbox input {
+  width: auto;
+}
+
+.error {
+  color: var(--danger);
+}

@@ -1,0 +1,216 @@
+name: Deploy to Simply.com
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22.x'
+  PROJECT_PATH: 'LigaCup.API/LigaCup.API.csproj'
+  PUBLISH_PATH: './publish'
+  RUNTIME_IDENTIFIER: 'win-x64'
+  ANGULAR_WORKING_DIR: './ligacup-web'
+  ANGULAR_DIST_PATH: './ligacup-web/dist/ligacup-web/browser'
+  API_SERVER_DIR: '/ligacup.api/'
+  WEB_SERVER_DIR: '/ligacup/'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web: ${{ steps.changes.outputs.web }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'LigaCup.API/**'
+              - 'LigaCup.ApplicationService/**'
+              - 'LigaCup.Infrastructure/**'
+              - 'LigaCup.Domain/**'
+              - 'LigaCup.Domain.Tests/**'
+              - 'Directory.Build.props'
+              - 'LigaCup.slnx'
+              - '.github/workflows/deploy-to-simply.yml'
+            web:
+              - 'ligacup-web/**'
+
+  test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run domain tests
+        run: dotnet test LigaCup.Domain.Tests --configuration Release
+
+  build-api:
+    needs: [detect-changes, test]
+    if: needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Generate production appsettings from secrets
+        working-directory: ./LigaCup.API
+        shell: pwsh
+        env:
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:JWT_KEY) -or $env:JWT_KEY.Length -lt 32) {
+            throw "The JWT_KEY secret must be set and at least 32 characters long."
+          }
+
+          $origin = if ([string]::IsNullOrWhiteSpace($env:WEB_ORIGIN)) { 'https://ligacup.sezginsahin.dk' } else { $env:WEB_ORIGIN }
+
+          $config = @{
+            Database          = @{ Provider = 'Sqlite' }
+            ConnectionStrings = @{ LigaCupSqlite = 'Data Source=App_Data/ligacup.db' }
+            Jwt               = @{
+              Issuer        = 'LigaCup'
+              Audience      = 'LigaCup.Clients'
+              Key           = $env:JWT_KEY
+              ExpiryMinutes = 720
+            }
+            Admin             = @{
+              Username = $env:ADMIN_USERNAME
+              Password = $env:ADMIN_PASSWORD
+            }
+            Cors              = @{ AllowedOrigins = @($origin) }
+            Logging           = @{ LogLevel = @{ Default = 'Warning'; 'LigaCup' = 'Information' } }
+            AllowedHosts      = '*'
+          }
+
+          $config | ConvertTo-Json -Depth 6 | Set-Content -Path 'appsettings.Production.json' -Encoding UTF8
+
+      - name: Publish API
+        run: >
+          dotnet publish ${{ env.PROJECT_PATH }}
+          --configuration Release
+          --runtime ${{ env.RUNTIME_IDENTIFIER }}
+          --self-contained true
+          --output ${{ env.PUBLISH_PATH }}
+
+      - name: Guard against shipping a database file
+        shell: pwsh
+        run: |
+          # A .db in the publish output would be uploaded and could clobber live results.
+          $strays = Get-ChildItem -Path '${{ env.PUBLISH_PATH }}' -Recurse -Include *.db, *.db-wal, *.db-shm -File
+          if ($strays) {
+            $strays | ForEach-Object { Write-Host "Removing $($_.FullName)" }
+            $strays | Remove-Item -Force
+          }
+
+          $configPath = Join-Path '${{ env.PUBLISH_PATH }}' 'appsettings.Production.json'
+          $json = Get-Content $configPath -Raw | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($json.Jwt.Key)) { throw 'Published config has an empty JWT key.' }
+          if ($json.Database.Provider -ne 'Sqlite') { throw 'Published config must pin the provider to Sqlite.' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-publish
+          path: ${{ env.PUBLISH_PATH }}/
+
+  build-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.ANGULAR_WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        run: npm ci
+
+      - name: Build Angular app
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        run: npm run build
+
+      - name: Copy the SPA rewrite rules into the output
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        run: |
+          target=$(dirname "$(find dist -name index.html | head -n 1)")
+          cp src/web.config "$target/web.config"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ${{ env.ANGULAR_DIST_PATH }}/
+
+  deploy-api:
+    needs: [detect-changes, build-api]
+    if: needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-publish
+          path: ${{ env.PUBLISH_PATH }}/
+
+      - name: Deploy API over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ${{ env.PUBLISH_PATH }}/
+          server-dir: ${{ env.API_SERVER_DIR }}
+          dangerous-clean-slate: false
+          # The live SQLite database and its journals must survive every deploy.
+          exclude: |
+            **/App_Data/**
+            **/*.db
+            **/*.db-shm
+            **/*.db-wal
+            **/logs/**
+            **/.git*
+            **/node_modules/**
+
+  deploy-web:
+    needs: [detect-changes, build-web]
+    if: needs.detect-changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: ./web-dist/
+
+      - name: Deploy web over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./web-dist/
+          server-dir: ${{ env.WEB_SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/node_modules/**
