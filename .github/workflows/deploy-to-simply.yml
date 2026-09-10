@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "8.0.x"
   NODE_VERSION: "22.x"
   PROJECT_PATH: "LigaCup.API/LigaCup.API.csproj"
   PUBLISH_PATH: "./publish"
