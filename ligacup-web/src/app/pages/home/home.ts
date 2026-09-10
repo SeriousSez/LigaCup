@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
     selector: 'app-home',
@@ -10,12 +11,9 @@ import { AuthService } from '../../core/auth.service';
     template: `
     <section class="hero card">
       <h1>Liga Cup</h1>
-      <p class="muted">
-        Live scores, automatic group tables and a knockout bracket that fills itself in as results
-        come in.
-      </p>
+      <p class="muted">{{ t().home.tagline }}</p>
       @if (auth.isLoggedIn()) {
-        <a routerLink="/admin"><button class="primary" type="button">Open admin</button></a>
+        <a routerLink="/admin"><button class="primary" type="button">{{ t().home.openAdmin }}</button></a>
       }
     </section>
 
@@ -31,17 +29,17 @@ import { AuthService } from '../../core/auth.service';
               <p class="muted">{{ tournament.description }}</p>
             }
             <div class="row muted stats">
-              <span>{{ tournament.teamCount }} teams</span>
-              <span>{{ tournament.matchCount }} matches</span>
-              <span>{{ statusLabel(tournament.status) }}</span>
+              <span>{{ tournament.teamCount }} {{ t().common.teams }}</span>
+              <span>{{ tournament.matchCount }} {{ t().common.matches }}</span>
+              <span>{{ t().tournamentStatus[tournament.status] }}</span>
             </div>
           </a>
         } @empty {
-          <p class="muted">No tournaments have been created yet.</p>
+          <p class="muted">{{ t().home.empty }}</p>
         }
       </div>
     } @else {
-      <p class="muted">Loading tournaments...</p>
+      <p class="muted">{{ t().home.loading }}</p>
     }
   `,
     styles: `
@@ -83,9 +81,6 @@ export class Home {
     protected readonly auth = inject(AuthService);
     private readonly api = inject(ApiService);
 
+    protected readonly t = inject(I18nService).t;
     protected readonly tournaments = toSignal(this.api.getTournaments());
-
-    statusLabel(status: string): string {
-        return status === 'InProgress' ? 'In progress' : status;
-    }
 }

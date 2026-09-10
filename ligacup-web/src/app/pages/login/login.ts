@@ -2,22 +2,23 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
     selector: 'app-login',
     imports: [FormsModule],
     template: `
     <section class="card login">
-      <h1>Sign in</h1>
-      <p class="muted">Organiser access for live scoring and tournament setup.</p>
+      <h1>{{ t().login.title }}</h1>
+      <p class="muted">{{ t().login.subtitle }}</p>
 
       <form (ngSubmit)="submit()" class="stack">
         <label>
-          Username
+          {{ t().login.username }}
           <input name="username" [(ngModel)]="username" autocomplete="username" required />
         </label>
         <label>
-          Password
+          {{ t().login.password }}
           <input
             type="password"
             name="password"
@@ -27,12 +28,12 @@ import { AuthService } from '../../core/auth.service';
           />
         </label>
 
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
+        @if (failed()) {
+          <p class="error">{{ t().login.failed }}</p>
         }
 
         <button class="primary" type="submit" [disabled]="busy()">
-          {{ busy() ? 'Signing in...' : 'Sign in' }}
+          {{ busy() ? t().login.submitting : t().login.submit }}
         </button>
       </form>
     </section>
@@ -55,10 +56,11 @@ export class Login {
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
 
+    protected readonly t = inject(I18nService).t;
     protected username = '';
     protected password = '';
     protected readonly busy = signal(false);
-    protected readonly error = signal<string | null>(null);
+    protected readonly failed = signal(false);
 
     submit(): void {
         if (!this.username || !this.password) {
@@ -66,7 +68,7 @@ export class Login {
         }
 
         this.busy.set(true);
-        this.error.set(null);
+        this.failed.set(false);
 
         this.auth.login(this.username, this.password).subscribe({
             next: () => {
@@ -75,7 +77,7 @@ export class Login {
             },
             error: () => {
                 this.busy.set(false);
-                this.error.set('That username and password combination was not accepted.');
+                this.failed.set(true);
             },
         });
     }

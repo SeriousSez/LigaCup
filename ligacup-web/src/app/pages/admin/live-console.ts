@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { Match, MatchEventType, MatchStatus } from '../../core/models';
 
@@ -13,27 +14,33 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
     @if (detail(); as data) {
       <section class="heading">
         <div class="spread">
-          <h1>Live console</h1>
+          <h1>{{ t().live.title }}</h1>
           <span class="badge" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
-              <span class="pulse"></span> Live
+              <span class="pulse"></span> {{ t().connection.live }}
             } @else {
-              {{ store.connectionState() === 'connecting' ? 'Connecting' : 'Offline' }}
+              {{
+                store.connectionState() === 'connecting'
+                  ? t().connection.connecting
+                  : t().connection.offline
+              }}
             }
           </span>
         </div>
         <p class="muted">{{ data.tournament.name }}</p>
         <div class="links">
-          <a [routerLink]="['/admin', data.tournament.slug]"><button type="button">Setup</button></a>
+          <a [routerLink]="['/admin', data.tournament.slug]">
+            <button type="button">{{ t().live.setup }}</button>
+          </a>
           <a [routerLink]="['/', data.tournament.slug]">
-            <button class="ghost" type="button">Public page</button>
+            <button class="ghost" type="button">{{ t().live.publicPage }}</button>
           </a>
         </div>
       </section>
 
       <section class="card picker">
         <label>
-          Match
+          {{ t().live.match }}
           <select [ngModel]="selectedId()" (ngModelChange)="selectedId.set(+$event)">
             @for (match of data.matches; track match.id) {
               <option [value]="match.id">
@@ -50,32 +57,50 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
             @if (match.status === 'Live') {
               <span class="badge live"><span class="pulse"></span> {{ match.liveMinute }}'</span>
             } @else {
-              <span class="badge">{{ statusLabel(match.status) }}</span>
+              <span class="badge">{{ t().matchStatus[match.status] }}</span>
             }
           </div>
 
           <div class="scorer">
             <div class="team">
-              <span class="name">{{ match.homeTeamName }}</span>
+              <span class="name">{{ i18n.teamName(match.homeTeamName, match.homeTeamId) }}</span>
               <div class="counter">
-                <button type="button" aria-label="Remove a home goal" (click)="adjust(match.id, 'home', -1)">
+                <button
+                  type="button"
+                  [attr.aria-label]="t().live.homeGoalRemove"
+                  (click)="adjust(match.id, 'home', -1)"
+                >
                   &minus;
                 </button>
                 <span class="value">{{ match.homeScore }}</span>
-                <button class="primary" type="button" aria-label="Add a home goal" (click)="adjust(match.id, 'home', 1)">
+                <button
+                  class="primary"
+                  type="button"
+                  [attr.aria-label]="t().live.homeGoalAdd"
+                  (click)="adjust(match.id, 'home', 1)"
+                >
                   +
                 </button>
               </div>
             </div>
 
             <div class="team">
-              <span class="name">{{ match.awayTeamName }}</span>
+              <span class="name">{{ i18n.teamName(match.awayTeamName, match.awayTeamId) }}</span>
               <div class="counter">
-                <button type="button" aria-label="Remove an away goal" (click)="adjust(match.id, 'away', -1)">
+                <button
+                  type="button"
+                  [attr.aria-label]="t().live.awayGoalRemove"
+                  (click)="adjust(match.id, 'away', -1)"
+                >
                   &minus;
                 </button>
                 <span class="value">{{ match.awayScore }}</span>
-                <button class="primary" type="button" aria-label="Add an away goal" (click)="adjust(match.id, 'away', 1)">
+                <button
+                  class="primary"
+                  type="button"
+                  [attr.aria-label]="t().live.awayGoalAdd"
+                  (click)="adjust(match.id, 'away', 1)"
+                >
                   +
                 </button>
               </div>
@@ -89,7 +114,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
                 [class.primary]="match.status === status"
                 (click)="setStatus(match.id, status)"
               >
-                {{ statusLabel(status) }}
+                {{ t().matchStatus[status] }}
               </button>
             }
           </div>
@@ -97,15 +122,17 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
           @if (isKnockout(match)) {
             <div class="form-grid">
               <label>
-                Home penalties
+                {{ t().live.homePenalties }}
                 <input type="number" inputmode="numeric" min="0" [(ngModel)]="homePenalties" />
               </label>
               <label>
-                Away penalties
+                {{ t().live.awayPenalties }}
                 <input type="number" inputmode="numeric" min="0" [(ngModel)]="awayPenalties" />
               </label>
               <div class="align-end">
-                <button type="button" (click)="savePenalties(match)">Save shootout</button>
+                <button type="button" (click)="savePenalties(match)">
+                  {{ t().live.saveShootout }}
+                </button>
               </div>
             </div>
           }
@@ -113,10 +140,10 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
 
         @if (data.tournament.trackPlayers) {
           <section class="card stack">
-            <h3>Record an event</h3>
+            <h3>{{ t().live.recordEvent }}</h3>
             <div class="form-grid">
               <label>
-                Team
+                {{ t().live.team }}
                 <select [ngModel]="eventTeamId()" (ngModelChange)="eventTeamId.set(+$event)">
                   @if (match.homeTeamId) {
                     <option [value]="match.homeTeamId">{{ match.homeTeamName }}</option>
@@ -127,52 +154,51 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
                 </select>
               </label>
               <label>
-                Player
+                {{ t().live.player }}
                 <select [ngModel]="eventPlayerId" (ngModelChange)="eventPlayerId = $event">
-                  <option [ngValue]="null">Not recorded</option>
+                  <option [ngValue]="null">{{ t().live.notRecorded }}</option>
                   @for (player of squad(); track player.id) {
                     <option [ngValue]="player.id">{{ player.name }}</option>
                   }
                 </select>
               </label>
               <label>
-                Type
+                {{ t().live.type }}
                 <select [(ngModel)]="eventType">
-                  <option value="Goal">Goal</option>
-                  <option value="PenaltyGoal">Penalty scored</option>
-                  <option value="OwnGoal">Own goal</option>
-                  <option value="Assist">Assist</option>
-                  <option value="YellowCard">Yellow card</option>
-                  <option value="RedCard">Red card</option>
-                  <option value="PenaltyMissed">Penalty missed</option>
+                  <option value="Goal">{{ t().eventType.Goal }}</option>
+                  <option value="PenaltyGoal">{{ t().eventType.PenaltyGoal }}</option>
+                  <option value="OwnGoal">{{ t().eventType.OwnGoal }}</option>
+                  <option value="Assist">{{ t().eventType.Assist }}</option>
+                  <option value="YellowCard">{{ t().eventType.YellowCard }}</option>
+                  <option value="RedCard">{{ t().eventType.RedCard }}</option>
+                  <option value="PenaltyMissed">{{ t().eventType.PenaltyMissed }}</option>
                 </select>
               </label>
               <label>
-                Minute
-                <input type="number" min="0" [(ngModel)]="eventMinute" />
+                {{ t().live.minute }}
+                <input type="number" inputmode="numeric" min="0" [(ngModel)]="eventMinute" />
               </label>
               <div class="align-end">
-                <button class="primary" type="button" (click)="addEvent(match.id)">Add event</button>
+                <button class="primary" type="button" (click)="addEvent(match.id)">
+                  {{ t().live.addEvent }}
+                </button>
               </div>
             </div>
-            <p class="muted note">
-              Goals added here also move the scoreline, so use either the buttons above or the event
-              feed, not both for the same goal.
-            </p>
+            <p class="muted note">{{ t().live.eventNote }}</p>
           </section>
         }
 
         @if (match.events.length) {
           <section class="card stack">
-            <h3>Event feed</h3>
+            <h3>{{ t().live.eventFeed }}</h3>
             <div class="scroll-x">
               <table>
                 <thead>
                   <tr>
-                    <th class="numeric">Min</th>
-                    <th>Type</th>
-                    <th>Team</th>
-                    <th>Player</th>
+                    <th class="numeric">{{ t().live.minuteShort }}</th>
+                    <th>{{ t().live.type }}</th>
+                    <th>{{ t().live.team }}</th>
+                    <th>{{ t().live.player }}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -180,12 +206,12 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
                   @for (event of match.events; track event.id) {
                     <tr>
                       <td class="numeric">{{ event.minute }}'</td>
-                      <td>{{ event.type }}</td>
+                      <td>{{ t().eventType[event.type] }}</td>
                       <td>{{ event.teamName }}</td>
                       <td class="muted">{{ event.playerName ?? '-' }}</td>
                       <td>
                         <button type="button" class="danger" (click)="removeEvent(match.id, event.id)">
-                          Undo
+                          {{ t().live.undo }}
                         </button>
                       </td>
                     </tr>
@@ -197,7 +223,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
         }
 
         <section class="stack">
-          <h3>Tables update automatically</h3>
+          <h3>{{ t().live.tablesAuto }}</h3>
           <div class="grid-auto">
             @for (table of data.tables; track table.groupId) {
               <div class="card">
@@ -223,7 +249,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
         </section>
       }
     } @else {
-      <p class="muted">Loading...</p>
+      <p class="muted">{{ t().common.loading }}</p>
     }
   `,
     styles: `
@@ -374,6 +400,8 @@ export class LiveConsole implements OnInit {
     readonly slug = input.required<string>();
 
     private readonly api = inject(ApiService);
+    protected readonly i18n = inject(I18nService);
+    protected readonly t = this.i18n.t;
     protected readonly store = inject(TournamentStore);
     protected readonly detail = this.store.detail;
 
@@ -415,12 +443,10 @@ export class LiveConsole implements OnInit {
     }
 
     matchLabel(match: Match): string {
-        const stage = match.groupName ?? match.stage;
-        return `${stage} - ${match.homeTeamName} ${match.homeScore}-${match.awayScore} ${match.awayTeamName}`;
-    }
-
-    statusLabel(status: MatchStatus): string {
-        return status === 'HalfTime' ? 'Half time' : status;
+        const stage = match.groupName ?? this.t().stage[match.stage];
+        const home = this.i18n.teamName(match.homeTeamName, match.homeTeamId);
+        const away = this.i18n.teamName(match.awayTeamName, match.awayTeamId);
+        return `${stage} - ${home} ${match.homeScore}-${match.awayScore} ${away}`;
     }
 
     isKnockout(match: Match): boolean {

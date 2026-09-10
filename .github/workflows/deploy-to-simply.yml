@@ -75,6 +75,7 @@ jobs:
           JWT_KEY: ${{ secrets.JWT_KEY }}
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:JWT_KEY) -or $env:JWT_KEY.Length -lt 32) {
@@ -95,6 +96,7 @@ jobs:
             Admin             = @{
               Username = $env:ADMIN_USERNAME
               Password = $env:ADMIN_PASSWORD
+              Email    = $env:ADMIN_EMAIL
             }
             Cors              = @{ AllowedOrigins = @($origin) }
             Logging           = @{ LogLevel = @{ Default = 'Warning'; 'LigaCup' = 'Information' } }

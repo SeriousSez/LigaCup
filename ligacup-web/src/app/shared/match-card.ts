@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { I18nService } from '../core/i18n/i18n.service';
 import { Match } from '../core/models';
 
 @Component({
@@ -8,9 +9,9 @@ import { Match } from '../core/models';
     template: `
     <article class="match" [class.is-live]="isLive()">
       <div class="meta">
-        <span>{{ match().groupName ?? stageLabel() }}</span>
+        <span>{{ match().groupName ?? t().stage[match().stage] }}</span>
         @if (match().kickoffUtc) {
-          <span>{{ match().kickoffUtc | date: 'EEE d MMM HH:mm' }}</span>
+          <span>{{ match().kickoffUtc | date: 'EEE d MMM HH:mm' : undefined : locale() }}</span>
         }
         @if (match().venue) {
           <span>{{ match().venue }}</span>
@@ -18,14 +19,14 @@ import { Match } from '../core/models';
       </div>
 
       <div class="scoreline">
-        <span class="side home">{{ match().homeTeamName }}</span>
+        <span class="side home">{{ homeName() }}</span>
         <span class="score">{{ match().homeScore }}&ndash;{{ match().awayScore }}</span>
-        <span class="side away">{{ match().awayTeamName }}</span>
+        <span class="side away">{{ awayName() }}</span>
       </div>
 
       @if (match().homePenalties !== null && match().awayPenalties !== null) {
         <p class="muted penalties">
-          Penalties {{ match().homePenalties }}&ndash;{{ match().awayPenalties }}
+          {{ t().matchCard.penalties }} {{ match().homePenalties }}&ndash;{{ match().awayPenalties }}
         </p>
       }
 
@@ -33,10 +34,10 @@ import { Match } from '../core/models';
         @if (isLive()) {
           <span class="badge live"
             ><span class="pulse"></span>
-            {{ match().status === 'HalfTime' ? 'Half time' : minuteLabel() }}</span
+            {{ match().status === 'HalfTime' ? t().matchStatus.HalfTime : minuteLabel() }}</span
           >
         } @else {
-          <span class="badge">{{ statusLabel() }}</span>
+          <span class="badge">{{ t().matchStatus[match().status] }}</span>
         }
       </div>
 
@@ -47,10 +48,10 @@ import { Match } from '../core/models';
               <span class="minute">{{ event.minute }}'</span>
               <span>{{ event.playerName ?? event.teamName }}</span>
               @if (event.type === 'OwnGoal') {
-                <span class="muted">(og)</span>
+                <span class="muted">{{ t().matchCard.ownGoalShort }}</span>
               }
               @if (event.type === 'PenaltyGoal') {
-                <span class="muted">(pen)</span>
+                <span class="muted">{{ t().matchCard.penaltyShort }}</span>
               }
             </li>
           }
@@ -138,38 +139,25 @@ import { Match } from '../core/models';
 export class MatchCard {
     readonly match = input.required<Match>();
 
+    private readonly i18n = inject(I18nService);
+    protected readonly t = this.i18n.t;
+    protected readonly locale = this.i18n.locale;
+
+    protected readonly homeName = computed(() =>
+        this.i18n.teamName(this.match().homeTeamName, this.match().homeTeamId),
+    );
+
+    protected readonly awayName = computed(() =>
+        this.i18n.teamName(this.match().awayTeamName, this.match().awayTeamId),
+    );
+
     isLive(): boolean {
         return this.match().status === 'Live' || this.match().status === 'HalfTime';
     }
 
     minuteLabel(): string {
         const minute = this.match().liveMinute;
-        return minute === null ? 'Live' : `${minute}'`;
-    }
-
-    statusLabel(): string {
-        const labels: Record<string, string> = {
-            Scheduled: 'Scheduled',
-            Finished: 'Full time',
-            Postponed: 'Postponed',
-            Abandoned: 'Abandoned',
-        };
-
-        return labels[this.match().status] ?? this.match().status;
-    }
-
-    stageLabel(): string {
-        const labels: Record<string, string> = {
-            Group: 'Group stage',
-            RoundOf32: 'Round of 32',
-            RoundOf16: 'Round of 16',
-            QuarterFinal: 'Quarter-final',
-            SemiFinal: 'Semi-final',
-            ThirdPlacePlayOff: 'Third place',
-            Final: 'Final',
-        };
-
-        return labels[this.match().stage] ?? this.match().stage;
+        return minute === null ? this.t().connection.live : `${minute}'`;
     }
 
     goalEvents() {

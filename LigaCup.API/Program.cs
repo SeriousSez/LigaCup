@@ -116,17 +116,19 @@ app.Run();
 
 static async Task SeedAdminUserAsync(LigaCupContext dbContext, IConfiguration configuration, IHostEnvironment environment, ILogger logger)
 {
-    if (await dbContext.Users.AnyAsync())
-    {
-        return;
-    }
-
     var username = configuration["Admin:Username"];
     var password = configuration["Admin:Password"];
+    var email = configuration["Admin:Email"];
 
     if (string.IsNullOrWhiteSpace(username))
     {
         username = "admin";
+    }
+
+    // Only ever creates a missing account. An existing password is never reset from configuration.
+    if (await dbContext.Users.AnyAsync(user => user.Username == username))
+    {
+        return;
     }
 
     if (string.IsNullOrWhiteSpace(password))
@@ -134,8 +136,9 @@ static async Task SeedAdminUserAsync(LigaCupContext dbContext, IConfiguration co
         if (environment.IsProduction())
         {
             logger.LogError(
-                "No users exist and Admin__Password is not configured, so no administrator was created. " +
-                "Set Admin__Username and Admin__Password, then restart the app.");
+                "Administrator '{Username}' does not exist and Admin__Password is not configured, so no account was created. " +
+                "Set Admin__Username and Admin__Password, then restart the app.",
+                username);
             return;
         }
 
@@ -147,10 +150,11 @@ static async Task SeedAdminUserAsync(LigaCupContext dbContext, IConfiguration co
     dbContext.Users.Add(new User
     {
         Username = username,
+        Email = string.IsNullOrWhiteSpace(email) ? null : email,
         PasswordHash = PasswordHasher.Hash(password),
         Role = UserRole.Admin
     });
 
     await dbContext.SaveChangesAsync();
-    logger.LogInformation("Created initial administrator '{Username}'.", username);
+    logger.LogInformation("Created administrator '{Username}'.", username);
 }

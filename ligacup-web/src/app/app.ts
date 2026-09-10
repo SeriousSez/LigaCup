@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
+import { I18nService } from './core/i18n/i18n.service';
 
 @Component({
   selector: 'app-root',
@@ -14,15 +15,29 @@ import { AuthService } from './core/auth.service';
         </a>
 
         <nav>
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
-            >Tournaments</a
+          <a
+            class="home-link"
+            routerLink="/"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            >{{ t().nav.tournaments }}</a
           >
           @if (auth.isLoggedIn()) {
-            <a routerLink="/admin" routerLinkActive="active">Admin</a>
-            <button class="ghost sign-out" type="button" (click)="auth.logout()">Sign out</button>
+            <a routerLink="/admin" routerLinkActive="active">{{ t().nav.admin }}</a>
+            <button class="ghost sign-out" type="button" (click)="auth.logout()">
+              {{ t().nav.signOut }}
+            </button>
           } @else {
-            <a routerLink="/login" routerLinkActive="active">Sign in</a>
+            <a routerLink="/login" routerLinkActive="active">{{ t().nav.signIn }}</a>
           }
+          <button
+            class="ghost lang"
+            type="button"
+            [attr.aria-label]="t().nav.languageLabel"
+            (click)="i18n.toggle()"
+          >
+            {{ i18n.language() === 'da' ? 'EN' : 'DA' }}
+          </button>
         </nav>
       </div>
     </header>
@@ -31,7 +46,7 @@ import { AuthService } from './core/auth.service';
       <router-outlet />
     </main>
 
-    <footer class="container muted">Liga Cup &middot; live tables update automatically</footer>
+    <footer class="container muted">{{ t().footer }}</footer>
   `,
   styles: `
     .site-header {
@@ -83,10 +98,22 @@ import { AuthService } from './core/auth.service';
       min-height: var(--tap);
       padding-inline: 0.55rem;
       font-size: 0.9rem;
+      white-space: nowrap;
     }
 
     nav a.active {
       color: var(--accent);
+    }
+
+    /* The brand already links home, so the phone header drops the duplicate. */
+    nav a.home-link {
+      display: none;
+    }
+
+    @media (min-width: 560px) {
+      nav a.home-link {
+        display: inline-flex;
+      }
     }
 
     .sign-out {
@@ -94,6 +121,17 @@ import { AuthService } from './core/auth.service';
       color: var(--text-muted);
       font-size: 0.9rem;
       padding-inline: 0.55rem;
+      white-space: nowrap;
+    }
+
+    .lang {
+      border-color: var(--surface-line);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding-inline: 0.5rem;
+      margin-left: 0.15rem;
     }
 
     main {
@@ -122,4 +160,6 @@ import { AuthService } from './core/auth.service';
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  protected readonly i18n = inject(I18nService);
+  protected readonly t = this.i18n.t;
 }

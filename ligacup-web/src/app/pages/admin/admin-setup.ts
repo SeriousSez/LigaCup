@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
 
@@ -14,124 +15,143 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
       <section class="spread heading">
         <div>
           <h1>{{ data.tournament.name }}</h1>
-          <p class="muted">Setup and rules</p>
+          <p class="muted">{{ t().setup.subtitle }}</p>
         </div>
         <div class="row">
           <a [routerLink]="['/admin', data.tournament.slug, 'live']">
-            <button class="primary" type="button">Live console</button>
+            <button class="primary" type="button">{{ t().tournament.liveConsole }}</button>
           </a>
           <a [routerLink]="['/', data.tournament.slug]">
-            <button class="ghost" type="button">Public page</button>
+            <button class="ghost" type="button">{{ t().setup.publicPage }}</button>
           </a>
         </div>
       </section>
 
       <section class="card stack">
-        <h3>Rules</h3>
+        <h3>{{ t().setup.rules }}</h3>
         <div class="form-grid">
           <label>
-            Name
+            {{ t().common.name }}
             <input [(ngModel)]="settings.name" />
           </label>
           <label>
-            Season
-            <input type="number" [(ngModel)]="settings.season" />
+            {{ t().common.season }}
+            <input type="number" inputmode="numeric" [(ngModel)]="settings.season" />
           </label>
           <label>
-            Status
+            {{ t().setup.status }}
             <select [(ngModel)]="settings.status">
-              <option value="Draft">Draft</option>
-              <option value="InProgress">In progress</option>
-              <option value="Completed">Completed</option>
-              <option value="Archived">Archived</option>
+              <option value="Draft">{{ t().tournamentStatus.Draft }}</option>
+              <option value="InProgress">{{ t().tournamentStatus.InProgress }}</option>
+              <option value="Completed">{{ t().tournamentStatus.Completed }}</option>
+              <option value="Archived">{{ t().tournamentStatus.Archived }}</option>
             </select>
           </label>
           <label>
-            Format
+            {{ t().setup.format }}
             <select [(ngModel)]="settings.format">
-              <option value="GroupsThenKnockout">Groups then knockout</option>
-              <option value="GroupsOnly">Group stage only</option>
-              <option value="KnockoutOnly">Straight knockout</option>
+              <option value="GroupsThenKnockout">{{ t().format.GroupsThenKnockout }}</option>
+              <option value="GroupsOnly">{{ t().format.GroupsOnly }}</option>
+              <option value="KnockoutOnly">{{ t().format.KnockoutOnly }}</option>
             </select>
           </label>
           <label>
-            Points for a win
-            <input type="number" [(ngModel)]="settings.pointsForWin" />
+            {{ t().setup.pointsWin }}
+            <input type="number" inputmode="numeric" [(ngModel)]="settings.pointsForWin" />
           </label>
           <label>
-            Points for a draw
-            <input type="number" [(ngModel)]="settings.pointsForDraw" />
+            {{ t().setup.pointsDraw }}
+            <input type="number" inputmode="numeric" [(ngModel)]="settings.pointsForDraw" />
           </label>
           <label>
-            Points for a loss
-            <input type="number" [(ngModel)]="settings.pointsForLoss" />
+            {{ t().setup.pointsLoss }}
+            <input type="number" inputmode="numeric" [(ngModel)]="settings.pointsForLoss" />
           </label>
           <label>
-            Times each pair meets
-            <input type="number" min="1" max="4" [(ngModel)]="settings.groupRounds" />
+            {{ t().setup.groupRounds }}
+            <input type="number" inputmode="numeric" min="1" max="4" [(ngModel)]="settings.groupRounds" />
           </label>
           <label>
-            Teams advancing per group
-            <input type="number" min="0" [(ngModel)]="settings.teamsAdvancingPerGroup" />
+            {{ t().setup.advancing }}
+            <input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              [(ngModel)]="settings.teamsAdvancingPerGroup"
+            />
           </label>
           <label>
-            Match length (minutes)
-            <input type="number" min="1" [(ngModel)]="settings.matchDurationMinutes" />
+            {{ t().setup.matchLength }}
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              [(ngModel)]="settings.matchDurationMinutes"
+            />
           </label>
         </div>
 
         <div class="row toggles">
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="settings.trackPlayers" />
-            Track players and goalscorers
+            {{ t().setup.trackPlayers }}
           </label>
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="settings.trackCards" />
-            Track cards
+            {{ t().setup.trackCards }}
           </label>
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="settings.hasThirdPlacePlayOff" />
-            Third place play-off
+            {{ t().setup.thirdPlace }}
           </label>
         </div>
 
         <div class="stack">
-          <h4>Tiebreakers, in order</h4>
-          <p class="muted">
-            Applied after points. Head-to-head rules only compare the teams that are still level.
-          </p>
+          <h4>{{ t().setup.tiebreakersTitle }}</h4>
+          <p class="muted">{{ t().setup.tiebreakersHelp }}</p>
           <div class="tiebreakers">
             @for (rule of tiebreakers(); track rule; let index = $index) {
               <div class="rule">
-                <span>{{ index + 1 }}. {{ tiebreakerLabel(rule) }}</span>
-                <button type="button" class="ghost" (click)="moveRule(index, -1)" [disabled]="index === 0">
+                <span>{{ index + 1 }}. {{ t().tiebreaker[rule] }}</span>
+                <button
+                  type="button"
+                  class="ghost"
+                  [attr.aria-label]="t().setup.moveUp"
+                  (click)="moveRule(index, -1)"
+                  [disabled]="index === 0"
+                >
                   &uarr;
                 </button>
                 <button
                   type="button"
                   class="ghost"
+                  [attr.aria-label]="t().setup.moveDown"
                   (click)="moveRule(index, 1)"
                   [disabled]="index === tiebreakers().length - 1"
                 >
                   &darr;
                 </button>
-                <button type="button" class="danger" (click)="removeRule(index)">Remove</button>
+                <button type="button" class="danger" (click)="removeRule(index)">
+                  {{ t().common.remove }}
+                </button>
               </div>
             }
           </div>
           <div class="add-rule">
             <select [ngModel]="ruleToAdd ?? availableRules()[0]" (ngModelChange)="ruleToAdd = $event">
               @for (rule of availableRules(); track rule) {
-                <option [value]="rule">{{ tiebreakerLabel(rule) }}</option>
+                <option [value]="rule">{{ t().tiebreaker[rule] }}</option>
               }
             </select>
-            <button type="button" (click)="addRule()" [disabled]="!availableRules().length">Add</button>
+            <button type="button" (click)="addRule()" [disabled]="!availableRules().length">
+              {{ t().common.add }}
+            </button>
           </div>
         </div>
 
         <div class="row">
           <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy()">
-            Save rules
+            {{ t().setup.saveRules }}
           </button>
           @if (message()) {
             <span class="muted">{{ message() }}</span>
@@ -140,7 +160,7 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
       </section>
 
       <section class="card stack">
-        <h3>Groups</h3>
+        <h3>{{ t().setup.groups }}</h3>
         <div class="row">
           @for (group of data.groups; track group.id) {
             <span class="badge">
@@ -148,26 +168,27 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
               <button type="button" class="danger tiny" (click)="removeGroup(group.id)">&times;</button>
             </span>
           } @empty {
-            <span class="muted">No groups. Teams without a group form one combined league.</span>
+            <span class="muted">{{ t().setup.noGroups }}</span>
           }
         </div>
         <div class="add-player">
-          <input [(ngModel)]="newGroupName" placeholder="Group A" />
-          <button type="button" (click)="addGroup()">Add group</button>
+          <input [(ngModel)]="newGroupName" [placeholder]="t().setup.groupPlaceholder" />
+          <button type="button" (click)="addGroup()">{{ t().setup.addGroup }}</button>
         </div>
       </section>
 
       <section class="card stack">
-        <h3>Teams</h3>
+        <h3>{{ t().setup.teams }}</h3>
         <div class="team-rows">
           @for (team of data.teams; track team.id) {
             <div class="team-row">
               <div class="team-main">
                 <strong>{{ team.name }}</strong>
                 <span class="muted">
-                  {{ team.shortName ?? 'No short name' }}
+                  {{ team.shortName ?? t().setup.noShortName }}
                   @if (team.pointsAdjustment !== 0) {
-                    &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }} pts
+                    &middot; {{ team.pointsAdjustment > 0 ? '+' : '' }}{{ team.pointsAdjustment }}
+                    {{ t().setup.pointsSuffix }}
                   }
                 </span>
               </div>
@@ -176,35 +197,42 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
                   [ngModel]="team.groupId"
                   (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
                 >
-                  <option [ngValue]="null">Unassigned</option>
+                  <option [ngValue]="null">{{ t().common.unassigned }}</option>
                   @for (group of data.groups; track group.id) {
                     <option [ngValue]="group.id">{{ group.name }}</option>
                   }
                 </select>
-                <button type="button" class="danger" (click)="removeTeam(team.id)">Remove</button>
+                <button type="button" class="danger" (click)="removeTeam(team.id)">
+                  {{ t().common.remove }}
+                </button>
               </div>
             </div>
           } @empty {
-            <p class="muted">No teams yet.</p>
+            <p class="muted">{{ t().setup.teams }}: 0</p>
           }
         </div>
 
         <div class="add-team">
-          <input [(ngModel)]="newTeamName" placeholder="Team name" />
-          <input class="tiny-input" [(ngModel)]="newTeamShort" placeholder="ABC" maxlength="10" />
+          <input [(ngModel)]="newTeamName" [placeholder]="t().setup.teamPlaceholder" />
+          <input
+            class="tiny-input"
+            [(ngModel)]="newTeamShort"
+            [placeholder]="t().setup.shortPlaceholder"
+            maxlength="10"
+          />
           <select [(ngModel)]="newTeamGroupId">
-            <option [ngValue]="null">Unassigned</option>
+            <option [ngValue]="null">{{ t().common.unassigned }}</option>
             @for (group of data.groups; track group.id) {
               <option [ngValue]="group.id">{{ group.name }}</option>
             }
           </select>
-          <button type="button" (click)="addTeam()">Add team</button>
+          <button type="button" (click)="addTeam()">{{ t().setup.addTeam }}</button>
         </div>
       </section>
 
       @if (data.tournament.trackPlayers) {
         <section class="card stack">
-          <h3>Squads</h3>
+          <h3>{{ t().setup.squads }}</h3>
           @for (team of data.teams; track team.id) {
             <div class="squad">
               <strong>{{ team.name }}</strong>
@@ -220,12 +248,12 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
                     </button>
                   </span>
                 } @empty {
-                  <span class="muted">No players yet.</span>
+                  <span class="muted">{{ t().setup.noPlayers }}</span>
                 }
               </div>
               <div class="add-player">
-                <input [(ngModel)]="playerDrafts[team.id]" placeholder="Player name" />
-                <button type="button" (click)="addPlayer(team.id)">Add</button>
+                <input [(ngModel)]="playerDrafts[team.id]" [placeholder]="t().setup.playerPlaceholder" />
+                <button type="button" (click)="addPlayer(team.id)">{{ t().common.add }}</button>
               </div>
             </div>
           }
@@ -233,31 +261,28 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
       }
 
       <section class="card stack">
-        <h3>Fixtures</h3>
-        <p class="muted">
-          Group fixtures are a full round robin. The knockout bracket is created with placeholders and
-          fills itself in as ties are decided.
-        </p>
+        <h3>{{ t().setup.fixtures }}</h3>
+        <p class="muted">{{ t().setup.fixturesHelp }}</p>
         <div class="row">
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="generateGroups" />
-            Group stage
+            {{ t().setup.groupStage }}
           </label>
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="generateKnockout" />
-            Knockout bracket
+            {{ t().setup.knockoutBracket }}
           </label>
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="replaceExisting" />
-            Replace existing fixtures
+            {{ t().setup.replaceExisting }}
           </label>
         </div>
         <div class="row">
           <button class="primary" type="button" (click)="generate()" [disabled]="busy()">
-            Generate fixtures
+            {{ t().setup.generate }}
           </button>
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
-            Seed knockout from tables
+            {{ t().setup.seedKnockout }}
           </button>
         </div>
         @if (fixtureMessage()) {
@@ -265,7 +290,7 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
         }
       </section>
     } @else {
-      <p class="muted">Loading...</p>
+      <p class="muted">{{ t().common.loading }}</p>
     }
   `,
     styles: `
@@ -455,6 +480,8 @@ export class AdminSetup implements OnInit {
     readonly slug = input.required<string>();
 
     private readonly api = inject(ApiService);
+    private readonly i18n = inject(I18nService);
+    protected readonly t = this.i18n.t;
     protected readonly store = inject(TournamentStore);
     protected readonly detail = this.store.detail;
 
@@ -530,22 +557,6 @@ export class AdminSetup implements OnInit {
         this.tiebreakers.set(['GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'Wins', 'TeamName']);
     }
 
-    tiebreakerLabel(rule: TiebreakerRule): string {
-        const labels: Record<TiebreakerRule, string> = {
-            GoalDifference: 'Goal difference',
-            GoalsScored: 'Goals scored',
-            GoalsConceded: 'Fewest goals conceded',
-            Wins: 'Most wins',
-            HeadToHeadPoints: 'Head-to-head points',
-            HeadToHeadGoalDifference: 'Head-to-head goal difference',
-            HeadToHeadGoalsScored: 'Head-to-head goals scored',
-            DisciplinaryPoints: 'Fewest disciplinary points',
-            TeamName: 'Alphabetical',
-        };
-
-        return labels[rule];
-    }
-
     addRule(): void {
         const rule = this.ruleToAdd ?? this.availableRules()[0];
         if (rule && !this.tiebreakers().includes(rule)) {
@@ -584,9 +595,9 @@ export class AdminSetup implements OnInit {
                 }),
             );
             await this.store.reload();
-            this.message.set('Saved.');
+            this.message.set(this.t().common.saved);
         } catch {
-            this.message.set('Could not save the rules.');
+            this.message.set(this.t().setup.saveFailed);
         } finally {
             this.busy.set(false);
         }
@@ -659,7 +670,7 @@ export class AdminSetup implements OnInit {
             await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
             await this.store.reload();
         } catch {
-            this.message.set('Delete the team fixtures before removing the team.');
+            this.message.set(this.t().setup.removeTeamBlocked);
         }
     }
 
@@ -698,11 +709,11 @@ export class AdminSetup implements OnInit {
                 ),
             );
             await this.store.reload();
-            this.fixtureMessage.set(`Generated ${result.generated} fixtures.`);
-        } catch {
             this.fixtureMessage.set(
-                'Fixtures already exist. Tick "replace existing fixtures" to regenerate them.',
+                this.i18n.format(this.t().setup.generated, { count: result.generated }),
             );
+        } catch {
+            this.fixtureMessage.set(this.t().setup.generateBlocked);
         } finally {
             this.busy.set(false);
         }
@@ -719,9 +730,9 @@ export class AdminSetup implements OnInit {
         try {
             const result = await firstValueFrom(this.api.seedKnockout(data.tournament.id));
             await this.store.reload();
-            this.fixtureMessage.set(`Filled ${result.seeded} knockout ties from the group tables.`);
+            this.fixtureMessage.set(this.i18n.format(this.t().setup.seeded, { count: result.seeded }));
         } catch {
-            this.fixtureMessage.set('The knockout bracket could not be seeded.');
+            this.fixtureMessage.set(this.t().setup.seedFailed);
         } finally {
             this.busy.set(false);
         }

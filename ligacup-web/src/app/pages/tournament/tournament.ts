@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
@@ -12,30 +13,34 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
     imports: [RouterLink, StandingsTable, MatchCard],
     template: `
     @if (store.loading()) {
-      <p class="muted">Loading...</p>
+      <p class="muted">{{ t().common.loading }}</p>
     } @else if (store.error()) {
-      <p class="error">{{ store.error() }}</p>
+      <p class="error">{{ t().tournament.notFound }}</p>
     } @else if (detail(); as data) {
       <section class="spread heading">
         <div>
           <h1>{{ data.tournament.name }}</h1>
           <p class="muted">
-            {{ data.tournament.season }} &middot; {{ data.teams.length }} teams &middot;
-            {{ formatLabel(data.tournament.format) }}
+            {{ data.tournament.season }} &middot; {{ data.teams.length }} {{ t().common.teams }}
+            &middot; {{ t().format[data.tournament.format] }}
           </p>
         </div>
 
         <div class="row">
           <span class="badge" [class.connected]="store.connectionState() === 'connected'">
             @if (store.connectionState() === 'connected') {
-              <span class="pulse"></span> Live
+              <span class="pulse"></span> {{ t().connection.live }}
             } @else {
-              {{ store.connectionState() === 'connecting' ? 'Connecting' : 'Offline' }}
+              {{
+                store.connectionState() === 'connecting'
+                  ? t().connection.connecting
+                  : t().connection.offline
+              }}
             }
           </span>
           @if (auth.isLoggedIn()) {
             <a [routerLink]="['/admin', data.tournament.slug, 'live']">
-              <button type="button">Live console</button>
+              <button type="button">{{ t().tournament.liveConsole }}</button>
             </a>
           }
         </div>
@@ -43,7 +48,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
 
       @if (liveMatches().length) {
         <section class="stack live-strip">
-          <h2>Playing now</h2>
+          <h2>{{ t().tournament.playingNow }}</h2>
           <div class="grid-auto">
             @for (match of liveMatches(); track match.id) {
               <app-match-card [match]="match" />
@@ -53,7 +58,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
       }
 
       <nav class="tabs">
-        @for (option of tabs; track option.id) {
+        @for (option of tabs(); track option.id) {
           @if (option.id !== 'bracket' || data.bracket.length) {
             @if (option.id !== 'scorers' || data.tournament.trackPlayers) {
               <button
@@ -74,7 +79,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
             @for (table of data.tables; track table.groupId) {
               <app-standings-table [table]="table" />
             } @empty {
-              <p class="muted">No group tables yet. Add teams and generate the fixtures.</p>
+              <p class="muted">{{ t().tournament.noTables }}</p>
             }
           </div>
         }
@@ -90,7 +95,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
                 </div>
               </section>
             } @empty {
-              <p class="muted">No fixtures have been generated yet.</p>
+              <p class="muted">{{ t().tournament.noFixtures }}</p>
             }
           </div>
         }
@@ -112,10 +117,10 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
               <thead>
                 <tr>
                   <th class="numeric">#</th>
-                  <th>Player</th>
-                  <th>Team</th>
-                  <th class="numeric">Goals</th>
-                  <th class="numeric">Assists</th>
+                  <th>{{ t().tournament.scorers.player }}</th>
+                  <th>{{ t().tournament.scorers.team }}</th>
+                  <th class="numeric">{{ t().tournament.scorers.goals }}</th>
+                  <th class="numeric">{{ t().tournament.scorers.assists }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,7 +134,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="muted">No goals recorded yet.</td>
+                    <td colspan="5" class="muted">{{ t().tournament.scorers.empty }}</td>
                   </tr>
                 }
               </tbody>
@@ -234,27 +239,32 @@ export class Tournament implements OnInit {
 
     protected readonly store = inject(TournamentStore);
     protected readonly auth = inject(AuthService);
+    protected readonly t = inject(I18nService).t;
     protected readonly tab = signal<Tab>('tables');
 
-    protected readonly tabs: { id: Tab; label: string }[] = [
-        { id: 'tables', label: 'Tables' },
-        { id: 'fixtures', label: 'Fixtures & results' },
-        { id: 'bracket', label: 'Knockout' },
-        { id: 'scorers', label: 'Top scorers' },
-    ];
+    protected readonly tabs = computed<{ id: Tab; label: string }[]>(() => {
+        const labels = this.t().tournament.tabs;
+        return [
+            { id: 'tables', label: labels.tables },
+            { id: 'fixtures', label: labels.fixtures },
+            { id: 'bracket', label: labels.bracket },
+            { id: 'scorers', label: labels.scorers },
+        ];
+    });
 
     protected readonly detail = this.store.detail;
     protected readonly liveMatches = this.store.liveMatches;
 
     protected readonly fixtureRounds = computed(() => {
         const matches = this.detail()?.matches ?? [];
+        const strings = this.t();
         const buckets = new Map<string, typeof matches>();
 
         for (const match of matches) {
             const key =
                 match.stage === 'Group'
-                    ? `${match.groupName ?? 'League'} - matchday ${match.round}`
-                    : this.stageLabel(match.stage);
+                    ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
+                    : strings.stagePlural[match.stage];
 
             buckets.set(key, [...(buckets.get(key) ?? []), match]);
         }
@@ -264,10 +274,13 @@ export class Tournament implements OnInit {
 
     protected readonly bracketStages = computed(() => {
         const bracket = this.detail()?.bracket ?? [];
+        const strings = this.t();
         const buckets = new Map<string, typeof bracket>();
 
+        // Grouped by stage rather than the server's English label so the heading follows the language.
         for (const item of bracket) {
-            buckets.set(item.stageName, [...(buckets.get(item.stageName) ?? []), item]);
+            const key = strings.stagePlural[item.stage as keyof typeof strings.stagePlural] ?? item.stageName;
+            buckets.set(key, [...(buckets.get(key) ?? []), item]);
         }
 
         return [...buckets.entries()].map(([key, matches]) => ({ key, matches }));
@@ -275,28 +288,5 @@ export class Tournament implements OnInit {
 
     ngOnInit(): void {
         void this.store.load(this.slug());
-    }
-
-    formatLabel(format: string): string {
-        const labels: Record<string, string> = {
-            GroupsOnly: 'Group stage only',
-            GroupsThenKnockout: 'Groups then knockout',
-            KnockoutOnly: 'Straight knockout',
-        };
-
-        return labels[format] ?? format;
-    }
-
-    private stageLabel(stage: string): string {
-        const labels: Record<string, string> = {
-            RoundOf32: 'Round of 32',
-            RoundOf16: 'Round of 16',
-            QuarterFinal: 'Quarter-finals',
-            SemiFinal: 'Semi-finals',
-            ThirdPlacePlayOff: 'Third place play-off',
-            Final: 'Final',
-        };
-
-        return labels[stage] ?? stage;
     }
 }

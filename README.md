@@ -26,7 +26,17 @@ cd LigaCup.API
 dotnet run
 ```
 
-It listens on `http://localhost:5099`, creates `App_Data/ligacup.dev.db` on first run and seeds an administrator using the credentials in `appsettings.Development.json` (`admin` / `ligacup-local-dev`). That file also holds a fixed token signing key so a restart does not sign you out. Everything in it is a local development value that production never loads.
+It listens on `http://localhost:5099` and creates `App_Data/ligacup.dev.db` on first run. The administrator username and email come from `appsettings.Development.json`, and the password is read from .NET user secrets so it never lands in the repository. Set it once with:
+
+```powershell
+dotnet user-secrets set "Admin:Password" "<your password>" --project LigaCup.API
+```
+
+That file also holds a fixed token signing key so restarting the API does not sign you out. Everything in it is a local development value that production never loads.
+
+## Language
+
+The site is in Danish by default. A DA/EN button in the header switches language instantly and the choice is remembered in local storage. Translations live in [ligacup-web/src/app/core/i18n/strings.ts](ligacup-web/src/app/core/i18n/strings.ts), where the `Strings` interface forces both languages to stay in step: miss a key in one and the build fails.
 
 Start the frontend in a second terminal:
 
@@ -94,7 +104,7 @@ In the repository settings, add these secrets:
 | -------------------------------------------- | -------------------------------------------------- |
 | `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Simply.com FTP credentials.                        |
 | `JWT_KEY`                                    | Signing key for tokens, at least 32 characters.    |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD`           | Seeds the first administrator on a fresh database. |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | Creates the administrator account if it is missing. An existing account is never modified, so changing the password later is safe. |
 
 And one variable:
 

@@ -1,4 +1,5 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
+import { I18nService } from '../core/i18n/i18n.service';
 import { GroupTable } from '../core/models';
 
 @Component({
@@ -9,17 +10,21 @@ import { GroupTable } from '../core/models';
       <table>
         <thead>
           <tr>
-            <th class="numeric pos">#</th>
-            <th>Team</th>
-            <th class="numeric" title="Played">P</th>
-            <th class="numeric hide-sm" title="Won">W</th>
-            <th class="numeric hide-sm" title="Drawn">D</th>
-            <th class="numeric hide-sm" title="Lost">L</th>
-            <th class="numeric hide-sm" title="Goals for">GF</th>
-            <th class="numeric hide-sm" title="Goals against">GA</th>
-            <th class="numeric" title="Goal difference">GD</th>
-            <th class="numeric" title="Points">Pts</th>
-            <th class="hide-sm">Form</th>
+            <th class="numeric pos">{{ t().table.position }}</th>
+            <th>{{ t().table.team }}</th>
+            <th class="numeric" [title]="t().table.playedFull">{{ t().table.played }}</th>
+            <th class="numeric hide-sm" [title]="t().table.wonFull">{{ t().table.won }}</th>
+            <th class="numeric hide-sm" [title]="t().table.drawnFull">{{ t().table.drawn }}</th>
+            <th class="numeric hide-sm" [title]="t().table.lostFull">{{ t().table.lost }}</th>
+            <th class="numeric hide-sm" [title]="t().table.goalsForFull">{{ t().table.goalsFor }}</th>
+            <th class="numeric hide-sm" [title]="t().table.goalsAgainstFull">
+              {{ t().table.goalsAgainst }}
+            </th>
+            <th class="numeric" [title]="t().table.goalDifferenceFull">
+              {{ t().table.goalDifference }}
+            </th>
+            <th class="numeric" [title]="t().table.pointsFull">{{ t().table.points }}</th>
+            <th class="hide-sm">{{ t().table.form }}</th>
           </tr>
         </thead>
         <tbody>
@@ -52,7 +57,7 @@ import { GroupTable } from '../core/models';
             </tr>
           } @empty {
             <tr>
-              <td colspan="11" class="muted">No teams in this group yet.</td>
+              <td colspan="11" class="muted">{{ t().table.empty }}</td>
             </tr>
           }
         </tbody>
@@ -165,9 +170,15 @@ import { GroupTable } from '../core/models';
         display: table-cell;
         white-space: nowrap;
       }
+
+      /* The full Form column is back, so the compact bars are not needed. */
+      .team-form {
+        display: none;
+      }
     }
   `,
 })
 export class StandingsTable {
     readonly table = input.required<GroupTable>();
+    protected readonly t = inject(I18nService).t;
 }

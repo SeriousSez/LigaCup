@@ -3,41 +3,42 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-admin-home',
     imports: [RouterLink, FormsModule],
     template: `
-    <h1>Admin</h1>
+    <h1>{{ t().adminHome.title }}</h1>
 
     <section class="card stack create">
-      <h3>New tournament</h3>
+      <h3>{{ t().adminHome.newTournament }}</h3>
       <div class="form-grid">
         <label>
-          Name
+          {{ t().common.name }}
           <input [(ngModel)]="draft.name" placeholder="Liga Cup" />
         </label>
         <label>
-          Season
-          <input type="number" [(ngModel)]="draft.season" />
+          {{ t().common.season }}
+          <input type="number" inputmode="numeric" [(ngModel)]="draft.season" />
         </label>
         <label>
-          Format
+          {{ t().setup.format }}
           <select [(ngModel)]="draft.format">
-            <option value="GroupsThenKnockout">Groups then knockout</option>
-            <option value="GroupsOnly">Group stage only</option>
-            <option value="KnockoutOnly">Straight knockout</option>
+            <option value="GroupsThenKnockout">{{ t().format.GroupsThenKnockout }}</option>
+            <option value="GroupsOnly">{{ t().format.GroupsOnly }}</option>
+            <option value="KnockoutOnly">{{ t().format.KnockoutOnly }}</option>
           </select>
         </label>
       </div>
       <label class="checkbox">
         <input type="checkbox" [(ngModel)]="draft.trackPlayers" />
-        Track players and goalscorers
+        {{ t().adminHome.trackPlayers }}
       </label>
       <div class="row">
         <button class="primary" type="button" [disabled]="busy()" (click)="create()">
-          Create tournament
+          {{ t().adminHome.create }}
         </button>
         @if (error()) {
           <span class="error">{{ error() }}</span>
@@ -46,7 +47,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
     </section>
 
     <section class="stack">
-      <h3>Your tournaments</h3>
+      <h3>{{ t().adminHome.yourTournaments }}</h3>
       <div class="grid-auto">
         @for (tournament of tournaments(); track tournament.id) {
           <div class="card stack">
@@ -54,17 +55,24 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
               <strong>{{ tournament.name }}</strong>
               <span class="badge">{{ tournament.season }}</span>
             </div>
-            <p class="muted">{{ tournament.teamCount }} teams, {{ tournament.matchCount }} matches</p>
+            <p class="muted">
+              {{ tournament.teamCount }} {{ t().common.teams }}, {{ tournament.matchCount }}
+              {{ t().common.matches }}
+            </p>
             <div class="row">
-              <a [routerLink]="['/admin', tournament.slug]"><button type="button">Set up</button></a>
-              <a [routerLink]="['/admin', tournament.slug, 'live']">
-                <button class="primary" type="button">Live console</button>
+              <a [routerLink]="['/admin', tournament.slug]">
+                <button type="button">{{ t().adminHome.setup }}</button>
               </a>
-              <a [routerLink]="['/', tournament.slug]"><button class="ghost" type="button">View</button></a>
+              <a [routerLink]="['/admin', tournament.slug, 'live']">
+                <button class="primary" type="button">{{ t().adminHome.liveConsole }}</button>
+              </a>
+              <a [routerLink]="['/', tournament.slug]">
+                <button class="ghost" type="button">{{ t().adminHome.view }}</button>
+              </a>
             </div>
           </div>
         } @empty {
-          <p class="muted">Nothing here yet. Create your first tournament above.</p>
+          <p class="muted">{{ t().adminHome.empty }}</p>
         }
       </div>
     </section>
@@ -82,6 +90,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
 export class AdminHome {
     private readonly api = inject(ApiService);
 
+    protected readonly t = inject(I18nService).t;
     protected readonly tournaments = signal<TournamentSummary[]>([]);
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
@@ -103,7 +112,7 @@ export class AdminHome {
 
     async create(): Promise<void> {
         if (!this.draft.name.trim()) {
-            this.error.set('Give the tournament a name first.');
+            this.error.set(this.t().adminHome.nameRequired);
             return;
         }
 
@@ -135,7 +144,7 @@ export class AdminHome {
             this.draft.name = '';
             await this.refresh();
         } catch {
-            this.error.set('The tournament could not be created.');
+            this.error.set(this.t().adminHome.createFailed);
         } finally {
             this.busy.set(false);
         }
