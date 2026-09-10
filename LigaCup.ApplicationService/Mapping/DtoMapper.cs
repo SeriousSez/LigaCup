@@ -2,6 +2,7 @@ using LigaCup.ApplicationService.Contracts;
 using LigaCup.Domain.Entities;
 using LigaCup.Domain.Enums;
 using LigaCup.Domain.Standings;
+using LigaCup.Domain.Timing;
 
 namespace LigaCup.ApplicationService.Mapping;
 
@@ -16,6 +17,13 @@ public static class DtoMapper
         tournament.Format,
         tournament.Status,
         tournament.TrackPlayers,
+        tournament.TrackCards,
+        tournament.PeriodCount,
+        tournament.PeriodDurationMinutes,
+        tournament.BreakDurationMinutes,
+        tournament.TrackMatchClock,
+        tournament.AllowTimeouts,
+        tournament.UseStoppageTime,
         teamCount,
         matchCount);
 
@@ -36,7 +44,7 @@ public static class DtoMapper
         team.PointsAdjustment,
         team.Players.OrderBy(player => player.ShirtNumber ?? int.MaxValue).ThenBy(player => player.Name).Select(ToDto).ToList());
 
-    public static MatchDto ToDto(Match match, int matchDurationMinutes)
+    public static MatchDto ToDto(Match match, Tournament tournament)
     {
         var events = match.Events
             .OrderBy(matchEvent => matchEvent.Minute)
@@ -75,21 +83,23 @@ public static class DtoMapper
             match.AwayScore,
             match.HomePenalties,
             match.AwayPenalties,
-            CalculateLiveMinute(match, matchDurationMinutes),
+            ToClockDto(tournament, match),
             match.Notes,
             events);
     }
 
-    /// <summary>Derives the clock from the kickoff timestamp so every client shows the same minute.</summary>
-    private static int? CalculateLiveMinute(Match match, int matchDurationMinutes)
+    private static MatchClockDto ToClockDto(Tournament tournament, Match match)
     {
-        if (match.Status is not (MatchStatus.Live or MatchStatus.HalfTime) || match.StartedUtc is null)
-        {
-            return null;
-        }
+        var state = MatchClock.Calculate(tournament, match, DateTime.UtcNow);
 
-        var elapsed = (int)Math.Floor((DateTime.UtcNow - match.StartedUtc.Value).TotalMinutes);
-        return Math.Clamp(elapsed, 0, matchDurationMinutes + 15);
+        return new MatchClockDto(
+            state.Period,
+            match.PeriodElapsedSeconds,
+            match.ClockStartedUtc,
+            state.IsRunning,
+            match.StoppageMinutes,
+            state.DisplayMinute,
+            state.StoppageShown);
     }
 
     public static StandingRowDto ToDto(StandingRow row) => new(

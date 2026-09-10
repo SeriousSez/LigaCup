@@ -61,7 +61,7 @@ public class TournamentService(LigaCupContext dbContext)
             DtoMapper.ToSummary(tournament, teams.Count, matches.Count),
             tournament.Groups.OrderBy(group => group.SortOrder).ThenBy(group => group.Name).Select(DtoMapper.ToDto).ToList(),
             teams.Select(DtoMapper.ToDto).ToList(),
-            matches.Select(match => DtoMapper.ToDto(match, tournament.MatchDurationMinutes)).ToList(),
+            matches.Select(match => DtoMapper.ToDto(match, tournament)).ToList(),
             BuildTables(tournament),
             BuildBracket(tournament),
             BuildTopScorers(tournament));
@@ -101,7 +101,7 @@ public class TournamentService(LigaCupContext dbContext)
         .Select(match => new BracketMatchDto(
             match.Stage,
             DtoMapper.ToStageName(match.Stage),
-            DtoMapper.ToDto(match, tournament.MatchDurationMinutes)))
+            DtoMapper.ToDto(match, tournament)))
         .ToList();
 
     public IReadOnlyList<ScorerDto> BuildTopScorers(Tournament tournament)
@@ -158,7 +158,12 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.HasThirdPlacePlayOff = request.HasThirdPlacePlayOff;
         tournament.TrackPlayers = request.TrackPlayers;
         tournament.TrackCards = request.TrackCards;
-        tournament.MatchDurationMinutes = Math.Clamp(request.MatchDurationMinutes, 1, 180);
+        tournament.PeriodCount = Math.Clamp(request.PeriodCount, 1, 4);
+        tournament.PeriodDurationMinutes = Math.Clamp(request.PeriodDurationMinutes, 1, 90);
+        tournament.BreakDurationMinutes = Math.Clamp(request.BreakDurationMinutes, 0, 60);
+        tournament.TrackMatchClock = request.TrackMatchClock;
+        tournament.AllowTimeouts = request.AllowTimeouts;
+        tournament.UseStoppageTime = request.UseStoppageTime;
         tournament.UpdatedUtc = DateTime.UtcNow;
 
         if (request.Tiebreakers is { Count: > 0 })

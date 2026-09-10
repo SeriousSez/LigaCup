@@ -6,9 +6,12 @@ function Show([string]$label, $value) {
     Write-Host " $value"
 }
 
+$password = (dotnet user-secrets list --project "$PSScriptRoot\..\LigaCup.API" |
+    Where-Object { $_ -like 'Admin:Password*' } | ForEach-Object { ($_ -split ' = ')[1] })
+
 Write-Host 'Signing in...' -ForegroundColor Cyan
 $auth = Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType 'application/json' `
-    -Body (@{ username = 'admin'; password = 'ligacup-local-dev' } | ConvertTo-Json)
+    -Body (@{ username = 'Sez'; password = $password } | ConvertTo-Json)
 $headers = @{ Authorization = "Bearer $($auth.token)" }
 Show 'user' $auth.username
 
@@ -29,7 +32,12 @@ $slug = Invoke-RestMethod "$base/api/admin/tournaments" -Method Post -Headers $h
         hasThirdPlacePlayOff   = $true
         trackPlayers           = $true
         trackCards             = $true
-        matchDurationMinutes   = 90
+        periodCount            = 2
+        periodDurationMinutes  = 45
+        breakDurationMinutes   = 15
+        trackMatchClock        = $true
+        allowTimeouts          = $true
+        useStoppageTime        = $true
         tiebreakers            = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
     } | ConvertTo-Json)
 Show 'slug' $slug
@@ -75,7 +83,7 @@ $match = $groupMatches[0]
 Invoke-RestMethod "$base/api/live/matches/$($match.id)/status" -Method Put -Headers $headers -ContentType 'application/json' -Body (@{ status = 'Live' } | ConvertTo-Json) | Out-Null
 Invoke-RestMethod "$base/api/live/matches/$($match.id)/score/home/1" -Method Post -Headers $headers | Out-Null
 $after = Invoke-RestMethod "$base/api/live/matches/$($match.id)/score/home/1" -Method Post -Headers $headers
-Show 'live score' "$($after.homeTeamName) $($after.homeScore)-$($after.awayScore) $($after.awayTeamName) at minute $($after.liveMinute)"
+Show 'live score' "$($after.homeTeamName) $($after.homeScore)-$($after.awayScore) $($after.awayTeamName) at minute $($after.clock.displayMinute)"
 
 Invoke-RestMethod "$base/api/live/matches/$($match.id)/status" -Method Put -Headers $headers -ContentType 'application/json' -Body (@{ status = 'Finished' } | ConvertTo-Json) | Out-Null
 

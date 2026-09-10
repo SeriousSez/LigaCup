@@ -51,7 +51,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
           <h2>{{ t().tournament.playingNow }}</h2>
           <div class="grid-auto">
             @for (match of liveMatches(); track match.id) {
-              <app-match-card [match]="match" />
+              <app-match-card [match]="match" [tournament]="data.tournament" />
             }
           </div>
         </section>
@@ -90,7 +90,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
                 <h3>{{ round.key }}</h3>
                 <div class="grid-auto">
                   @for (match of round.matches; track match.id) {
-                    <app-match-card [match]="match" />
+                    <app-match-card [match]="match" [tournament]="data.tournament" />
                   }
                 </div>
               </section>
@@ -105,7 +105,7 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers';
               <section class="stage">
                 <h3>{{ stage.key }}</h3>
                 @for (item of stage.matches; track item.match.id) {
-                  <app-match-card [match]="item.match" />
+                  <app-match-card [match]="item.match" [tournament]="data.tournament" />
                 }
               </section>
             }

@@ -80,15 +80,6 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
               [(ngModel)]="settings.teamsAdvancingPerGroup"
             />
           </label>
-          <label>
-            {{ t().setup.matchLength }}
-            <input
-              type="number"
-              inputmode="numeric"
-              min="1"
-              [(ngModel)]="settings.matchDurationMinutes"
-            />
-          </label>
         </div>
 
         <div class="row toggles">
@@ -104,6 +95,57 @@ import { SaveTournamentRequest, TiebreakerRule } from '../../core/models';
             <input type="checkbox" [(ngModel)]="settings.hasThirdPlacePlayOff" />
             {{ t().setup.thirdPlace }}
           </label>
+        </div>
+
+        <div class="stack">
+          <h4>{{ t().setup.clockSection }}</h4>
+          <p class="muted">{{ t().setup.clockHelp }}</p>
+          <div class="form-grid">
+            <label>
+              {{ t().setup.periodCount }}
+              <input
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="4"
+                [(ngModel)]="settings.periodCount"
+              />
+            </label>
+            <label>
+              {{ t().setup.periodDuration }}
+              <input
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="90"
+                [(ngModel)]="settings.periodDurationMinutes"
+              />
+            </label>
+            <label>
+              {{ t().setup.breakDuration }}
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                max="60"
+                [(ngModel)]="settings.breakDurationMinutes"
+              />
+            </label>
+          </div>
+          <div class="row toggles">
+            <label class="checkbox">
+              <input type="checkbox" [(ngModel)]="settings.trackMatchClock" />
+              {{ t().setup.trackMatchClock }}
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" [(ngModel)]="settings.useStoppageTime" />
+              {{ t().setup.useStoppageTime }}
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" [(ngModel)]="settings.allowTimeouts" />
+              {{ t().setup.allowTimeouts }}
+            </label>
+          </div>
         </div>
 
         <div class="stack">
@@ -532,7 +574,12 @@ export class AdminSetup implements OnInit {
         hasThirdPlacePlayOff: false,
         trackPlayers: false,
         trackCards: false,
-        matchDurationMinutes: 90,
+        periodCount: 2,
+        periodDurationMinutes: 45,
+        breakDurationMinutes: 15,
+        trackMatchClock: true,
+        allowTimeouts: false,
+        useStoppageTime: true,
         tiebreakers: null,
     };
 
@@ -552,6 +599,13 @@ export class AdminSetup implements OnInit {
             format: data.tournament.format,
             status: data.tournament.status,
             trackPlayers: data.tournament.trackPlayers,
+            trackCards: data.tournament.trackCards,
+            periodCount: data.tournament.periodCount,
+            periodDurationMinutes: data.tournament.periodDurationMinutes,
+            breakDurationMinutes: data.tournament.breakDurationMinutes,
+            trackMatchClock: data.tournament.trackMatchClock,
+            allowTimeouts: data.tournament.allowTimeouts,
+            useStoppageTime: data.tournament.useStoppageTime,
         };
 
         this.tiebreakers.set(['GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'Wins', 'TeamName']);

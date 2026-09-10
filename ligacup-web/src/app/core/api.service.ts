@@ -169,6 +169,12 @@ export class ApiService {
         return this.http.put<Match>(`${this.base}/api/live/matches/${matchId}/status`, { status });
     }
 
+    setStoppage(matchId: number, stoppageMinutes: number) {
+        return this.http.put<Match>(`${this.base}/api/live/matches/${matchId}/stoppage`, {
+            stoppageMinutes,
+        });
+    }
+
     addEvent(
         matchId: number,
         teamId: number,

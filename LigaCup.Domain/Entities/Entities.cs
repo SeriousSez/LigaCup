@@ -36,7 +36,24 @@ public class Tournament
     /// <summary>When false, cards are not recorded and disciplinary tiebreakers are skipped.</summary>
     public bool TrackCards { get; set; }
 
-    public int MatchDurationMinutes { get; set; } = 90;
+    /// <summary>Halves by default. Set to 1 for a single straight period, or 4 for quarters.</summary>
+    public int PeriodCount { get; set; } = 2;
+
+    public int PeriodDurationMinutes { get; set; } = 45;
+
+    /// <summary>Shown as a countdown during the interval. Does not affect the match clock.</summary>
+    public int BreakDurationMinutes { get; set; } = 15;
+
+    /// <summary>When false the organiser records scores without any running clock.</summary>
+    public bool TrackMatchClock { get; set; } = true;
+
+    /// <summary>Allows the clock to be stopped inside a period for injuries or timeouts.</summary>
+    public bool AllowTimeouts { get; set; }
+
+    /// <summary>When true the clock keeps counting past the period as 45+2 rather than stopping.</summary>
+    public bool UseStoppageTime { get; set; } = true;
+
+    public int TotalDurationMinutes => Math.Max(1, PeriodCount) * Math.Max(1, PeriodDurationMinutes);
 
     /// <summary>Tiebreaker rules serialised in priority order, applied after points.</summary>
     public string TiebreakerOrder { get; set; } = "GoalDifference,GoalsScored,HeadToHeadPoints,Wins,TeamName";
@@ -154,6 +171,18 @@ public class Match
     /// <summary>Set when the referee starts the clock, used to derive the live minute.</summary>
     public DateTime? StartedUtc { get; set; }
     public DateTime? FinishedUtc { get; set; }
+
+    /// <summary>Which period is on the pitch, 1-based.</summary>
+    public int CurrentPeriod { get; set; } = 1;
+
+    /// <summary>Play time already banked in the current period, excluding any paused spells.</summary>
+    public int PeriodElapsedSeconds { get; set; }
+
+    /// <summary>When the clock last started running. Null means the clock is stopped.</summary>
+    public DateTime? ClockStartedUtc { get; set; }
+
+    /// <summary>Added time the referee has signalled for the current period.</summary>
+    public int StoppageMinutes { get; set; }
 
     public string? Notes { get; set; }
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;

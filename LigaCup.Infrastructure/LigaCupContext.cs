@@ -1,10 +1,32 @@
 using LigaCup.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace LigaCup.Infrastructure;
 
 public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContext(options)
 {
+    /// <summary>
+    /// SQLite hands dates back with an unspecified kind, which JSON then serialises without a
+    /// trailing Z. Browsers read that as local time, so the match clock would drift by the
+    /// timezone offset. Tagging every date as UTC on read keeps the wire format unambiguous.
+    /// </summary>
+    private sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(
+        value => value.ToUniversalTime(),
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+
+    private sealed class NullableUtcDateTimeConverter() : ValueConverter<DateTime?, DateTime?>(
+        value => value.HasValue ? value.Value.ToUniversalTime() : value,
+        value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : value);
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeConverter>();
+
+        base.ConfigureConventions(configurationBuilder);
+    }
+
     public DbSet<Tournament> Tournaments => Set<Tournament>();
     public DbSet<TournamentGroup> Groups => Set<TournamentGroup>();
     public DbSet<Team> Teams => Set<Team>();

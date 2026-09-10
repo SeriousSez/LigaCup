@@ -25,7 +25,8 @@ export class TournamentStore {
     readonly liveMatches = computed(
         () =>
             this.detail()?.matches.filter(
-                (match) => match.status === 'Live' || match.status === 'HalfTime',
+                (match) =>
+                    match.status === 'Live' || match.status === 'HalfTime' || match.status === 'Paused',
             ) ?? [],
     );
 

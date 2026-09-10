@@ -135,7 +135,12 @@ export class AdminHome {
             hasThirdPlacePlayOff: false,
             trackPlayers: this.draft.trackPlayers,
             trackCards: false,
-            matchDurationMinutes: 90,
+            periodCount: 2,
+            periodDurationMinutes: 45,
+            breakDurationMinutes: 15,
+            trackMatchClock: true,
+            allowTimeouts: false,
+            useStoppageTime: true,
             tiebreakers: null,
         };
 

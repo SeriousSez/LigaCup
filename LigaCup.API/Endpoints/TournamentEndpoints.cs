@@ -110,6 +110,9 @@ public static class TournamentEndpoints
         live.MapPut("/matches/{matchId:int}/status", async (int matchId, UpdateMatchStatusRequest request, MatchService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.UpdateStatusAsync(matchId, request.Status, cancellationToken)));
 
+        live.MapPut("/matches/{matchId:int}/stoppage", async (int matchId, UpdateStoppageRequest request, MatchService service, CancellationToken cancellationToken) =>
+            Results.Ok(await service.UpdateStoppageAsync(matchId, request.StoppageMinutes, cancellationToken)));
+
         live.MapPost("/matches/{matchId:int}/events", async (int matchId, SaveMatchEventRequest request, MatchService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.AddEventAsync(matchId, request, cancellationToken)));
 

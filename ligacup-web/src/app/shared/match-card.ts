@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
-import { Match } from '../core/models';
+import { MatchClockService } from '../core/match-clock.service';
+import { Match, TournamentSummary } from '../core/models';
 
 @Component({
     selector: 'app-match-card',
@@ -32,10 +33,9 @@ import { Match } from '../core/models';
 
       <div class="status">
         @if (isLive()) {
-          <span class="badge live"
-            ><span class="pulse"></span>
-            {{ match().status === 'HalfTime' ? t().matchStatus.HalfTime : minuteLabel() }}</span
-          >
+          <span class="badge live"><span class="pulse"></span> {{ minuteLabel() }}</span>
+        } @else if (match().status === 'HalfTime') {
+          <span class="badge">{{ breakLabel() }}</span>
         } @else {
           <span class="badge">{{ t().matchStatus[match().status] }}</span>
         }
@@ -138,8 +138,10 @@ import { Match } from '../core/models';
 })
 export class MatchCard {
     readonly match = input.required<Match>();
+    readonly tournament = input.required<TournamentSummary>();
 
     private readonly i18n = inject(I18nService);
+    private readonly clock = inject(MatchClockService);
     protected readonly t = this.i18n.t;
     protected readonly locale = this.i18n.locale;
 
@@ -151,13 +153,17 @@ export class MatchCard {
         this.i18n.teamName(this.match().awayTeamName, this.match().awayTeamId),
     );
 
-    isLive(): boolean {
-        return this.match().status === 'Live' || this.match().status === 'HalfTime';
-    }
+    protected readonly minuteLabel = computed(() => {
+        const label = this.clock.label(this.match(), this.tournament());
+        return label === '' ? this.t().connection.live : label;
+    });
 
-    minuteLabel(): string {
-        const minute = this.match().liveMinute;
-        return minute === null ? this.t().connection.live : `${minute}'`;
+    protected readonly breakLabel = computed(() =>
+        this.clock.breakLabel(this.match(), this.tournament()),
+    );
+
+    isLive(): boolean {
+        return this.match().status === 'Live' || this.match().status === 'Paused';
     }
 
     goalEvents() {

@@ -72,6 +72,20 @@ Everything about the format is configurable per tournament from the setup screen
 
 Group fixtures are generated with the circle method, so every team plays every other team and an odd number of teams gives each team exactly one bye. The knockout bracket is created up front with placeholders such as `Winner QF1`, and those resolve into real teams the moment a tie finishes. Level knockout ties are decided on the penalty shootout score.
 
+## The match clock
+
+The clock starts when the organiser presses **Live**, and it counts play time rather than wall-clock time. Half time and any mid-period timeout stop it, so a fifteen minute interval does not silently add fifteen minutes to the game. Coming back from the interval starts the next period, and the displayed minute continues from where that period begins, so a second half opens at 45' in a standard game.
+
+Everything about it is configurable per tournament:
+
+- **Periods and length**: two halves of 45 minutes by default. Set one period for a straight run, or four for quarters, and give each period whatever length suits the pitch.
+- **Break length**: recorded for reference between periods.
+- **Added time**: when enabled, play past the end of a period shows as `45+2`. Switch it off and the clock simply stops at the whistle. The organiser can also record the minutes the referee signalled.
+- **Timeouts**: off by default. Turn it on and the live console gains a button that stops the clock inside a period for an injury or a break, then resumes the same period.
+- **No clock at all**: switch the clock off entirely and the app becomes a plain scores-and-tables tool.
+
+The server stores banked play time plus the moment the clock last started, rather than a rendered minute. Clients recompute from that once a second, so the minute keeps moving between live updates instead of freezing until the next goal. Every viewer therefore sees the same minute without the server having to broadcast a tick.
+
 ## Live updates
 
 The API owns every calculation. When a score changes, the server recomputes the tables, bracket and scorer list and pushes the whole lot down the SignalR hub at `/hubs/live`. Clients join a group per tournament, so a busy match only sends data to the people actually watching it. The frontend patches its cached state from that message, meaning no polling and no recalculation in the browser.
@@ -100,10 +114,10 @@ Take a copy of the file over FTP before a tournament if you want a backup. It is
 
 In the repository settings, add these secrets:
 
-| Secret                                       | Purpose                                            |
-| -------------------------------------------- | -------------------------------------------------- |
-| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Simply.com FTP credentials.                        |
-| `JWT_KEY`                                    | Signing key for tokens, at least 32 characters.    |
+| Secret                                            | Purpose                                                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`      | Simply.com FTP credentials.                                                                                                        |
+| `JWT_KEY`                                         | Signing key for tokens, at least 32 characters.                                                                                    |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | Creates the administrator account if it is missing. An existing account is never modified, so changing the password later is safe. |
 
 And one variable:

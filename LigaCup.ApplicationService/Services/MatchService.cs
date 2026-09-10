@@ -4,6 +4,7 @@ using LigaCup.Domain.Entities;
 using LigaCup.Domain.Enums;
 using LigaCup.Domain.Scheduling;
 using LigaCup.Domain.Standings;
+using LigaCup.Domain.Timing;
 using LigaCup.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -94,28 +95,12 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
     public async Task<MatchDto> UpdateStatusAsync(int matchId, MatchStatus status, CancellationToken cancellationToken = default)
     {
         var match = await LoadTrackedAsync(matchId, cancellationToken);
+        var tournament = await dbContext.Tournaments
+            .AsNoTracking()
+            .FirstAsync(candidate => candidate.Id == match.TournamentId, cancellationToken);
 
-        match.Status = status;
+        MatchClock.ApplyStatusChange(tournament, match, status, DateTime.UtcNow);
         match.UpdatedUtc = DateTime.UtcNow;
-
-        if (status == MatchStatus.Live && match.StartedUtc is null)
-        {
-            match.StartedUtc = DateTime.UtcNow;
-        }
-
-        if (status == MatchStatus.Finished)
-        {
-            match.FinishedUtc = DateTime.UtcNow;
-        }
-        else
-        {
-            match.FinishedUtc = null;
-        }
-
-        if (status == MatchStatus.Scheduled)
-        {
-            match.StartedUtc = null;
-        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -124,6 +109,18 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
             await AdvanceBracketAsync(match, cancellationToken);
         }
 
+        return await PublishAsync(match.Id, cancellationToken);
+    }
+
+    /// <summary>Sets the added time the referee has signalled for the period currently being played.</summary>
+    public async Task<MatchDto> UpdateStoppageAsync(int matchId, int stoppageMinutes, CancellationToken cancellationToken = default)
+    {
+        var match = await LoadTrackedAsync(matchId, cancellationToken);
+
+        match.StoppageMinutes = Math.Clamp(stoppageMinutes, 0, 30);
+        match.UpdatedUtc = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
         return await PublishAsync(match.Id, cancellationToken);
     }
 
@@ -347,7 +344,7 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
             ?? throw new KeyNotFoundException($"Tournament {tournamentId} was not found.");
 
         var match = tournament.Matches.First(candidate => candidate.Id == matchId);
-        var dto = DtoMapper.ToDto(match, tournament.MatchDurationMinutes);
+        var dto = DtoMapper.ToDto(match, tournament);
 
         await broadcaster.BroadcastAsync(new LiveUpdateDto(
             tournament.Slug,

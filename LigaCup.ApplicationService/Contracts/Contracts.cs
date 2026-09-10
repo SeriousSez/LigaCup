@@ -15,6 +15,13 @@ public record TournamentSummaryDto(
     TournamentFormat Format,
     TournamentStatus Status,
     bool TrackPlayers,
+    bool TrackCards,
+    int PeriodCount,
+    int PeriodDurationMinutes,
+    int BreakDurationMinutes,
+    bool TrackMatchClock,
+    bool AllowTimeouts,
+    bool UseStoppageTime,
     int TeamCount,
     int MatchCount);
 
@@ -34,7 +41,12 @@ public record SaveTournamentRequest(
     bool HasThirdPlacePlayOff,
     bool TrackPlayers,
     bool TrackCards,
-    int MatchDurationMinutes,
+    int PeriodCount,
+    int PeriodDurationMinutes,
+    int BreakDurationMinutes,
+    bool TrackMatchClock,
+    bool AllowTimeouts,
+    bool UseStoppageTime,
     IReadOnlyList<TiebreakerRule>? Tiebreakers);
 
 public record GroupDto(int Id, string Name, int SortOrder);
@@ -101,9 +113,22 @@ public record MatchDto(
     int AwayScore,
     int? HomePenalties,
     int? AwayPenalties,
-    int? LiveMinute,
+    MatchClockDto Clock,
     string? Notes,
     IReadOnlyList<MatchEventDto> Events);
+
+/// <summary>
+/// Raw clock state rather than a rendered minute, so a client can keep counting
+/// between broadcasts instead of freezing until the next server message.
+/// </summary>
+public record MatchClockDto(
+    int Period,
+    int PeriodElapsedSeconds,
+    DateTime? ClockStartedUtc,
+    bool IsRunning,
+    int StoppageMinutes,
+    int DisplayMinute,
+    int? StoppageShown);
 
 public record SaveMatchRequest(
     int? GroupId,
@@ -119,6 +144,8 @@ public record SaveMatchRequest(
 public record UpdateScoreRequest(int HomeScore, int AwayScore, int? HomePenalties, int? AwayPenalties);
 
 public record UpdateMatchStatusRequest(MatchStatus Status);
+
+public record UpdateStoppageRequest(int StoppageMinutes);
 
 public record StandingRowDto(
     int Position,

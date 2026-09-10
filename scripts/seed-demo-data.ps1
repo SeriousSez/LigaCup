@@ -1,8 +1,11 @@
 $ErrorActionPreference = 'Stop'
 $base = 'http://localhost:5099'
 
+$password = (dotnet user-secrets list --project "$PSScriptRoot\..\LigaCup.API" |
+    Where-Object { $_ -like 'Admin:Password*' } | ForEach-Object { ($_ -split ' = ')[1] })
+
 $auth = Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType 'application/json' `
-    -Body (@{ username = 'admin'; password = 'ligacup-local-dev' } | ConvertTo-Json)
+    -Body (@{ username = 'Sez'; password = $password } | ConvertTo-Json)
 $headers = @{ Authorization = "Bearer $($auth.token)" }
 
 $slug = Invoke-RestMethod "$base/api/admin/tournaments" -Method Post -Headers $headers -ContentType 'application/json' -Body (@{
@@ -11,7 +14,9 @@ $slug = Invoke-RestMethod "$base/api/admin/tournaments" -Method Post -Headers $h
         pointsForWin = 3; pointsForDraw = 1; pointsForLoss = 0
         groupRounds = 1; teamsAdvancingPerGroup = 2
         includeBestThirdPlaced = $false; hasThirdPlacePlayOff = $true
-        trackPlayers = $true; trackCards = $true; matchDurationMinutes = 90
+    trackPlayers = $true; trackCards = $true
+    periodCount = 2; periodDurationMinutes = 45; breakDurationMinutes = 15
+    trackMatchClock = $true; allowTimeouts = $true; useStoppageTime = $true
         tiebreakers = @('GoalDifference', 'GoalsScored', 'HeadToHeadPoints', 'TeamName')
     } | ConvertTo-Json)
 

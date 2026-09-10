@@ -4,8 +4,9 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { MatchClockService } from '../../core/match-clock.service';
 import { TournamentStore } from '../../core/tournament.store';
-import { Match, MatchEventType, MatchStatus } from '../../core/models';
+import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../core/models';
 
 @Component({
     selector: 'app-live-console',
@@ -53,13 +54,24 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
 
       @if (selected(); as match) {
         <section class="card control">
-          <div class="clock">
-            @if (match.status === 'Live') {
-              <span class="badge live"><span class="pulse"></span> {{ match.liveMinute }}'</span>
-            } @else {
+          @if (data.tournament.trackMatchClock) {
+            <div class="clock">
+              @if (match.status === 'Live') {
+                <span class="badge live"><span class="pulse"></span> {{ minuteLabel(match) }}</span>
+              } @else if (match.status === 'Paused') {
+                <span class="badge">{{ minuteLabel(match) }} &middot; {{ t().matchStatus.Paused }}</span>
+              } @else if (match.status === 'HalfTime') {
+                <span class="badge">{{ breakLabel(match) }} &middot; {{ minuteLabel(match) }}</span>
+              } @else {
+                <span class="badge">{{ t().matchStatus[match.status] }}</span>
+              }
+              <span class="period muted">{{ periodLabel(match) }}</span>
+            </div>
+          } @else {
+            <div class="clock">
               <span class="badge">{{ t().matchStatus[match.status] }}</span>
-            }
-          </div>
+            </div>
+          }
 
           <div class="scorer">
             <div class="team">
@@ -108,7 +120,7 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
           </div>
 
           <div class="statuses">
-            @for (status of statuses; track status) {
+            @for (status of statuses(data.tournament); track status) {
               <button
                 type="button"
                 [class.primary]="match.status === status"
@@ -118,6 +130,18 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
               </button>
             }
           </div>
+
+          @if (data.tournament.trackMatchClock && data.tournament.useStoppageTime) {
+            <div class="stoppage">
+              <label>
+                {{ t().clock.addedTime }}
+                <input type="number" inputmode="numeric" min="0" max="30" [(ngModel)]="stoppage" />
+              </label>
+              <div class="align-end">
+                <button type="button" (click)="saveStoppage(match.id)">{{ t().live.setStoppage }}</button>
+              </div>
+            </div>
+          }
 
           @if (isKnockout(match)) {
             <div class="form-grid">
@@ -347,6 +371,25 @@ import { Match, MatchEventType, MatchStatus } from '../../core/models';
       margin-top: 1.1rem;
     }
 
+    .clock {
+      display: grid;
+      justify-items: center;
+      gap: 0.3rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .period {
+      font-size: 0.8rem;
+    }
+
+    .stoppage {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: end;
+      margin-top: 1rem;
+    }
+
     .align-end {
       display: flex;
       align-items: flex-end;
@@ -400,6 +443,7 @@ export class LiveConsole implements OnInit {
     readonly slug = input.required<string>();
 
     private readonly api = inject(ApiService);
+    private readonly clock = inject(MatchClockService);
     protected readonly i18n = inject(I18nService);
     protected readonly t = this.i18n.t;
     protected readonly store = inject(TournamentStore);
@@ -408,12 +452,37 @@ export class LiveConsole implements OnInit {
     protected readonly selectedId = signal<number | null>(null);
     protected readonly eventTeamId = signal<number | null>(null);
 
-    protected readonly statuses: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
     protected eventType: MatchEventType = 'Goal';
     protected eventPlayerId: number | null = null;
     protected eventMinute = 1;
     protected homePenalties: number | null = null;
     protected awayPenalties: number | null = null;
+    protected stoppage = 0;
+
+    /** The timeout button only appears when the tournament allows stopping the clock. */
+    statuses(tournament: TournamentSummary): MatchStatus[] {
+        const base: MatchStatus[] = ['Scheduled', 'Live', 'HalfTime', 'Finished'];
+        return tournament.allowTimeouts ? ['Scheduled', 'Live', 'Paused', 'HalfTime', 'Finished'] : base;
+    }
+
+    minuteLabel(match: Match): string {
+        const tournament = this.detail()?.tournament;
+        return tournament ? this.clock.label(match, tournament) : '';
+    }
+
+    breakLabel(match: Match): string {
+        const tournament = this.detail()?.tournament;
+        return tournament ? this.clock.breakLabel(match, tournament) : '';
+    }
+
+    periodLabel(match: Match): string {
+        const tournament = this.detail()?.tournament;
+        return tournament ? this.clock.periodLabel(match, tournament) : '';
+    }
+
+    async saveStoppage(matchId: number): Promise<void> {
+        this.store.patchMatch(await firstValueFrom(this.api.setStoppage(matchId, this.stoppage)));
+    }
 
     protected readonly selected = computed(
         () => this.detail()?.matches.find((match) => match.id === this.selectedId()) ?? null,
@@ -439,6 +508,7 @@ export class LiveConsole implements OnInit {
             this.eventTeamId.set(preferred.homeTeamId);
             this.homePenalties = preferred.homePenalties;
             this.awayPenalties = preferred.awayPenalties;
+            this.stoppage = preferred.clock.stoppageMinutes;
         }
     }
 

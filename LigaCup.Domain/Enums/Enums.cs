@@ -38,7 +38,10 @@ public enum MatchStatus
     HalfTime = 2,
     Finished = 3,
     Postponed = 4,
-    Abandoned = 5
+    Abandoned = 5,
+
+    /// <summary>Clock stopped inside a period, for an injury or a called timeout.</summary>
+    Paused = 6
 }
 
 public enum MatchEventType

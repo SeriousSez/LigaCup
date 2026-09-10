@@ -1,6 +1,13 @@
 export type TournamentFormat = 'GroupsOnly' | 'GroupsThenKnockout' | 'KnockoutOnly';
 export type TournamentStatus = 'Draft' | 'InProgress' | 'Completed' | 'Archived';
-export type MatchStatus = 'Scheduled' | 'Live' | 'HalfTime' | 'Finished' | 'Postponed' | 'Abandoned';
+export type MatchStatus =
+  | 'Scheduled'
+  | 'Live'
+  | 'HalfTime'
+  | 'Finished'
+  | 'Postponed'
+  | 'Abandoned'
+  | 'Paused';
 export type MatchStage =
     | 'Group'
     | 'RoundOf32'
@@ -45,6 +52,13 @@ export interface TournamentSummary {
     format: TournamentFormat;
     status: TournamentStatus;
     trackPlayers: boolean;
+    trackCards: boolean;
+    periodCount: number;
+    periodDurationMinutes: number;
+    breakDurationMinutes: number;
+    trackMatchClock: boolean;
+    allowTimeouts: boolean;
+    useStoppageTime: boolean;
     teamCount: number;
     matchCount: number;
 }
@@ -65,7 +79,12 @@ export interface SaveTournamentRequest {
     hasThirdPlacePlayOff: boolean;
     trackPlayers: boolean;
     trackCards: boolean;
-    matchDurationMinutes: number;
+    periodCount: number;
+    periodDurationMinutes: number;
+    breakDurationMinutes: number;
+    trackMatchClock: boolean;
+    allowTimeouts: boolean;
+    useStoppageTime: boolean;
     tiebreakers: TiebreakerRule[] | null;
 }
 
@@ -109,6 +128,16 @@ export interface MatchEvent {
     note: string | null;
 }
 
+export interface MatchClock {
+  period: number;
+  periodElapsedSeconds: number;
+  clockStartedUtc: string | null;
+  isRunning: boolean;
+  stoppageMinutes: number;
+  displayMinute: number;
+  stoppageShown: number | null;
+}
+
 export interface Match {
     id: number;
     tournamentId: number;
@@ -131,7 +160,7 @@ export interface Match {
     awayScore: number;
     homePenalties: number | null;
     awayPenalties: number | null;
-    liveMinute: number | null;
+    clock: MatchClock;
     notes: string | null;
     events: MatchEvent[];
 }
