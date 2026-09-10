@@ -16,6 +16,8 @@ env:
   ANGULAR_DIST_PATH: "./ligacup-web/dist/ligacup-web/browser"
   API_SERVER_DIR: "/ligacup.api/"
   WEB_SERVER_DIR: "/ligacup/"
+  # Encrypts the FTP session. Change to "ftp" only if the host refuses TLS.
+  FTP_PROTOCOL: "ftps"
 
 jobs:
   detect-changes:
@@ -181,6 +183,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ env.FTP_PROTOCOL }}
           local-dir: ${{ env.PUBLISH_PATH }}/
           server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
@@ -210,6 +213,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ env.FTP_PROTOCOL }}
           local-dir: ./web-dist/
           server-dir: ${{ env.WEB_SERVER_DIR }}
           dangerous-clean-slate: false

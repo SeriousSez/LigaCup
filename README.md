@@ -130,7 +130,18 @@ The API refuses to start in production without a valid `JWT_KEY`, and will not c
 
 ### Before the first deploy
 
-Update `ligacup-web/src/environments/environment.production.ts` with the real API URL, and adjust `API_SERVER_DIR` and `WEB_SERVER_DIR` in the workflow to match the directories on the hosting account.
+Hosting is split across two subdomains on simply.com:
+
+| Part | Subdomain | FTP directory |
+| --- | --- | --- |
+| Angular client | `ligacup.sezginsahin.dk` | `/ligacup/` |
+| API | `ligacup.api.sezginsahin.dk` | `/ligacup.api/` |
+
+Those are already set as `WEB_SERVER_DIR` and `API_SERVER_DIR` in the workflow, and the client is built against the API subdomain.
+
+The upload runs over FTPS so credentials and files are encrypted in transit. If the host ever refuses TLS, set `FTP_PROTOCOL` in the workflow to `ftp`, but prefer fixing the TLS side over sending the password in the clear.
+
+Do not reuse the hosting FTP password for the application administrator. A leak of one should not hand over the other.
 
 ## Switching to MySQL later
 
