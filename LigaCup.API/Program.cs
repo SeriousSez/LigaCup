@@ -39,12 +39,17 @@ if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
 {
     if (builder.Environment.IsProduction())
     {
-        throw new InvalidOperationException(
-            "Jwt:Key must be at least 32 characters in production. Provide it through the Jwt__Key environment variable or appsettings.Production.json.");
+        Console.Error.WriteLine(
+            "CRITICAL: Jwt:Key is missing or shorter than 32 characters. " +
+            "The API is using an ephemeral key until the production configuration is repaired.");
+        jwtKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
+    }
+    else
+    {
+        // Development only: a per-run key keeps local tokens working without committing a secret.
+        jwtKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
     }
 
-    // Development only: a per-run key keeps local tokens working without committing a secret.
-    jwtKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
     builder.Configuration["Jwt:Key"] = jwtKey;
 }
 
