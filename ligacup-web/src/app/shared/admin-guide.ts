@@ -7,16 +7,18 @@ import { I18nService } from '../core/i18n/i18n.service';
 type GuideId = 'overview' | 'fixtures' | 'knockout' | 'create' | 'setup' | 'live';
 
 interface AdminGuideStep {
-    target: string;
-    route: string;
-    title: () => string;
-    text: () => string;
-    action?: 'click';
+  target: string;
+  route: string;
+  title: () => string;
+  text: () => string;
+  action?: 'click';
+  /** Skip auto-scrolling the target into view on this viewport; useful when scrolling would hide the step's content. */
+  noScroll?: 'mobile' | 'desktop' | 'both';
 }
 
 @Component({
-    selector: 'app-admin-guide',
-    template: `
+  selector: 'app-admin-guide',
+  template: `
     @if (showHint() && !isOpen()) {
       <aside class="guide-hint" aria-live="polite">
         <div>
@@ -56,6 +58,8 @@ interface AdminGuideStep {
                   <p>{{ guideText(guide) }}</p>
                   @if (isGuideCompleted(guide)) {
                     <span class="guide-complete">&#10003; {{ t().adminGuide.completed }}</span>
+                  } @else if (guide === 'knockout' && !canStart(guide)) {
+                    <span class="guide-complete">{{ t().adminGuide.noKnockout }}</span>
                   }
                 </div>
                 <button class="guide-primary" type="button" [disabled]="!canStart(guide)" (click)="startGuide(guide)">{{ isGuideCompleted(guide) ? t().adminGuide.restart : t().adminGuide.start }}</button>
@@ -80,7 +84,7 @@ interface AdminGuideStep {
           @if (currentStep(); as current) {
             <div class="guide-body">
               <span class="guide-step">{{ step() + 1 }} / {{ currentSteps().length }}</span>
-              <h3>{{ current.title() }}</h3>
+              <h3>{{ current.title() }} <span class="guide-step-mobile">({{ step() + 1 }}/{{ currentSteps().length }})</span></h3>
               <p>{{ current.text() }}</p>
             </div>
           }
@@ -95,7 +99,7 @@ interface AdminGuideStep {
       }
     }
   `,
-    styles: `
+  styles: `
     :host { position: relative; z-index: 20; }
     .guide-help { position: fixed; right: 1rem; bottom: calc(1rem + var(--safe-bottom)); width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid var(--surface-line); border-radius: 50%; background: var(--surface-raised); color: var(--accent); font-size: 1.2rem; font-weight: 700; box-shadow: var(--shadow); z-index: 25; }
     .guide-hint { position: fixed; right: 4.5rem; bottom: calc(1rem + var(--safe-bottom)); display: flex; align-items: center; gap: 1rem; width: fit-content; max-width: calc(100vw - 6rem); padding: 0.8rem 0.35rem 0.8rem 1rem; border: 1px solid var(--surface-line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); z-index: 26; }
@@ -110,6 +114,7 @@ interface AdminGuideStep {
     .guide-library { inset: 50% auto auto 50%; width: min(46rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 1.5rem; transform: translate(-50%, -50%); }
     header, footer, footer > div { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
     .guide-kicker, .guide-step { color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .guide-step-mobile { display: none; }
     h2, h3, p { margin: 0; } h2 { margin-top: 0.15rem; font-size: 1.3rem; } h3 { margin-top: 0.9rem; font-size: 1.05rem; }
     .guide-dialog > header p, .guide-card p, .guide-body p { margin-top: 0.4rem; color: var(--text-muted); line-height: 1.5; font-size: 0.85rem; }
     .guide-close { width: 2.25rem; min-height: 2.25rem; padding: 0; border: 0; background: transparent; color: var(--text-muted); font-size: 1.35rem; }
@@ -118,184 +123,230 @@ interface AdminGuideStep {
     .guide-card > div { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); column-gap: 0.7rem; row-gap: 0.1rem; align-items: start; min-width: 0; } .guide-card p { grid-column: 2; margin: 0; } .guide-progress { display: flex; gap: 0.35rem; margin-top: 1rem; } .guide-progress span { height: 0.25rem; flex: 1; border-radius: 999px; background: var(--surface-line); } .guide-progress span.active, .guide-progress span.complete { background: var(--accent-strong); }
     .guide-complete { grid-column: 2; display: block; margin-top: 0.35rem; color: var(--accent); font-size: 0.72rem; font-weight: 700; }
     footer { margin-top: 1.4rem; } .guide-primary, .guide-secondary { min-height: 38px; padding: 0.45rem 0.7rem; border-radius: 8px; font-size: 0.85rem; } .guide-primary { border: 1px solid var(--accent-strong); background: var(--accent-strong); color: var(--pitch-900); font-weight: 700; } .guide-secondary { border: 1px solid var(--surface-line); background: transparent; color: var(--text-muted); }
-    @media (max-width: 560px) { .guide-hint { right: 1rem; bottom: calc(4.5rem + var(--safe-bottom)); width: fit-content; max-width: calc(100vw - 2rem); } .guide-dialog:not(.guide-library) { top: auto; left: 1rem; right: 1rem; bottom: calc(1rem + var(--safe-bottom)); width: auto; } .guide-dialog.guide-library { top: 50%; left: 1rem; right: 1rem; bottom: auto; width: auto; transform: translateY(-50%); } }
+    @media (max-width: 560px) {
+      .guide-hint { right: 1rem; bottom: calc(4.5rem + var(--safe-bottom)); width: auto; max-width: calc(100vw - 2rem); flex-direction: column; align-items: flex-start; gap: 0.6rem; padding: 0.75rem 0.9rem; }
+      .guide-hint-actions { width: 100%; justify-content: space-between; gap: 0.5rem; }
+      .guide-progress { display: none; }
+      .guide-step { display: none; }
+      .guide-step-mobile { display: inline-block; color: var(--accent); font-size: 0.85rem; font-weight: 700; margin-left: 0.35rem; letter-spacing: normal; text-transform: none; }
+      .guide-dialog { display: flex; flex-direction: column; max-height: calc(100vh - 2rem); overflow: hidden; }
+      .guide-dialog header { flex: 0 0 auto; }
+      .guide-dialog:not(.guide-library) { top: auto; left: 1rem; right: 1rem; bottom: calc(1rem + var(--safe-bottom)); width: auto; max-height: min(24rem, calc(100vh - 3rem)); padding: 0.9rem; }
+      .guide-dialog.guide-library { top: 50%; left: 1rem; right: 1rem; bottom: auto; width: auto; transform: translateY(-50%); max-height: calc(100vh - 2.5rem); padding: 1rem; }
+      .guide-dialog header h2 { font-size: 1.15rem; }
+      .guide-dialog header p { font-size: 0.8rem; margin-top: 0.2rem; }
+      .guide-list { margin-top: 0.85rem; gap: 0.6rem; overflow-y: auto; flex: 1; min-height: 0; padding-right: 0.15rem; }
+      .guide-card { grid-template-columns: 1fr; gap: 0.65rem; padding: 0.75rem; }
+      .guide-card .guide-primary { width: 100%; min-height: 36px; font-size: 0.82rem; }
+      .guide-card h3 { font-size: 0.95rem; }
+      .guide-card p { font-size: 0.8rem; line-height: 1.4; }
+      .guide-icon { width: 2rem; height: 2rem; font-size: 0.95rem; }
+      .guide-card > div { grid-template-columns: 2rem minmax(0, 1fr); column-gap: 0.6rem; }
+      .guide-body { overflow-y: auto; flex: 1; min-height: 0; margin-top: 0.35rem; padding-right: 0.15rem; }
+      .guide-body h3 { font-size: 0.95rem; margin-top: 0.35rem; }
+      .guide-body p { font-size: 0.82rem; line-height: 1.4; margin-top: 0.3rem; }
+      footer { margin-top: 0.85rem; gap: 0.5rem; flex: 0 0 auto; }
+      footer .guide-primary, footer .guide-secondary { min-height: 36px; padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+    }
   `,
 })
 export class AdminGuide {
-    readonly slug = input<string | null>(null);
-    protected readonly t = inject(I18nService).t;
-    private readonly router = inject(Router);
-    private readonly api = inject(ApiService);
-    protected readonly isOpen = signal(false);
-    protected readonly showHint = signal(this.loadHintVisibility());
-    protected readonly activeGuide = signal<GuideId | null>(null);
-    protected readonly step = signal(0);
-    protected readonly targetRect = signal<{ top: number; left: number; width: number; height: number } | null>(null);
-    protected readonly completedGuides = signal<GuideId[]>(this.loadCompletedGuides());
-    private readonly guideSlug = signal<string | null>(null);
-    protected readonly guideIds: GuideId[] = ['overview', 'fixtures', 'knockout', 'create', 'setup', 'live'];
+  readonly slug = input<string | null>(null);
+  protected readonly t = inject(I18nService).t;
+  private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
+  protected readonly isOpen = signal(false);
+  protected readonly showHint = signal(this.loadHintVisibility());
+  protected readonly activeGuide = signal<GuideId | null>(null);
+  protected readonly step = signal(0);
+  protected readonly targetRect = signal<{ top: number; left: number; width: number; height: number } | null>(null);
+  protected readonly completedGuides = signal<GuideId[]>(this.loadCompletedGuides());
+  private readonly guideSlug = signal<string | null>(null);
+  private readonly knockoutSlug = signal<string | null | undefined>(undefined);
+  protected readonly guideIds: GuideId[] = ['overview', 'fixtures', 'knockout', 'create', 'setup', 'live'];
 
-    private readonly guideSteps: Record<GuideId, Omit<AdminGuideStep, 'route'>[]> = {
-        overview: [
-            { target: '[data-guide-target="tournament-header"]', title: () => this.t().guide.headerTitle, text: () => this.t().guide.headerText },
-            { target: '[data-guide-target="tournament-status"]', title: () => this.t().guide.statusTitle, text: () => this.t().guide.statusText },
-            { target: '[data-guide-target="tournament-tabs"]', title: () => this.t().guide.tabsTitle, text: () => this.t().guide.tabsText },
-            { target: '[data-guide-target="tournament-table"]', title: () => this.t().guide.tableTitle, text: () => this.t().guide.tableText },
-        ],
-        fixtures: [
-            { target: '[data-guide-tab="fixtures"]', title: () => this.t().guide.fixturesTabsTitle, text: () => this.t().guide.fixturesTabsText, action: 'click' },
-            { target: '[data-guide-target="tournament-fixtures"]', title: () => this.t().guide.fixturesListTitle, text: () => this.t().guide.fixturesListText },
-            { target: '[data-guide-target="tournament-match"]', title: () => this.t().guide.fixturesMatchTitle, text: () => this.t().guide.fixturesMatchText },
-        ],
-        knockout: [
-            { target: '[data-guide-tab="bracket"]', title: () => this.t().guide.knockoutTabsTitle, text: () => this.t().guide.knockoutTabsText, action: 'click' },
-            { target: '[data-guide-target="tournament-bracket"]', title: () => this.t().guide.knockoutBracketTitle, text: () => this.t().guide.knockoutBracketText },
-            { target: '[data-guide-target="tournament-match"]', title: () => this.t().guide.knockoutMatchTitle, text: () => this.t().guide.knockoutMatchText },
-        ],
-        create: [
-            { target: '[data-guide-target="admin-create"]', title: () => this.t().adminGuide.createNameTitle, text: () => this.t().adminGuide.createNameText },
-            { target: '[data-guide-target="admin-create-format"]', title: () => this.t().adminGuide.createFormatTitle, text: () => this.t().adminGuide.createFormatText },
-            { target: '[data-guide-target="admin-create-submit"]', title: () => this.t().adminGuide.createSubmitTitle, text: () => this.t().adminGuide.createSubmitText },
-        ],
-        setup: [
-            { target: '[data-guide-target="admin-rules"]', title: () => this.t().adminGuide.setupRulesTitle, text: () => this.t().adminGuide.setupRulesText },
-            { target: '[data-guide-tab="structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText, action: 'click' },
-            { target: '[data-guide-target="admin-structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText },
-            { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, action: 'click' },
-            { target: '[data-guide-target="admin-fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText },
-        ],
-        live: [
-            { target: '[data-guide-target="admin-match-picker"]', title: () => this.t().adminGuide.livePickerTitle, text: () => this.t().adminGuide.livePickerText },
-            { target: '[data-guide-target="admin-score-control"]', title: () => this.t().adminGuide.liveScoreTitle, text: () => this.t().adminGuide.liveScoreText },
-            { target: '[data-guide-target="admin-status-control"]', title: () => this.t().adminGuide.liveStatusTitle, text: () => this.t().adminGuide.liveStatusText },
-        ],
-    };
+  private readonly guideSteps: Record<GuideId, Omit<AdminGuideStep, 'route'>[]> = {
+    overview: [
+      { target: '[data-guide-target="tournament-header"]', title: () => this.t().guide.headerTitle, text: () => this.t().guide.headerText },
+      { target: '[data-guide-target="tournament-status"]', title: () => this.t().guide.statusTitle, text: () => this.t().guide.statusText },
+      { target: '[data-guide-target="tournament-tabs"]', title: () => this.t().guide.tabsTitle, text: () => this.t().guide.tabsText },
+      { target: '[data-guide-target="tournament-table"]', title: () => this.t().guide.tableTitle, text: () => this.t().guide.tableText },
+    ],
+    fixtures: [
+      { target: '[data-guide-tab="fixtures"]', title: () => this.t().guide.fixturesTabsTitle, text: () => this.t().guide.fixturesTabsText, action: 'click' },
+      { target: '[data-guide-target="tournament-fixtures"]', title: () => this.t().guide.fixturesListTitle, text: () => this.t().guide.fixturesListText, noScroll: 'both' },
+      { target: '[data-guide-target="tournament-match"]', title: () => this.t().guide.fixturesMatchTitle, text: () => this.t().guide.fixturesMatchText },
+    ],
+    knockout: [
+      { target: '[data-guide-tab="bracket"]', title: () => this.t().guide.knockoutTabsTitle, text: () => this.t().guide.knockoutTabsText, action: 'click' },
+      { target: '[data-guide-target="tournament-bracket"]', title: () => this.t().guide.knockoutBracketTitle, text: () => this.t().guide.knockoutBracketText },
+      { target: '[data-guide-target="tournament-match"]', title: () => this.t().guide.knockoutMatchTitle, text: () => this.t().guide.knockoutMatchText },
+    ],
+    create: [
+      { target: '[data-guide-target="admin-create"]', title: () => this.t().adminGuide.createNameTitle, text: () => this.t().adminGuide.createNameText },
+      { target: '[data-guide-target="admin-create-format"]', title: () => this.t().adminGuide.createFormatTitle, text: () => this.t().adminGuide.createFormatText },
+      { target: '[data-guide-target="admin-create-submit"]', title: () => this.t().adminGuide.createSubmitTitle, text: () => this.t().adminGuide.createSubmitText },
+    ],
+    setup: [
+      { target: '[data-guide-target="admin-rules"]', title: () => this.t().adminGuide.setupRulesTitle, text: () => this.t().adminGuide.setupRulesText, noScroll: 'both' },
+      { target: '[data-guide-tab="structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText, action: 'click' },
+      { target: '[data-guide-target="admin-structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText },
+      { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, action: 'click' },
+      { target: '[data-guide-target="admin-fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, noScroll: 'both' },
+    ],
+    live: [
+      { target: '[data-guide-target="admin-match-picker"]', title: () => this.t().adminGuide.livePickerTitle, text: () => this.t().adminGuide.livePickerText },
+      { target: '[data-guide-target="admin-score-control"]', title: () => this.t().adminGuide.liveScoreTitle, text: () => this.t().adminGuide.liveScoreText },
+      { target: '[data-guide-target="admin-status-control"]', title: () => this.t().adminGuide.liveStatusTitle, text: () => this.t().adminGuide.liveStatusText },
+    ],
+  };
 
-    protected currentSteps(): AdminGuideStep[] {
-        const guide = this.activeGuide();
-        if (!guide) return [];
-        const slug = this.slug() ?? this.guideSlug() ?? this.currentSlug();
-        const route = guide === 'create' ? '/admin'
-            : ['overview', 'fixtures', 'knockout'].includes(guide) ? `/${slug ?? ''}`
-                : `/admin/${slug ?? ''}${guide === 'live' ? '/live' : ''}`;
-        return this.guideSteps[guide].map((step) => ({ ...step, route }));
+  protected currentSteps(): AdminGuideStep[] {
+    const guide = this.activeGuide();
+    if (!guide) return [];
+    const slug = this.slug() ?? this.guideSlug() ?? this.currentSlug();
+    const route = guide === 'create' ? '/admin'
+      : ['overview', 'fixtures', 'knockout'].includes(guide) ? `/${slug ?? ''}`
+        : `/admin/${slug ?? ''}${guide === 'live' ? '/live' : ''}`;
+    return this.guideSteps[guide].map((step) => ({ ...step, route }));
+  }
+
+  protected currentStep(): AdminGuideStep | undefined { return this.currentSteps()[this.step()]; }
+  protected guideTitle(id: GuideId | null): string {
+    if (!id) return this.t().adminGuide.title;
+    return ['overview', 'fixtures', 'knockout'].includes(id)
+      ? this.t().guide[`${id}Title` as 'overviewTitle' | 'fixturesTitle' | 'knockoutTitle']
+      : this.t().adminGuide[`${id}Title` as 'createTitle' | 'setupTitle' | 'liveTitle'];
+  }
+  protected guideText(id: GuideId): string {
+    return ['overview', 'fixtures', 'knockout'].includes(id)
+      ? this.t().guide[`${id}Text` as 'overviewText' | 'fixturesText' | 'knockoutText']
+      : this.t().adminGuide[`${id}Text` as 'createText' | 'setupText' | 'liveText'];
+  }
+  protected guideIcon(id: GuideId): string {
+    return id === 'overview'
+      ? 'fa-book-open'
+      : id === 'fixtures'
+        ? 'fa-calendar-days'
+        : id === 'knockout'
+          ? 'fa-trophy'
+          : id === 'create'
+            ? 'fa-plus'
+            : id === 'setup'
+              ? 'fa-gear'
+              : 'fa-play';
+  }
+  protected canStart(id: GuideId): boolean { return id === 'knockout' ? this.knockoutSlug() !== null : true; }
+  protected isGuideCompleted(id: GuideId): boolean { return this.completedGuides().includes(id); }
+  private currentSlug(): string | null {
+    const match = this.router.url.match(/^\/(?:admin\/)?([^/?]+)/);
+    return match && match[1] !== 'admin' ? match[1] : null;
+  }
+
+  protected dialogPosition(): { top?: number; left?: number } {
+    if (typeof window === 'undefined' || window.innerWidth <= 560) return {};
+    const target = this.targetRect(); const width = Math.min(430, window.innerWidth - 32);
+    if (!target) return { top: 16, left: Math.max(16, (window.innerWidth - width) / 2) };
+    const left = target.left + target.width + 16 + width <= window.innerWidth ? target.left + target.width + 16 : Math.max(16, target.left - width - 16);
+    return { top: Math.min(Math.max(16, target.top), Math.max(16, window.innerHeight - 300)), left };
+  }
+
+  @HostListener('window:resize') @HostListener('window:scroll') refreshTarget(): void { if (this.isOpen()) this.measureTarget(0, false); }
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboard(event: KeyboardEvent): void {
+    if (!this.isOpen()) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close();
+    } else if (event.key === 'Enter' && this.activeGuide()) {
+      event.preventDefault();
+      this.next();
+    }
+  }
+  openLibrary(): void {
+    this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null); this.isOpen.set(true);
+    if (this.knockoutSlug() === undefined) this.loadKnockoutSlug();
+  }
+  private async loadKnockoutSlug(): Promise<void> {
+    const tournaments = await firstValueFrom(this.api.getTournaments());
+    const withBracket = tournaments.find((tournament) => tournament.format === 'GroupsThenKnockout' || tournament.format === 'KnockoutOnly');
+    this.knockoutSlug.set(withBracket?.slug ?? null);
+  }
+  dismissHint(): void { this.showHint.set(false); localStorage.setItem('ligacup-guide-hint-dismissed', 'true'); }
+  async startGuide(id: GuideId): Promise<void> {
+    this.activeGuide.set(id);
+    this.step.set(0);
+
+    if (id === 'knockout') {
+      // The current page's tournament may not have a bracket, so always jump to one that does.
+      if (this.knockoutSlug() === undefined) await this.loadKnockoutSlug();
+      this.guideSlug.set(this.knockoutSlug() ?? null);
+    } else if (id !== 'create' && !this.slug() && !this.guideSlug() && !this.currentSlug()) {
+      const tournaments = await firstValueFrom(this.api.getTournaments());
+      this.guideSlug.set(tournaments[0]?.slug ?? null);
     }
 
-    protected currentStep(): AdminGuideStep | undefined { return this.currentSteps()[this.step()]; }
-    protected guideTitle(id: GuideId | null): string {
-        if (!id) return this.t().adminGuide.title;
-        return ['overview', 'fixtures', 'knockout'].includes(id)
-            ? this.t().guide[`${id}Title` as 'overviewTitle' | 'fixturesTitle' | 'knockoutTitle']
-            : this.t().adminGuide[`${id}Title` as 'createTitle' | 'setupTitle' | 'liveTitle'];
-    }
-    protected guideText(id: GuideId): string {
-        return ['overview', 'fixtures', 'knockout'].includes(id)
-            ? this.t().guide[`${id}Text` as 'overviewText' | 'fixturesText' | 'knockoutText']
-            : this.t().adminGuide[`${id}Text` as 'createText' | 'setupText' | 'liveText'];
-    }
-    protected guideIcon(id: GuideId): string {
-        return id === 'overview'
-            ? 'fa-book-open'
-            : id === 'fixtures'
-                ? 'fa-calendar-days'
-                : id === 'knockout'
-                    ? 'fa-trophy'
-                    : id === 'create'
-                        ? 'fa-plus'
-                        : id === 'setup'
-                            ? 'fa-gear'
-                            : 'fa-play';
-    }
-    protected canStart(_id: GuideId): boolean { return true; }
-    protected isGuideCompleted(id: GuideId): boolean { return this.completedGuides().includes(id); }
-    private currentSlug(): string | null {
-        const match = this.router.url.match(/^\/(?:admin\/)?([^/?]+)/);
-        return match && match[1] !== 'admin' ? match[1] : null;
+    const route = this.currentSteps()[0]?.route;
+    if (!route || route === '/admin/' || route === '//') {
+      this.close();
+      return;
     }
 
-    protected dialogPosition(): { top?: number; left?: number } {
-        if (typeof window === 'undefined' || window.innerWidth <= 560) return {};
-        const target = this.targetRect(); const width = Math.min(430, window.innerWidth - 32);
-        if (!target) return { top: 16, left: Math.max(16, (window.innerWidth - width) / 2) };
-        const left = target.left + target.width + 16 + width <= window.innerWidth ? target.left + target.width + 16 : Math.max(16, target.left - width - 16);
-        return { top: Math.min(Math.max(16, target.top), Math.max(16, window.innerHeight - 300)), left };
+    if (this.router.url !== route) {
+      await this.router.navigateByUrl(route);
+    }
+    this.measureTarget();
+  }
+  close(): void { this.isOpen.set(false); this.activeGuide.set(null); this.targetRect.set(null); }
+  previous(): void { this.step.update((value) => Math.max(0, value - 1)); this.measureTarget(); }
+  next(): void { if (this.step() < this.currentSteps().length - 1) { const current = this.currentStep(); if (current?.action === 'click') document.querySelector<HTMLElement>(current.target)?.click(); this.step.update((value) => value + 1); this.measureTarget(); } else { const guide = this.activeGuide(); if (guide) this.markGuideCompleted(guide); this.close(); } }
+  private markGuideCompleted(id: GuideId): void {
+    const completed = this.completedGuides().includes(id) ? this.completedGuides() : [...this.completedGuides(), id];
+    this.completedGuides.set(completed);
+    localStorage.setItem('ligacup.completed-guides', JSON.stringify(completed));
+  }
+  private loadCompletedGuides(): GuideId[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const saved = JSON.parse(localStorage.getItem('ligacup.completed-guides') ?? '[]');
+      return Array.isArray(saved) ? saved.filter((id): id is GuideId => this.guideIds.includes(id)) : [];
+    } catch { return []; }
+  }
+  private measureTarget(attempt = 0, allowScroll = true): void {
+    const step = this.currentStep();
+    const target = step?.target;
+    if (!target || typeof document === 'undefined') {
+      this.targetRect.set(null);
+      return;
     }
 
-    @HostListener('window:resize') @HostListener('window:scroll') refreshTarget(): void { if (this.isOpen()) this.measureTarget(); }
-    @HostListener('document:keydown', ['$event'])
-    handleKeyboard(event: KeyboardEvent): void {
-        if (!this.isOpen()) return;
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            this.close();
-        } else if (event.key === 'Enter' && this.activeGuide()) {
-            event.preventDefault();
-            this.next();
+    window.setTimeout(() => {
+      const element = document.querySelector<HTMLElement>(target);
+      if (!element) {
+        if (attempt < 20 && this.isOpen()) {
+          this.measureTarget(attempt + 1, allowScroll);
+        } else {
+          this.targetRect.set(null);
         }
-    }
-    openLibrary(): void { this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null); this.isOpen.set(true); }
-    dismissHint(): void { this.showHint.set(false); localStorage.setItem('ligacup-guide-hint-dismissed', 'true'); }
-    async startGuide(id: GuideId): Promise<void> {
-        this.activeGuide.set(id);
-        this.step.set(0);
+        return;
+      }
 
-        if (id !== 'create' && !this.slug() && !this.guideSlug() && !this.currentSlug()) {
-            const tournaments = await firstValueFrom(this.api.getTournaments());
-            this.guideSlug.set(tournaments[0]?.slug ?? null);
-        }
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 560;
+      const skipScroll = !allowScroll || step?.noScroll === 'both' || step?.noScroll === (isMobile ? 'mobile' : 'desktop');
 
-        const route = this.currentSteps()[0]?.route;
-        if (!route || route === '/admin/' || route === '//') {
-            this.close();
-            return;
-        }
-
-        if (this.router.url !== route) {
-            await this.router.navigateByUrl(route);
-        }
-        this.measureTarget();
-    }
-    close(): void { this.isOpen.set(false); this.activeGuide.set(null); this.targetRect.set(null); }
-    previous(): void { this.step.update((value) => Math.max(0, value - 1)); this.measureTarget(); }
-    next(): void { if (this.step() < this.currentSteps().length - 1) { const current = this.currentStep(); if (current?.action === 'click') document.querySelector<HTMLElement>(current.target)?.click(); this.step.update((value) => value + 1); this.measureTarget(); } else { const guide = this.activeGuide(); if (guide) this.markGuideCompleted(guide); this.close(); } }
-    private markGuideCompleted(id: GuideId): void {
-        const completed = this.completedGuides().includes(id) ? this.completedGuides() : [...this.completedGuides(), id];
-        this.completedGuides.set(completed);
-        localStorage.setItem('ligacup.completed-guides', JSON.stringify(completed));
-    }
-    private loadCompletedGuides(): GuideId[] {
-        if (typeof localStorage === 'undefined') return [];
-        try {
-            const saved = JSON.parse(localStorage.getItem('ligacup.completed-guides') ?? '[]');
-            return Array.isArray(saved) ? saved.filter((id): id is GuideId => this.guideIds.includes(id)) : [];
-        } catch { return []; }
-    }
-    private measureTarget(attempt = 0): void {
-        const target = this.currentStep()?.target;
-        if (!target || typeof document === 'undefined') {
-            this.targetRect.set(null);
-            return;
-        }
-
-        window.setTimeout(() => {
-            const element = document.querySelector<HTMLElement>(target);
-            if (!element) {
-                if (attempt < 20 && this.isOpen()) {
-                    this.measureTarget(attempt + 1);
-                } else {
-                    this.targetRect.set(null);
-                }
-                return;
-            }
-
-            const rect = element.getBoundingClientRect();
-            this.targetRect.set({
-                top: rect.top - 4,
-                left: rect.left - 4,
-                width: rect.width + 8,
-                height: rect.height + 8,
-            });
-        }, attempt === 0 ? 0 : 50);
-    }
-    private loadHintVisibility(): boolean { return typeof localStorage === 'undefined' || localStorage.getItem('ligacup-guide-hint-dismissed') !== 'true'; }
+      // Tabs scroll horizontally on mobile, so the target can sit outside the visible area until scrolled into view.
+      // Only do this when a step is first shown; re-running it on the user's own scroll/resize would fight their input.
+      if (!skipScroll) element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      window.setTimeout(() => {
+        const rect = element.getBoundingClientRect();
+        this.targetRect.set({
+          top: rect.top - 4,
+          left: rect.left - 4,
+          width: rect.width + 8,
+          height: rect.height + 8,
+        });
+      }, 0);
+    }, attempt === 0 ? 0 : 50);
+  }
+  private loadHintVisibility(): boolean { return typeof localStorage === 'undefined' || localStorage.getItem('ligacup-guide-hint-dismissed') !== 'true'; }
 }
