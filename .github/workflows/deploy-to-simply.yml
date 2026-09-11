@@ -358,6 +358,8 @@ jobs:
         run: sleep 10
 
       - name: Check API health
+        id: health
+        continue-on-error: true
         shell: bash
         run: |
           for attempt in 1 2 3 4 5; do
@@ -369,8 +371,49 @@ jobs:
           done
           exit 1
 
+      - name: Prepare recovery offline marker
+        if: steps.health.outcome == 'failure'
+        shell: bash
+        run: |
+          mkdir -p api-recovery-payload
+          printf '%s\n' '<html><body>Restarting Liga Cup API...</body></html>' > api-recovery-payload/app_offline.htm
+
+      - name: Recycle API worker after health failure
+        if: steps.health.outcome == 'failure'
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+            --upload-file ./api-recovery-payload/app_offline.htm \
+            "ftp://$FTP_SERVER/ligacup.api/app_offline.htm"
+
+      - name: Wait for API worker recycle
+        if: steps.health.outcome == 'failure'
+        run: sleep 30
+
+      - name: Remove recovery offline marker
+        if: always() && steps.health.outcome == 'failure'
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+            -Q 'DELE app_offline.htm' "ftp://$FTP_SERVER/ligacup.api/"
+
+      - name: Check API health after worker recycle
+        id: recovery_health
+        if: steps.health.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        run: curl --fail --retry 6 --retry-delay 5 --retry-all-errors --max-time 10 "${{ env.DEFAULT_API_ORIGIN }}/api/health"
+
       - name: Download API startup logs after health failure
-        if: failure()
+        if: steps.health.outcome == 'failure' && steps.recovery_health.outcome == 'failure'
         shell: bash
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -388,7 +431,7 @@ jobs:
           cat remote-api-logs/*.log 2>/dev/null || true
 
       - name: Fail when API health check failed
-        if: failure()
+        if: steps.health.outcome == 'failure' && steps.recovery_health.outcome == 'failure'
         run: exit 1
 
   deploy-web:
