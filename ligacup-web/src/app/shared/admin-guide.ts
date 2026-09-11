@@ -222,6 +222,17 @@ export class AdminGuide {
     }
 
     @HostListener('window:resize') @HostListener('window:scroll') refreshTarget(): void { if (this.isOpen()) this.measureTarget(); }
+    @HostListener('document:keydown', ['$event'])
+    handleKeyboard(event: KeyboardEvent): void {
+        if (!this.isOpen()) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.close();
+        } else if (event.key === 'Enter' && this.activeGuide()) {
+            event.preventDefault();
+            this.next();
+        }
+    }
     openLibrary(): void { this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null); this.isOpen.set(true); }
     dismissHint(): void { this.showHint.set(false); localStorage.setItem('ligacup-guide-hint-dismissed', 'true'); }
     async startGuide(id: GuideId): Promise<void> {

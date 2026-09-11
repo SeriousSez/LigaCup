@@ -9,11 +9,12 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { CreateUserRequest, User, UserRole } from '../../core/models';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
+import { ConfirmDialog } from '../../shared/confirm-dialog';
 
 @Component({
-    selector: 'app-admin-users',
-    imports: [FormsModule, RouterLink, DatePipe, CardListSkeleton, SelectField],
-    template: `
+  selector: 'app-admin-users',
+  imports: [FormsModule, RouterLink, DatePipe, CardListSkeleton, SelectField, ConfirmDialog],
+  template: `
     <div class="users-page">
     <section class="spread heading">
       <div>
@@ -125,7 +126,7 @@ import { SelectField, SelectOption } from '../../shared/select-field';
               <button type="button" (click)="startReset(user.id)" [disabled]="busy()">
                 {{ t().users.resetPassword }}
               </button>
-              <button type="button" class="danger" (click)="remove(user)" [disabled]="busy()">
+              <button type="button" class="danger" (click)="askRemove(user)" [disabled]="busy()">
                 {{ t().users.deleteUser }}
               </button>
             </div>
@@ -150,8 +151,18 @@ import { SelectField, SelectOption } from '../../shared/select-field';
       </div>
     }
     </div>
+
+    <app-confirm-dialog
+      [open]="pendingDelete() !== null"
+      [title]="t().users.deleteUser"
+      [message]="pendingDelete() ? t().users.confirmDelete + '\n\n' + pendingDelete()!.username : ''"
+      [confirmLabel]="t().users.deleteUser"
+      [cancelLabel]="t().common.cancel"
+      (confirmed)="confirmRemove()"
+      (cancelled)="pendingDelete.set(null)"
+    />
   `,
-    styles: `
+  styles: `
     .users-page {
       max-width: 980px;
       margin-inline: auto;
@@ -301,140 +312,147 @@ import { SelectField, SelectOption } from '../../shared/select-field';
   `,
 })
 export class AdminUsers {
-    private readonly api = inject(ApiService);
-    private readonly i18n = inject(I18nService);
-    protected readonly auth = inject(AuthService);
-    protected readonly t = this.i18n.t;
-    protected readonly locale = this.i18n.locale;
+  private readonly api = inject(ApiService);
+  private readonly i18n = inject(I18nService);
+  protected readonly auth = inject(AuthService);
+  protected readonly t = this.i18n.t;
+  protected readonly locale = this.i18n.locale;
 
-    protected readonly users = signal<User[]>([]);
-    protected readonly loading = signal(true);
-    protected readonly busy = signal(false);
-    protected readonly message = signal<string | null>(null);
-    protected readonly error = signal<string | null>(null);
-    protected readonly showPassword = signal(false);
-    protected readonly resettingId = signal<number | null>(null);
-    protected newPassword = '';
+  protected readonly users = signal<User[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly busy = signal(false);
+  protected readonly message = signal<string | null>(null);
+  protected readonly error = signal<string | null>(null);
+  protected readonly showPassword = signal(false);
+  protected readonly resettingId = signal<number | null>(null);
+  protected readonly pendingDelete = signal<User | null>(null);
+  protected newPassword = '';
 
-    protected readonly roleOptions = computed<SelectOption<UserRole>[]>(() => {
-        const labels = this.t().userRole;
-        return [
-            { value: 'Viewer', label: labels.Viewer },
-            { value: 'Editor', label: labels.Editor },
-            { value: 'Admin', label: labels.Admin },
-        ];
-    });
+  protected readonly roleOptions = computed<SelectOption<UserRole>[]>(() => {
+    const labels = this.t().userRole;
+    return [
+      { value: 'Viewer', label: labels.Viewer },
+      { value: 'Editor', label: labels.Editor },
+      { value: 'Admin', label: labels.Admin },
+    ];
+  });
 
-    protected draft: CreateUserRequest = {
-        username: '',
-        email: null,
-        password: '',
-        role: 'Editor' as UserRole,
-    };
+  protected draft: CreateUserRequest = {
+    username: '',
+    email: null,
+    password: '',
+    role: 'Editor' as UserRole,
+  };
 
-    constructor() {
-        void this.refresh();
+  constructor() {
+    void this.refresh();
+  }
+
+  async refresh(): Promise<void> {
+    try {
+      this.users.set(await firstValueFrom(this.api.getUsers()));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async create(): Promise<void> {
+    this.busy.set(true);
+    this.message.set(null);
+    this.error.set(null);
+
+    try {
+      await firstValueFrom(
+        this.api.createUser({
+          ...this.draft,
+          username: this.draft.username.trim(),
+          email: this.draft.email?.trim() || null,
+        }),
+      );
+
+      this.draft = { username: '', email: null, password: '', role: 'Editor' as UserRole };
+      this.message.set(this.t().users.created);
+      await this.refresh();
+    } catch (failure) {
+      this.error.set(this.describe(failure));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async save(user: User): Promise<void> {
+    this.busy.set(true);
+    this.message.set(null);
+    this.error.set(null);
+
+    try {
+      await firstValueFrom(
+        this.api.updateUser(user.id, {
+          email: user.email?.trim() || null,
+          role: user.role,
+          isActive: user.isActive,
+        }),
+      );
+      this.message.set(this.t().users.saved);
+      await this.refresh();
+    } catch (failure) {
+      this.error.set(this.describe(failure));
+      await this.refresh();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  startReset(userId: number): void {
+    this.newPassword = '';
+    this.resettingId.set(this.resettingId() === userId ? null : userId);
+  }
+
+  async confirmReset(userId: number): Promise<void> {
+    this.busy.set(true);
+    this.message.set(null);
+    this.error.set(null);
+
+    try {
+      await firstValueFrom(this.api.resetUserPassword(userId, this.newPassword));
+      this.resettingId.set(null);
+      this.newPassword = '';
+      this.message.set(this.t().users.passwordReset);
+    } catch (failure) {
+      this.error.set(this.describe(failure));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  askRemove(user: User): void {
+    this.pendingDelete.set(user);
+  }
+
+  async confirmRemove(): Promise<void> {
+    const user = this.pendingDelete();
+    this.pendingDelete.set(null);
+    if (!user) {
+      return;
     }
 
-    async refresh(): Promise<void> {
-        try {
-            this.users.set(await firstValueFrom(this.api.getUsers()));
-        } finally {
-            this.loading.set(false);
-        }
+    this.busy.set(true);
+    this.message.set(null);
+    this.error.set(null);
+
+    try {
+      await firstValueFrom(this.api.deleteUser(user.id));
+      await this.refresh();
+    } catch (failure) {
+      this.error.set(this.describe(failure));
+    } finally {
+      this.busy.set(false);
     }
+  }
 
-    async create(): Promise<void> {
-        this.busy.set(true);
-        this.message.set(null);
-        this.error.set(null);
-
-        try {
-            await firstValueFrom(
-                this.api.createUser({
-                    ...this.draft,
-                    username: this.draft.username.trim(),
-                    email: this.draft.email?.trim() || null,
-                }),
-            );
-
-            this.draft = { username: '', email: null, password: '', role: 'Editor' as UserRole };
-            this.message.set(this.t().users.created);
-            await this.refresh();
-        } catch (failure) {
-            this.error.set(this.describe(failure));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async save(user: User): Promise<void> {
-        this.busy.set(true);
-        this.message.set(null);
-        this.error.set(null);
-
-        try {
-            await firstValueFrom(
-                this.api.updateUser(user.id, {
-                    email: user.email?.trim() || null,
-                    role: user.role,
-                    isActive: user.isActive,
-                }),
-            );
-            this.message.set(this.t().users.saved);
-            await this.refresh();
-        } catch (failure) {
-            this.error.set(this.describe(failure));
-            await this.refresh();
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    startReset(userId: number): void {
-        this.newPassword = '';
-        this.resettingId.set(this.resettingId() === userId ? null : userId);
-    }
-
-    async confirmReset(userId: number): Promise<void> {
-        this.busy.set(true);
-        this.message.set(null);
-        this.error.set(null);
-
-        try {
-            await firstValueFrom(this.api.resetUserPassword(userId, this.newPassword));
-            this.resettingId.set(null);
-            this.newPassword = '';
-            this.message.set(this.t().users.passwordReset);
-        } catch (failure) {
-            this.error.set(this.describe(failure));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async remove(user: User): Promise<void> {
-        if (!confirm(this.t().users.confirmDelete)) {
-            return;
-        }
-
-        this.busy.set(true);
-        this.message.set(null);
-        this.error.set(null);
-
-        try {
-            await firstValueFrom(this.api.deleteUser(user.id));
-            await this.refresh();
-        } catch (failure) {
-            this.error.set(this.describe(failure));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    /** Surfaces the server's reason, which explains guards like the last-administrator rule. */
-    private describe(failure: unknown): string {
-        const message = (failure as { error?: { message?: string } })?.error?.message;
-        return message ?? this.t().common.somethingWentWrong;
-    }
+  /** Surfaces the server's reason, which explains guards like the last-administrator rule. */
+  private describe(failure: unknown): string {
+    const message = (failure as { error?: { message?: string } })?.error?.message;
+    return message ?? this.t().common.somethingWentWrong;
+  }
 }

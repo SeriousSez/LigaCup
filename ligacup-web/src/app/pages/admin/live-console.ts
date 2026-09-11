@@ -8,11 +8,12 @@ import { MatchClockService } from '../../core/match-clock.service';
 import { TournamentStore } from '../../core/tournament.store';
 import { HeadingSkeleton, ScoreboardSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
+import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../core/models';
 
 @Component({
   selector: 'app-live-console',
-  imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField],
+  imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField, ConfirmDialog],
   template: `
     @if (detail(); as data) {
       <section class="heading">
@@ -218,7 +219,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
                       <td>{{ event.teamName }}</td>
                       <td class="muted">{{ event.playerName ?? '-' }}</td>
                       <td>
-                        <button type="button" class="danger" (click)="removeEvent(match.id, event.id)">
+                        <button type="button" class="danger" (click)="askRemoveEvent(match.id, event.id, event.type)">
                           {{ t().live.undo }}
                         </button>
                       </td>
@@ -261,6 +262,16 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
       <app-heading-skeleton />
       <app-scoreboard-skeleton />
     }
+
+    <app-confirm-dialog
+      [open]="pendingEventDelete() !== null"
+      [title]="t().common.remove"
+      [message]="pendingEventDelete()?.message ?? ''"
+      [confirmLabel]="t().common.remove"
+      [cancelLabel]="t().common.cancel"
+      (confirmed)="confirmEventDelete()"
+      (cancelled)="pendingEventDelete.set(null)"
+    />
   `,
   styles: `
     .heading {
@@ -437,6 +448,7 @@ export class LiveConsole implements OnInit {
 
   protected readonly selectedId = signal<number | null>(null);
   protected readonly eventTeamId = signal<number | null>(null);
+  protected readonly pendingEventDelete = signal<{ matchId: number; eventId: number; message: string } | null>(null);
 
   protected eventType: MatchEventType = 'Goal';
   protected eventPlayerId: number | null = null;
@@ -586,6 +598,24 @@ export class LiveConsole implements OnInit {
     );
 
     this.eventPlayerId = null;
+  }
+
+  askRemoveEvent(matchId: number, eventId: number, eventType: MatchEventType): void {
+    this.pendingEventDelete.set({
+      matchId,
+      eventId,
+      message: `${this.t().common.confirmDelete}\n\n${this.t().eventType[eventType]}`,
+    });
+  }
+
+  async confirmEventDelete(): Promise<void> {
+    const pending = this.pendingEventDelete();
+    this.pendingEventDelete.set(null);
+    if (!pending) {
+      return;
+    }
+
+    await this.removeEvent(pending.matchId, pending.eventId);
   }
 
   async removeEvent(matchId: number, eventId: number): Promise<void> {

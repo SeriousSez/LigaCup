@@ -23,6 +23,7 @@ export interface Strings {
         cancel: string;
         add: string;
         remove: string;
+        confirmDelete: string;
         teams: string;
         matches: string;
         season: string;
@@ -237,9 +238,12 @@ export interface Strings {
         setup: string;
         view: string;
         liveConsole: string;
+        delete: string;
+        deleteConfirm: string;
         empty: string;
         nameRequired: string;
         createFailed: string;
+        deleteFailed: string;
         countSummary: string;
     };
     setup: {
@@ -369,6 +373,7 @@ export const danish: Strings = {
         cancel: 'Annuller',
         add: 'Tilføj',
         remove: 'Fjern',
+        confirmDelete: 'Er du sikker på, at du vil fjerne dette?',
         teams: 'hold',
         matches: 'kampe',
         season: 'Sæson',
@@ -629,9 +634,12 @@ export const danish: Strings = {
         setup: 'Opsætning',
         view: 'Se',
         liveConsole: 'Livekonsol',
+        delete: 'Slet',
+        deleteConfirm: 'Vil du slette denne turnering og alle dens kampe, hold og spillere?',
         empty: 'Der er ikke noget her endnu. Opret din første turnering ovenfor.',
         nameRequired: 'Giv turneringen et navn først.',
         createFailed: 'Turneringen kunne ikke oprettes.',
+        deleteFailed: 'Turneringen kunne ikke slettes.',
         countSummary: '{teams} hold, {matches} kampe',
     },
     setup: {
@@ -766,6 +774,7 @@ export const english: Strings = {
         cancel: 'Cancel',
         add: 'Add',
         remove: 'Remove',
+        confirmDelete: 'Are you sure you want to remove this?',
         teams: 'teams',
         matches: 'matches',
         season: 'Season',
@@ -1026,9 +1035,12 @@ export const english: Strings = {
         setup: 'Set up',
         view: 'View',
         liveConsole: 'Live console',
+        delete: 'Delete',
+        deleteConfirm: 'Delete this tournament and all its fixtures, teams, and players?',
         empty: 'Nothing here yet. Create your first tournament above.',
         nameRequired: 'Give the tournament a name first.',
         createFailed: 'The tournament could not be created.',
+        deleteFailed: 'The tournament could not be deleted.',
         countSummary: '{teams} teams, {matches} matches',
     },
     setup: {

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -9,12 +10,13 @@ import { defaultTournamentRulesWithoutDate } from '../../core/default-rules';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
+import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../../core/models';
 
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, FormsModule, CardListSkeleton, SelectField, DateTimePicker],
+  imports: [RouterLink, FormsModule, DatePipe, CardListSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
     <h1>{{ t().adminHome.title }}</h1>
 
@@ -60,18 +62,20 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
         <p class="sr-only" role="status">{{ t().common.loading }}</p>
         <app-card-list-skeleton [count]="2" />
       } @else {
-        <div class="grid-auto">
+        <div class="tournament-grid">
         @for (tournament of tournaments(); track tournament.id) {
-          <div class="card stack">
+          <article class="card stack tournament-card">
             <div class="spread">
               <strong>{{ tournament.name }}</strong>
-              <span class="badge">{{ tournament.season }}</span>
+              <span class="badge">
+                {{ tournament.tournamentDateUtc ? (tournament.tournamentDateUtc | date: 'dd.MM.yyyy HH:mm') : tournament.season }}
+              </span>
             </div>
             <p class="muted">
               {{ tournament.teamCount }} {{ t().common.teams }}, {{ tournament.matchCount }}
               {{ t().common.matches }}
             </p>
-            <div class="row">
+            <div class="tournament-actions">
               <a [routerLink]="['/admin', tournament.slug]">
                 <button type="button">{{ t().adminHome.setup }}</button>
               </a>
@@ -81,14 +85,27 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
               <a [routerLink]="['/', tournament.slug]">
                 <button class="ghost" type="button">{{ t().adminHome.view }}</button>
               </a>
+              <button class="danger" type="button" (click)="askDeleteTournament(tournament)">
+                {{ t().adminHome.delete }}
+              </button>
             </div>
-          </div>
+          </article>
         } @empty {
           <p class="muted">{{ t().adminHome.empty }}</p>
         }
         </div>
       }
     </section>
+
+    <app-confirm-dialog
+      [open]="pendingDelete() !== null"
+      [title]="t().adminHome.delete"
+      [message]="pendingDelete() ? t().adminHome.deleteConfirm + '\n\n' + pendingDelete()!.name : ''"
+      [confirmLabel]="t().adminHome.delete"
+      [cancelLabel]="t().common.cancel"
+      (confirmed)="confirmDeleteTournament()"
+      (cancelled)="pendingDelete.set(null)"
+    />
   `,
   styles: `
     .create {
@@ -97,6 +114,31 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
 
     .create p {
       margin: 0;
+    }
+
+    .tournament-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .tournament-card {
+      min-width: 0;
+    }
+
+    .tournament-card p {
+      margin: 0;
+    }
+
+    .tournament-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .tournament-actions a {
+      display: contents;
     }
   `,
 })
@@ -109,6 +151,7 @@ export class AdminHome {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(true);
+  protected readonly pendingDelete = signal<TournamentSummary | null>(null);
 
   protected readonly formatOptions = computed<SelectOption<TournamentFormat>[]>(() => {
     const labels = this.t().format;
@@ -184,6 +227,29 @@ export class AdminHome {
       await this.refresh();
     } catch {
       this.error.set(this.t().adminHome.createFailed);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  askDeleteTournament(tournament: TournamentSummary): void {
+    this.pendingDelete.set(tournament);
+  }
+
+  async confirmDeleteTournament(): Promise<void> {
+    const tournament = this.pendingDelete();
+    this.pendingDelete.set(null);
+    if (!tournament) {
+      return;
+    }
+
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      await firstValueFrom(this.api.deleteTournament(tournament.id));
+      await this.refresh();
+    } catch {
+      this.error.set(this.t().adminHome.deleteFailed);
     } finally {
       this.busy.set(false);
     }

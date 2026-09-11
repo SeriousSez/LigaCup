@@ -9,11 +9,12 @@ import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
+import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
 
 @Component({
   selector: 'app-admin-setup',
-  imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker],
+  imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -259,7 +260,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                 >
                   &darr;
                 </button>
-                <button type="button" class="danger" (click)="removeRule(index)">
+                <button type="button" class="danger" (click)="confirmRemoveRule(index, t().tiebreaker[rule])">
                   {{ t().common.remove }}
                 </button>
               </div>
@@ -296,7 +297,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           @for (group of data.groups; track group.id) {
             <span class="badge">
               {{ group.name }}
-              <button type="button" class="danger tiny" (click)="removeGroup(group.id)">&times;</button>
+              <button type="button" class="danger tiny" (click)="confirmRemoveGroup(group.id, group.name)">&times;</button>
             </span>
           } @empty {
             <span class="muted">{{ t().setup.noGroups }}</span>
@@ -379,7 +380,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                     class="danger icon-button"
                     [attr.aria-label]="t().common.remove"
                     [title]="t().common.remove"
-                    (click)="removeTeam(team.id)"
+                    (click)="confirmRemoveTeam(team.id, team.name)"
                   >
                     &#128465;
                   </button>
@@ -418,7 +419,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                       {{ player.shirtNumber }}
                     }
                     {{ player.name }}
-                    <button type="button" class="danger tiny" (click)="removePlayer(player.id)">
+                    <button type="button" class="danger tiny" (click)="confirmRemovePlayer(player.id, player.name)">
                       &times;
                     </button>
                   </span>
@@ -495,7 +496,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                 </label>
                 <div class="schedule-actions">
                   <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
-                  <button type="button" class="danger" (click)="deleteSchedule(match)">
+                  <button type="button" class="danger" (click)="confirmDeleteSchedule(match)">
                     {{ t().common.remove }}
                   </button>
                 </div>
@@ -505,6 +506,16 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         }
         </section>
       }
+
+      <app-confirm-dialog
+        [open]="pendingConfirmation() !== null"
+        [title]="t().common.remove"
+        [message]="pendingConfirmation()?.message ?? ''"
+        [confirmLabel]="t().common.remove"
+        [cancelLabel]="t().common.cancel"
+        (confirmed)="confirmPendingAction()"
+        (cancelled)="pendingConfirmation.set(null)"
+      />
     } @else {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
       <app-heading-skeleton />
@@ -890,6 +901,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected readonly busy = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
+  protected readonly pendingConfirmation = signal<{ message: string; action: () => Promise<void> | void } | null>(null);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
   @ViewChild('rulesContent') private rulesContent?: ElementRef<HTMLElement>;
   private rulesContentInitialized = false;
@@ -1053,6 +1065,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     }
   }
 
+  confirmRemoveRule(index: number, ruleName: string): void {
+    this.requestConfirmation(ruleName, () => this.removeRule(index));
+  }
+
   removeRule(index: number): void {
     this.tiebreakers.update((rules) => rules.filter((_, position) => position !== index));
   }
@@ -1179,6 +1195,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     await this.store.reload();
   }
 
+  confirmRemoveGroup(groupId: number, groupName: string): void {
+    this.requestConfirmation(groupName, () => this.removeGroup(groupId));
+  }
+
   async addTeam(): Promise<void> {
     const data = this.detail();
     if (!data || !this.newTeamName.trim()) {
@@ -1257,6 +1277,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     }
   }
 
+  confirmRemoveTeam(teamId: number, teamName: string): void {
+    this.requestConfirmation(teamName, () => this.removeTeam(teamId));
+  }
+
   async addPlayer(teamId: number): Promise<void> {
     const mode = this.detail()?.tournament.playerRegistrationMode ?? 'NamesAndNumbers';
     const name = (this.playerDrafts[teamId] ?? '').trim();
@@ -1279,6 +1303,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   async removePlayer(playerId: number): Promise<void> {
     await firstValueFrom(this.api.deletePlayer(playerId));
     await this.store.reload();
+  }
+
+  confirmRemovePlayer(playerId: number, playerName: string): void {
+    this.requestConfirmation(playerName, () => this.removePlayer(playerId));
   }
 
   async generate(): Promise<void> {
@@ -1370,6 +1398,25 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  confirmDeleteSchedule(match: Match): void {
+    this.requestConfirmation(`${match.homeTeamName} - ${match.awayTeamName}`, () => this.deleteSchedule(match));
+  }
+
+  async confirmPendingAction(): Promise<void> {
+    const pending = this.pendingConfirmation();
+    this.pendingConfirmation.set(null);
+    if (pending) {
+      await pending.action();
+    }
+  }
+
+  private requestConfirmation(name: string, action: () => Promise<void> | void): void {
+    this.pendingConfirmation.set({
+      message: `${this.t().common.confirmDelete}\n\n${name}`,
+      action,
+    });
   }
 
   async seedKnockout(): Promise<void> {
