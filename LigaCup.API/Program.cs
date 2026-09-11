@@ -11,6 +11,7 @@ using LigaCup.Infrastructure;
 using LigaCup.Infrastructure.Configuration;
 using LigaCup.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -118,7 +119,7 @@ static async Task InitializeDatabaseAsync(WebApplication app)
     {
         using var scope = app.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<LigaCupContext>();
-        await dbContext.Database.MigrateAsync();
+        await MigrateWithSqliteRetryAsync(dbContext, app.Logger);
 
         var databasePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(
             DatabaseConfiguration.GetSqliteConnectionString(app.Configuration));
@@ -130,6 +131,31 @@ static async Task InitializeDatabaseAsync(WebApplication app)
     {
         app.Logger.LogCritical(exception, "LigaCup database initialization failed during startup.");
         throw;
+    }
+}
+
+static async Task MigrateWithSqliteRetryAsync(LigaCupContext dbContext, ILogger logger)
+{
+    const int maxAttempts = 6;
+
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            await dbContext.Database.MigrateAsync();
+            return;
+        }
+        catch (SqliteException exception) when ((exception.SqliteErrorCode is 5 or 6) && attempt < maxAttempts)
+        {
+            var delay = TimeSpan.FromSeconds(Math.Min(attempt * 5, 20));
+            logger.LogWarning(
+                exception,
+                "SQLite database is temporarily locked during startup. Retrying migration in {DelaySeconds} seconds (attempt {Attempt} of {MaxAttempts}).",
+                delay.TotalSeconds,
+                attempt + 1,
+                maxAttempts);
+            await Task.Delay(delay);
+        }
     }
 }
 

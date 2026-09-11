@@ -251,7 +251,7 @@ jobs:
           dangerous-clean-slate: false
 
       - name: Wait for API worker to stop
-        run: sleep 5
+        run: sleep 30
 
       - name: Deploy API over FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
