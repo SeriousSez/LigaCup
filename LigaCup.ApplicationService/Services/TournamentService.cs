@@ -53,8 +53,8 @@ public class TournamentService(LigaCupContext dbContext)
         var teams = tournament.Teams.OrderBy(team => team.SortOrder).ThenBy(team => team.Name).ToList();
         var matches = tournament.Matches
             .OrderBy(match => match.Stage)
-            .ThenBy(match => match.Round)
             .ThenBy(match => match.KickoffUtc ?? DateTime.MaxValue)
+            .ThenBy(match => match.Round)
             .ToList();
 
         return new TournamentDetailDto(

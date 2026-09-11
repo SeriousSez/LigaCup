@@ -462,6 +462,9 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           <button class="primary" type="button" (click)="generate()" [disabled]="busy()">
             {{ t().setup.generate }}
           </button>
+          <button type="button" (click)="addMatch()" [disabled]="busy()">
+            {{ t().setup.addMatch }}
+          </button>
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
             {{ t().setup.seedKnockout }}
           </button>
@@ -472,7 +475,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         @if (data.matches.length) {
           <div class="schedule-list">
             <h4>{{ t().setup.schedule }}</h4>
-            @for (match of data.matches; track match.id) {
+            @for (match of scheduleMatches(data.matches); track match.id) {
               <div class="schedule-row">
                 @if (match.stage === 'Group') {
                   <label>
@@ -490,7 +493,12 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                   {{ t().setup.kickoff }}
                   <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
                 </label>
-                <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
+                <div class="schedule-actions">
+                  <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
+                  <button type="button" class="danger" (click)="deleteSchedule(match)">
+                    {{ t().common.remove }}
+                  </button>
+                </div>
               </div>
             }
           </div>
@@ -727,8 +735,15 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
       font-size: 0.75rem;
     }
 
-    .schedule-row > button {
+    .schedule-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
       align-self: end;
+    }
+
+    .schedule-actions button {
+      white-space: nowrap;
     }
 
     @media (min-width: 700px) {
@@ -1290,6 +1305,68 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       );
     } catch {
       this.fixtureMessage.set(this.t().setup.generateBlocked);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async addMatch(): Promise<void> {
+    const data = this.detail();
+    if (!data) {
+      return;
+    }
+
+    this.busy.set(true);
+    try {
+      const groupRounds = data.matches
+        .filter((match) => match.stage === 'Group')
+        .map((match) => match.round);
+      const round = groupRounds.length ? Math.max(...groupRounds) + 1 : 1;
+      await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
+        groupId: null,
+        stage: 'Group',
+        round,
+        homeTeamId: null,
+        awayTeamId: null,
+        homePlaceholder: null,
+        awayPlaceholder: null,
+        kickoffUtc: null,
+        venue: null,
+      }));
+      await this.store.reload();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  scheduleMatches(matches: Match[]): Match[] {
+    return [...matches].sort((left, right) => {
+      if (!left.kickoffUtc && right.kickoffUtc) {
+        return -1;
+      }
+
+      if (left.kickoffUtc && !right.kickoffUtc) {
+        return 1;
+      }
+
+      if (!left.kickoffUtc && !right.kickoffUtc) {
+        return right.id - left.id;
+      }
+
+      return left.kickoffUtc!.localeCompare(right.kickoffUtc!);
+    });
+  }
+
+  async deleteSchedule(match: Match): Promise<void> {
+    const data = this.detail();
+    if (!data) {
+      return;
+    }
+
+    this.busy.set(true);
+    try {
+      await firstValueFrom(this.api.deleteMatch(data.tournament.id, match.id));
+      await this.store.reload();
     } finally {
       this.busy.set(false);
     }

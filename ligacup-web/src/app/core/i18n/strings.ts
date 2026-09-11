@@ -309,6 +309,7 @@ export interface Strings {
         fixtures: string;
         fixturesHelp: string;
         schedule: string;
+        addMatch: string;
         saveSchedule: string;
         kickoff: string;
         homeTeam: string;
@@ -701,12 +702,13 @@ export const danish: Strings = {
         shirtNumberPlaceholder: 'Nr.',
         fixtures: 'Kampprogram',
         schedule: 'Tidspunkter for kampe',
+        addMatch: 'Tilføj kamp',
         saveSchedule: 'Gem tidspunkt',
         kickoff: 'Starttidspunkt',
         homeTeam: 'Hjemmehold',
         awayTeam: 'Udehold',
         fixturesHelp:
-            'Gruppekampene er en fuld turnering, hvor alle møder alle. Slutspilsskemaet oprettes med pladsholdere og udfylder sig selv, efterhånden som kampene bliver afgjort.',
+            'Generer et grundkampprogram, og tilpas det bagefter ved at tilføje eller fjerne enkelte kampe. Slutspilsskemaet oprettes med pladsholdere og udfylder sig selv, efterhånden som kampene bliver afgjort.',
         groupStage: 'Gruppespil',
         knockoutBracket: 'Slutspilsskema',
         replaceExisting: 'Erstat eksisterende kampe',
@@ -1097,12 +1099,13 @@ export const english: Strings = {
         shirtNumberPlaceholder: 'No.',
         fixtures: 'Fixtures',
         schedule: 'Match schedule',
+        addMatch: 'Add match',
         saveSchedule: 'Save time',
         kickoff: 'Kickoff',
         homeTeam: 'Home team',
         awayTeam: 'Away team',
         fixturesHelp:
-            'Group fixtures are a full round robin. The knockout bracket is created with placeholders and fills itself in as ties are decided.',
+            'Generate a starting schedule, then add or remove individual matches as needed. The knockout bracket is created with placeholders and fills itself in as ties are decided.',
         groupStage: 'Group stage',
         knockoutBracket: 'Knockout bracket',
         replaceExisting: 'Replace existing fixtures',

@@ -294,20 +294,39 @@ export class Tournament implements OnInit {
   protected readonly liveMatches = this.store.liveMatches;
 
   protected readonly fixtureRounds = computed(() => {
-    const matches = this.detail()?.matches ?? [];
+    const detail = this.detail();
+    const matches = detail?.matches ?? [];
     const strings = this.t();
     const buckets = new Map<string, typeof matches>();
+    const isLeague = detail?.tournament.format === 'League';
 
     for (const match of matches) {
       const key =
-        match.stage === 'Group'
-          ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
-          : strings.stagePlural[match.stage];
+        match.stage === 'Group' && isLeague
+          ? strings.tournament.league
+          : match.stage === 'Group'
+            ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
+            : strings.stagePlural[match.stage];
 
       buckets.set(key, [...(buckets.get(key) ?? []), match]);
     }
 
-    return [...buckets.entries()].map(([key, group]) => ({ key, matches: group }));
+    return [...buckets.entries()].map(([key, group]) => ({
+      key,
+      matches: [...group].sort((left, right) => {
+        if (!left.kickoffUtc && right.kickoffUtc) {
+          return 1;
+        }
+
+        if (left.kickoffUtc && !right.kickoffUtc) {
+          return -1;
+        }
+
+        return left.kickoffUtc && right.kickoffUtc
+          ? left.kickoffUtc.localeCompare(right.kickoffUtc)
+          : left.round - right.round;
+      }),
+    }));
   });
 
   protected readonly bracketStages = computed(() => {
