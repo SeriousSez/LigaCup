@@ -330,11 +330,12 @@ jobs:
           dangerous-clean-slate: false
 
       - name: Wait for API worker recycle
-        if: steps.health.outcome == 'failure'
+        if: always() && steps.health.outcome == 'failure'
         run: sleep 30
 
       - name: Remove recovery offline marker
-        if: steps.health.outcome == 'failure'
+        if: always() && steps.health.outcome == 'failure'
+        continue-on-error: true
         shell: bash
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -346,7 +347,7 @@ jobs:
 
       - name: Check API health after worker recycle
         id: recovery-health
-        if: steps.health.outcome == 'failure'
+        if: always() && steps.health.outcome == 'failure'
         continue-on-error: true
         run: curl --fail --retry 6 --retry-delay 5 --retry-all-errors --verbose '${{ env.DEFAULT_API_ORIGIN }}/api/health'
 
