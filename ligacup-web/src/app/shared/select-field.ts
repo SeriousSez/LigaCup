@@ -1,19 +1,19 @@
 import {
-    Component,
-    ElementRef,
-    HostListener,
-    computed,
-    forwardRef,
-    inject,
-    input,
-    signal,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  forwardRef,
+  inject,
+  input,
+  signal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface SelectOption<T = unknown> {
-    value: T;
-    label: string;
-    disabled?: boolean;
+  value: T;
+  label: string;
+  disabled?: boolean;
 }
 
 let nextId = 0;
@@ -24,15 +24,15 @@ let nextId = 0;
  * aria-activedescendant, which keeps keyboard and screen reader behaviour predictable.
  */
 @Component({
-    selector: 'app-select',
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => SelectField),
-            multi: true,
-        },
-    ],
-    template: `
+  selector: 'app-select',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => SelectField),
+      multi: true,
+    },
+  ],
+  template: `
     <button
       type="button"
       class="trigger"
@@ -53,7 +53,7 @@ let nextId = 0;
     </button>
 
     @if (open()) {
-      <ul class="options" role="listbox" [id]="listId">
+      <ul class="options" [class.open-up]="openUp()" role="listbox" [id]="listId">
         @for (option of options(); track $index) {
           <li
             role="option"
@@ -74,7 +74,7 @@ let nextId = 0;
       </ul>
     }
   `,
-    styles: `
+  styles: `
     :host {
       position: relative;
       display: block;
@@ -129,6 +129,11 @@ let nextId = 0;
       -webkit-overflow-scrolling: touch;
     }
 
+    .options.open-up {
+      top: auto;
+      bottom: calc(100% + 0.25rem);
+    }
+
     li {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -167,139 +172,164 @@ let nextId = 0;
   `,
 })
 export class SelectField<T = unknown> implements ControlValueAccessor {
-    readonly options = input<SelectOption<T>[]>([]);
-    readonly placeholder = input('');
-    readonly label = input('');
+  readonly options = input<SelectOption<T>[]>([]);
+  readonly placeholder = input('');
+  readonly label = input('');
 
-    private readonly host = inject(ElementRef<HTMLElement>);
-    private readonly instance = nextId++;
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly instance = nextId++;
 
-    protected readonly listId = `select-list-${this.instance}`;
-    protected readonly open = signal(false);
-    protected readonly activeIndex = signal(0);
-    protected readonly value = signal<T | null>(null);
-    protected readonly isDisabled = signal(false);
+  protected readonly listId = `select-list-${this.instance}`;
+  protected readonly open = signal(false);
+  protected readonly openUp = signal(false);
+  protected readonly activeIndex = signal(0);
+  protected readonly value = signal<T | null>(null);
+  protected readonly isDisabled = signal(false);
 
-    protected readonly selectedOption = computed(
-        () => this.options().find((option) => option.value === this.value()) ?? null,
-    );
+  protected readonly selectedOption = computed(
+    () => this.options().find((option) => option.value === this.value()) ?? null,
+  );
 
-    private onChange: (value: T | null) => void = () => { };
-    private onTouched: () => void = () => { };
+  private onChange: (value: T | null) => void = () => { };
+  private onTouched: () => void = () => { };
 
-    writeValue(value: T | null): void {
-        this.value.set(value);
+  writeValue(value: T | null): void {
+    this.value.set(value);
+  }
+
+  registerOnChange(fn: (value: T | null) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.isDisabled.set(isDisabled);
+  }
+
+  protected optionId(index: number): string {
+    return `${this.listId}-option-${index}`;
+  }
+
+  protected toggle(): void {
+    this.open() ? this.close() : this.openList();
+  }
+
+  protected choose(index: number): void {
+    const option = this.options()[index];
+    if (!option || option.disabled) {
+      return;
     }
 
-    registerOnChange(fn: (value: T | null) => void): void {
-        this.onChange = fn;
+    this.value.set(option.value);
+    this.onChange(option.value);
+    this.close();
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    if (!this.open()) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+        this.openList();
+      }
+      return;
     }
 
-    registerOnTouched(fn: () => void): void {
-        this.onTouched = fn;
-    }
-
-    setDisabledState(isDisabled: boolean): void {
-        this.isDisabled.set(isDisabled);
-    }
-
-    protected optionId(index: number): string {
-        return `${this.listId}-option-${index}`;
-    }
-
-    protected toggle(): void {
-        this.open() ? this.close() : this.openList();
-    }
-
-    protected choose(index: number): void {
-        const option = this.options()[index];
-        if (!option || option.disabled) {
-            return;
-        }
-
-        this.value.set(option.value);
-        this.onChange(option.value);
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.move(1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.move(-1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activeIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activeIndex.set(this.options().length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.choose(this.activeIndex());
+        break;
+      case 'Escape':
+      case 'Tab':
         this.close();
+        break;
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
+      this.close();
+    }
+  }
+
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  protected reposition(): void {
+    if (this.open()) {
+      requestAnimationFrame(() => this.updatePlacement());
+    }
+  }
+
+  private openList(): void {
+    if (this.isDisabled()) {
+      return;
     }
 
-    protected onKeydown(event: KeyboardEvent): void {
-        if (!this.open()) {
-            if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
-                event.preventDefault();
-                this.openList();
-            }
-            return;
-        }
+    const selected = this.options().findIndex((option) => option.value === this.value());
+    this.activeIndex.set(selected >= 0 ? selected : 0);
+    this.open.set(true);
+    requestAnimationFrame(() => this.updatePlacement());
+  }
 
-        switch (event.key) {
-            case 'ArrowDown':
-                event.preventDefault();
-                this.move(1);
-                break;
-            case 'ArrowUp':
-                event.preventDefault();
-                this.move(-1);
-                break;
-            case 'Home':
-                event.preventDefault();
-                this.activeIndex.set(0);
-                break;
-            case 'End':
-                event.preventDefault();
-                this.activeIndex.set(this.options().length - 1);
-                break;
-            case 'Enter':
-            case ' ':
-                event.preventDefault();
-                this.choose(this.activeIndex());
-                break;
-            case 'Escape':
-            case 'Tab':
-                this.close();
-                break;
-        }
+  private close(): void {
+    if (!this.open()) {
+      return;
     }
 
-    @HostListener('document:click', ['$event'])
-    protected onDocumentClick(event: MouseEvent): void {
-        if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
-            this.close();
-        }
+    this.open.set(false);
+    this.openUp.set(false);
+    this.onTouched();
+  }
+
+  private updatePlacement(): void {
+    const hostRect = this.host.nativeElement.getBoundingClientRect();
+    const options = (this.host.nativeElement as HTMLElement).querySelector('.options');
+    if (!options) {
+      return;
     }
 
-    private openList(): void {
-        if (this.isDisabled()) {
-            return;
-        }
+    const gap = 4;
+    const spaceAbove = hostRect.top - gap;
+    const spaceBelow = window.innerHeight - hostRect.bottom - gap;
+    const menuHeight = Math.min(options.scrollHeight, Math.min(window.innerHeight * 0.5, 320));
+    this.openUp.set(spaceBelow < menuHeight && spaceAbove > spaceBelow);
+  }
 
-        const selected = this.options().findIndex((option) => option.value === this.value());
-        this.activeIndex.set(selected >= 0 ? selected : 0);
-        this.open.set(true);
+  /** Steps over disabled options so keyboard users never land on one. */
+  private move(direction: number): void {
+    const options = this.options();
+    if (options.length === 0) {
+      return;
     }
 
-    private close(): void {
-        if (!this.open()) {
-            return;
-        }
-
-        this.open.set(false);
-        this.onTouched();
+    let index = this.activeIndex();
+    for (let step = 0; step < options.length; step++) {
+      index = (index + direction + options.length) % options.length;
+      if (!options[index].disabled) {
+        this.activeIndex.set(index);
+        return;
+      }
     }
-
-    /** Steps over disabled options so keyboard users never land on one. */
-    private move(direction: number): void {
-        const options = this.options();
-        if (options.length === 0) {
-            return;
-        }
-
-        let index = this.activeIndex();
-        for (let step = 0; step < options.length; step++) {
-            index = (index + direction + options.length) % options.length;
-            if (!options[index].disabled) {
-                this.activeIndex.set(index);
-                return;
-            }
-        }
-    }
+  }
 }

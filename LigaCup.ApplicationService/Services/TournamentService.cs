@@ -329,9 +329,10 @@ public class TournamentService(LigaCupContext dbContext)
 
         if (request.ReplaceExisting)
         {
+            var supportsKnockoutStage = tournament.Format is TournamentFormat.GroupsThenKnockout or TournamentFormat.KnockoutOnly;
             var doomed = tournament.Matches
                 .Where(match => (request.IncludeGroupStage && match.Stage == MatchStage.Group)
-                    || (request.IncludeKnockoutStage && match.Stage != MatchStage.Group))
+                    || ((request.IncludeKnockoutStage || !supportsKnockoutStage) && match.Stage != MatchStage.Group))
                 .ToList();
 
             dbContext.Matches.RemoveRange(doomed);
@@ -372,7 +373,8 @@ public class TournamentService(LigaCupContext dbContext)
             }
         }
 
-        if (request.IncludeKnockoutStage && tournament.Format != TournamentFormat.GroupsOnly)
+        if (request.IncludeKnockoutStage
+            && tournament.Format is TournamentFormat.GroupsThenKnockout or TournamentFormat.KnockoutOnly)
         {
             var slots = tournament.Format == TournamentFormat.KnockoutOnly
                 ? tournament.Teams.Count

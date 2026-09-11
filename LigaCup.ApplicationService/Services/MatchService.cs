@@ -218,6 +218,11 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
         var tournament = await tournamentService.LoadGraphAsync(tournamentId, cancellationToken)
             ?? throw new KeyNotFoundException($"Tournament {tournamentId} was not found.");
 
+        if (tournament.Format is not (TournamentFormat.GroupsThenKnockout or TournamentFormat.KnockoutOnly))
+        {
+            throw new InvalidOperationException("This tournament format does not have a knockout stage.");
+        }
+
         var qualifiers = new List<int>();
         var groups = tournament.Groups.OrderBy(group => group.SortOrder).ThenBy(group => group.Name).ToList();
         var advancing = Math.Max(1, tournament.TeamsAdvancingPerGroup);
