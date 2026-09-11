@@ -47,6 +47,11 @@ npm start
 
 Then open `http://localhost:4200`.
 
+To test from a phone on the same network, open `http://<computer-ip>:4200`, using the
+computer's LAN IPv4 address. The development client sends API requests back to that address on
+port `5099`. Allow inbound TCP ports `4200` and `5099` through Windows Firewall if the phone cannot
+connect.
+
 Run the tests:
 
 ```powershell
