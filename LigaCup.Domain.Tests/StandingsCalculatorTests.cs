@@ -177,6 +177,24 @@ public class FixtureGeneratorTests
     }
 
     [Fact]
+    public void AnOddNumberOfTeamsRotatesOneByePerRound()
+    {
+        var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };
+        var teams = BuildTeams(5);
+        var fixtures = FixtureGenerator.GenerateGroupFixtures(BuildTournament(), group, teams);
+
+        var byeTeamIds = fixtures
+            .GroupBy(fixture => fixture.Round)
+            .Select(round => teams.Select(team => team.Id)
+                .Except(round.SelectMany(fixture => new[] { fixture.HomeTeamId!.Value, fixture.AwayTeamId!.Value }))
+                .Single())
+            .ToList();
+
+        Assert.Equal(5, byeTeamIds.Count);
+        Assert.Equal(teams.Select(team => team.Id).Order(), byeTeamIds.Order());
+    }
+
+    [Fact]
     public void ADoubleRoundRobinPlaysEveryPairTwice()
     {
         var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };

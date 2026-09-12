@@ -212,12 +212,17 @@ export interface Strings {
         noRules: string;
         matchday: string;
         league: string;
+        bye: string;
+        fixtureViewLabel: string;
+        byRounds: string;
+        allMatches: string;
         scorers: { player: string; team: string; goals: string; assists: string; empty: string };
     };
     matchCard: {
         penalties: string;
         ownGoalShort: string;
         penaltyShort: string;
+        pitch: string;
     };
     placeholder: {
         winner: string;
@@ -316,6 +321,7 @@ export interface Strings {
         addMatch: string;
         saveSchedule: string;
         kickoff: string;
+        pitchNumber: string;
         homeTeam: string;
         awayTeam: string;
         groupStage: string;
@@ -600,8 +606,12 @@ export const danish: Strings = {
         noTables: 'Ingen gruppetabeller endnu. Tilføj hold og generer kampprogrammet.',
         noFixtures: 'Der er ikke genereret et kampprogram endnu.',
         noRules: 'Turneringsreglerne er ikke offentliggjort endnu.',
-        matchday: 'spillerunde',
+        matchday: 'Spillerunde',
         league: 'Række',
+        bye: 'Oversidder',
+        fixtureViewLabel: 'Visning af kampe',
+        byRounds: 'Runder',
+        allMatches: 'Alle kampe',
         scorers: {
             player: 'Spiller',
             team: 'Hold',
@@ -614,6 +624,7 @@ export const danish: Strings = {
         penalties: 'Straffesparkskonkurrence',
         ownGoalShort: '(selvmål)',
         penaltyShort: '(straffe)',
+        pitch: 'Bane',
     },
     placeholder: {
         winner: 'Vinder af {label}',
@@ -713,6 +724,7 @@ export const danish: Strings = {
         addMatch: 'Tilføj kamp',
         saveSchedule: 'Gem tidspunkt',
         kickoff: 'Starttidspunkt',
+        pitchNumber: 'Bane nr.',
         homeTeam: 'Hjemmehold',
         awayTeam: 'Udehold',
         fixturesHelp:
@@ -1001,8 +1013,12 @@ export const english: Strings = {
         noTables: 'No group tables yet. Add teams and generate the fixtures.',
         noFixtures: 'No fixtures have been generated yet.',
         noRules: 'Tournament rules have not been published yet.',
-        matchday: 'matchday',
+        matchday: 'Matchday',
         league: 'League',
+        bye: 'Bye',
+        fixtureViewLabel: 'Fixture view',
+        byRounds: 'Rounds',
+        allMatches: 'All matches',
         scorers: {
             player: 'Player',
             team: 'Team',
@@ -1015,6 +1031,7 @@ export const english: Strings = {
         penalties: 'Penalties',
         ownGoalShort: '(og)',
         penaltyShort: '(pen)',
+        pitch: 'Pitch',
     },
     placeholder: {
         winner: 'Winner {label}',
@@ -1114,6 +1131,7 @@ export const english: Strings = {
         addMatch: 'Add match',
         saveSchedule: 'Save time',
         kickoff: 'Kickoff',
+        pitchNumber: 'Pitch no.',
         homeTeam: 'Home team',
         awayTeam: 'Away team',
         fixturesHelp:

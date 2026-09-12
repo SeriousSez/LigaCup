@@ -16,8 +16,8 @@ import { GroupTable } from '../core/models';
             <th class="numeric hide-sm" [title]="t().table.wonFull">{{ t().table.won }}</th>
             <th class="numeric hide-sm" [title]="t().table.drawnFull">{{ t().table.drawn }}</th>
             <th class="numeric hide-sm" [title]="t().table.lostFull">{{ t().table.lost }}</th>
-            <th class="numeric hide-sm" [title]="t().table.goalsForFull">{{ t().table.goalsFor }}</th>
-            <th class="numeric hide-sm" [title]="t().table.goalsAgainstFull">
+            <th class="numeric" [title]="t().table.goalsForFull">{{ t().table.goalsFor }}</th>
+            <th class="numeric" [title]="t().table.goalsAgainstFull">
               {{ t().table.goalsAgainst }}
             </th>
             <th class="numeric" [title]="t().table.goalDifferenceFull">
@@ -43,8 +43,8 @@ import { GroupTable } from '../core/models';
               <td class="numeric hide-sm">{{ row.won }}</td>
               <td class="numeric hide-sm">{{ row.drawn }}</td>
               <td class="numeric hide-sm">{{ row.lost }}</td>
-              <td class="numeric hide-sm">{{ row.goalsFor }}</td>
-              <td class="numeric hide-sm">{{ row.goalsAgainst }}</td>
+              <td class="numeric">{{ row.goalsFor }}</td>
+              <td class="numeric">{{ row.goalsAgainst }}</td>
               <td class="numeric">{{ row.goalDifference > 0 ? '+' : '' }}{{ row.goalDifference }}</td>
               <td class="numeric points">{{ row.points }}</td>
               <td class="hide-sm">

@@ -9,6 +9,7 @@ import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
 
 type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules';
+type FixtureView = 'rounds' | 'all';
 
 @Component({
   selector: 'app-tournament',
@@ -96,19 +97,57 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules';
         }
         @case ('fixtures') {
           <div class="stack" data-guide-target="tournament-fixtures">
-            @for (round of fixtureRounds(); track round.key) {
-              <section class="stack">
-                <h3>{{ round.key }}</h3>
-                <div class="grid-auto">
-                  @for (match of round.matches; track match.id) {
-                    <div data-guide-target="tournament-match">
-                      <app-match-card [match]="match" [tournament]="data.tournament" />
-                    </div>
+            @if (data.matches.length) {
+              <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+                <button
+                  type="button"
+                  [class.active]="fixtureView() === 'rounds'"
+                  [attr.aria-pressed]="fixtureView() === 'rounds'"
+                  (click)="fixtureView.set('rounds')"
+                >
+                  {{ t().tournament.byRounds }}
+                </button>
+                <button
+                  type="button"
+                  [class.active]="fixtureView() === 'all'"
+                  [attr.aria-pressed]="fixtureView() === 'all'"
+                  (click)="fixtureView.set('all')"
+                >
+                  {{ t().tournament.allMatches }}
+                </button>
+              </div>
+            }
+
+            @if (fixtureView() === 'rounds') {
+              @for (round of fixtureRounds(); track round.key) {
+                <section class="stack">
+                  <h3>{{ round.key }}</h3>
+                  @if (round.byeTeams.length) {
+                    <p class="muted bye-team">
+                      {{ t().tournament.bye }}: {{ round.byeTeams.join(', ') }}
+                    </p>
                   }
-                </div>
-              </section>
-            } @empty {
-              <p class="muted">{{ t().tournament.noFixtures }}</p>
+                  <div class="grid-auto">
+                    @for (match of round.matches; track match.id) {
+                      <div data-guide-target="tournament-match">
+                        <app-match-card [match]="match" [tournament]="data.tournament" />
+                      </div>
+                    }
+                  </div>
+                </section>
+              } @empty {
+                <p class="muted">{{ t().tournament.noFixtures }}</p>
+              }
+            } @else {
+              <div class="grid-auto">
+                @for (match of fixtureMatches(); track match.id) {
+                  <div data-guide-target="tournament-match">
+                    <app-match-card [match]="match" [tournament]="data.tournament" />
+                  </div>
+                } @empty {
+                  <p class="muted">{{ t().tournament.noFixtures }}</p>
+                }
+              </div>
             }
           </div>
         }
@@ -181,6 +220,34 @@ type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules';
 
     .live-strip {
       margin-bottom: 1.25rem;
+    }
+
+    .bye-team {
+      margin: 0;
+      font-size: 0.85rem;
+    }
+
+    .fixture-view {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.2rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .fixture-view button {
+      min-height: 2.25rem;
+      padding: 0.4rem 0.75rem;
+      border-color: transparent;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .fixture-view button.active {
+      background: var(--surface-raised);
+      color: var(--text);
+      border-color: var(--accent);
     }
 
     /* Sticks under the site header so switching view never needs a scroll back up. */
@@ -278,6 +345,7 @@ export class Tournament implements OnInit {
   protected readonly t = this.i18n.t;
   protected readonly locale = this.i18n.locale;
   protected readonly tab = signal<Tab>('tables');
+  protected readonly fixtureView = signal<FixtureView>('rounds');
 
   protected readonly tabs = computed<{ id: Tab; label: string }[]>(() => {
     const labels = this.t().tournament.tabs;
@@ -293,6 +361,24 @@ export class Tournament implements OnInit {
   protected readonly detail = this.store.detail;
   protected readonly liveMatches = this.store.liveMatches;
 
+  protected readonly fixtureMatches = computed(() =>
+    [...(this.detail()?.matches ?? [])].sort((left, right) => {
+      if (left.kickoffUtc && right.kickoffUtc) {
+        return left.kickoffUtc.localeCompare(right.kickoffUtc);
+      }
+
+      if (left.kickoffUtc) {
+        return -1;
+      }
+
+      if (right.kickoffUtc) {
+        return 1;
+      }
+
+      return left.round - right.round;
+    }),
+  );
+
   protected readonly fixtureRounds = computed(() => {
     const detail = this.detail();
     const matches = detail?.matches ?? [];
@@ -303,7 +389,7 @@ export class Tournament implements OnInit {
     for (const match of matches) {
       const key =
         match.stage === 'Group' && isLeague
-          ? strings.tournament.league
+          ? `${strings.tournament.matchday} ${match.round}`
           : match.stage === 'Group'
             ? `${match.groupName ?? strings.tournament.league} - ${strings.tournament.matchday} ${match.round}`
             : strings.stagePlural[match.stage];
@@ -311,22 +397,33 @@ export class Tournament implements OnInit {
       buckets.set(key, [...(buckets.get(key) ?? []), match]);
     }
 
-    return [...buckets.entries()].map(([key, group]) => ({
-      key,
-      matches: [...group].sort((left, right) => {
-        if (!left.kickoffUtc && right.kickoffUtc) {
-          return 1;
-        }
+    return [...buckets.entries()].map(([key, group]) => {
+      const firstMatch = group[0];
+      const eligibleTeams = firstMatch.stage === 'Group'
+        ? detail?.teams.filter((team) => isLeague || team.groupId === firstMatch.groupId) ?? []
+        : [];
+      const playingTeamIds = new Set(group.flatMap((match) => [match.homeTeamId, match.awayTeamId]));
 
-        if (left.kickoffUtc && !right.kickoffUtc) {
-          return -1;
-        }
+      return {
+        key,
+        byeTeams: eligibleTeams
+          .filter((team) => !playingTeamIds.has(team.id))
+          .map((team) => this.i18n.teamName(team.name, team.id)),
+        matches: [...group].sort((left, right) => {
+          if (!left.kickoffUtc && right.kickoffUtc) {
+            return 1;
+          }
 
-        return left.kickoffUtc && right.kickoffUtc
-          ? left.kickoffUtc.localeCompare(right.kickoffUtc)
-          : left.round - right.round;
-      }),
-    }));
+          if (left.kickoffUtc && !right.kickoffUtc) {
+            return -1;
+          }
+
+          return left.kickoffUtc && right.kickoffUtc
+            ? left.kickoffUtc.localeCompare(right.kickoffUtc)
+            : left.round - right.round;
+        }),
+      };
+    });
   });
 
   protected readonly bracketStages = computed(() => {

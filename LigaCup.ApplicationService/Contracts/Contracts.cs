@@ -147,6 +147,8 @@ public record MatchDto(
     string? AwayTeamShortName,
     string? AwayTeamLogoUrl,
     DateTime? KickoffUtc,
+    DateTime? ScheduledEndUtc,
+    int? PitchNumber,
     string? Venue,
     MatchStatus Status,
     int HomeScore,
@@ -179,6 +181,7 @@ public record SaveMatchRequest(
     string? HomePlaceholder,
     string? AwayPlaceholder,
     DateTime? KickoffUtc,
+    int? PitchNumber,
     string? Venue);
 
 public record UpdateScoreRequest(int HomeScore, int AwayScore, int? HomePenalties, int? AwayPenalties);

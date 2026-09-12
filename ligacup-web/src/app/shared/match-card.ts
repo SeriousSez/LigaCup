@@ -5,14 +5,22 @@ import { MatchClockService } from '../core/match-clock.service';
 import { Match, TournamentSummary } from '../core/models';
 
 @Component({
-    selector: 'app-match-card',
-    imports: [DatePipe],
-    template: `
+  selector: 'app-match-card',
+  imports: [DatePipe],
+  template: `
     <article class="match" [class.is-live]="isLive()">
       <div class="meta">
         <span>{{ match().groupName ?? t().stage[match().stage] }}</span>
         @if (match().kickoffUtc) {
-          <span>{{ match().kickoffUtc | date: 'EEE d MMM HH:mm' : undefined : locale() }}</span>
+          <span>
+            {{ match().kickoffUtc | date: 'EEE d MMM HH:mm' : undefined : locale() }}
+            @if (match().scheduledEndUtc) {
+              &ndash;{{ match().scheduledEndUtc | date: 'HH:mm' : undefined : locale() }}
+            }
+          </span>
+        }
+        @if (match().pitchNumber) {
+          <span>{{ t().matchCard.pitch }} {{ match().pitchNumber }}</span>
         }
         @if (match().venue) {
           <span>{{ match().venue }}</span>
@@ -59,7 +67,7 @@ import { Match, TournamentSummary } from '../core/models';
       }
     </article>
   `,
-    styles: `
+  styles: `
     .match {
       background: var(--surface);
       border: 1px solid var(--surface-line);
@@ -137,38 +145,38 @@ import { Match, TournamentSummary } from '../core/models';
   `,
 })
 export class MatchCard {
-    readonly match = input.required<Match>();
-    readonly tournament = input.required<TournamentSummary>();
+  readonly match = input.required<Match>();
+  readonly tournament = input.required<TournamentSummary>();
 
-    private readonly i18n = inject(I18nService);
-    private readonly clock = inject(MatchClockService);
-    protected readonly t = this.i18n.t;
-    protected readonly locale = this.i18n.locale;
+  private readonly i18n = inject(I18nService);
+  private readonly clock = inject(MatchClockService);
+  protected readonly t = this.i18n.t;
+  protected readonly locale = this.i18n.locale;
 
-    protected readonly homeName = computed(() =>
-        this.i18n.teamName(this.match().homeTeamName, this.match().homeTeamId),
+  protected readonly homeName = computed(() =>
+    this.i18n.teamName(this.match().homeTeamName, this.match().homeTeamId),
+  );
+
+  protected readonly awayName = computed(() =>
+    this.i18n.teamName(this.match().awayTeamName, this.match().awayTeamId),
+  );
+
+  protected readonly minuteLabel = computed(() => {
+    const label = this.clock.label(this.match(), this.tournament());
+    return label === '' ? this.t().connection.live : label;
+  });
+
+  protected readonly breakLabel = computed(() =>
+    this.clock.breakLabel(this.match(), this.tournament()),
+  );
+
+  isLive(): boolean {
+    return this.match().status === 'Live' || this.match().status === 'Paused';
+  }
+
+  goalEvents() {
+    return this.match().events.filter(
+      (event) => event.type === 'Goal' || event.type === 'OwnGoal' || event.type === 'PenaltyGoal',
     );
-
-    protected readonly awayName = computed(() =>
-        this.i18n.teamName(this.match().awayTeamName, this.match().awayTeamId),
-    );
-
-    protected readonly minuteLabel = computed(() => {
-        const label = this.clock.label(this.match(), this.tournament());
-        return label === '' ? this.t().connection.live : label;
-    });
-
-    protected readonly breakLabel = computed(() =>
-        this.clock.breakLabel(this.match(), this.tournament()),
-    );
-
-    isLive(): boolean {
-        return this.match().status === 'Live' || this.match().status === 'Paused';
-    }
-
-    goalEvents() {
-        return this.match().events.filter(
-            (event) => event.type === 'Goal' || event.type === 'OwnGoal' || event.type === 'PenaltyGoal',
-        );
-    }
+  }
 }

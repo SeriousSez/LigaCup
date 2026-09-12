@@ -149,6 +149,7 @@ export class ApiService {
             homePlaceholder: string | null;
             awayPlaceholder: string | null;
             kickoffUtc: string | null;
+            pitchNumber: number | null;
             venue: string | null;
         },
     ) {

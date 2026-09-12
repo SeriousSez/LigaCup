@@ -200,6 +200,8 @@ export interface Match {
     awayTeamShortName: string | null;
     awayTeamLogoUrl: string | null;
     kickoffUtc: string | null;
+    scheduledEndUtc: string | null;
+    pitchNumber: number | null;
     venue: string | null;
     status: MatchStatus;
     homeScore: number;

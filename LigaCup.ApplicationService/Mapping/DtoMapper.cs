@@ -90,6 +90,8 @@ public static class DtoMapper
             match.AwayTeam?.ShortName,
             match.AwayTeam?.LogoUrl,
             match.KickoffUtc,
+            match.KickoffUtc?.AddMinutes(tournament.ScheduledMatchDurationMinutes),
+            match.PitchNumber,
             match.Venue,
             match.Status,
             match.HomeScore,

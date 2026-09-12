@@ -397,7 +397,7 @@ public class TournamentService(LigaCupContext dbContext)
             return;
         }
 
-        var slotDuration = tournament.PeriodDurationMinutes + (tournament.MatchIntervalMinutes ?? 0);
+        var slotDuration = tournament.ScheduledMatchDurationMinutes + (tournament.MatchIntervalMinutes ?? 0);
         foreach (var roundMatches in matches
             .Where(match => match.Stage == MatchStage.Group)
             .GroupBy(match => match.Round))
@@ -408,6 +408,7 @@ public class TournamentService(LigaCupContext dbContext)
                 var slot = index / Math.Max(1, tournament.MatchesPerTimeSlot);
                 ordered[index].KickoffUtc = tournament.TournamentDateUtc.Value
                     .AddMinutes(((ordered[0].Round - 1) + slot) * slotDuration);
+                ordered[index].PitchNumber = index % Math.Max(1, tournament.MatchesPerTimeSlot) + 1;
             }
         }
     }

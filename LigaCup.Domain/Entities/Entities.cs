@@ -64,6 +64,9 @@ public class Tournament
 
     public int TotalDurationMinutes => Math.Max(1, PeriodCount) * Math.Max(1, PeriodDurationMinutes);
 
+    public int ScheduledMatchDurationMinutes =>
+        TotalDurationMinutes + (Math.Max(1, PeriodCount) - 1) * Math.Max(0, BreakDurationMinutes);
+
     /// <summary>Tiebreaker rules serialised in priority order, applied after points.</summary>
     public string TiebreakerOrder { get; set; } = "GoalDifference,GoalsScored,Lottery";
 
@@ -167,6 +170,7 @@ public class Match
     public string? AwayPlaceholder { get; set; }
 
     public DateTime? KickoffUtc { get; set; }
+    public int? PitchNumber { get; set; }
     public string? Venue { get; set; }
 
     public MatchStatus Status { get; set; } = MatchStatus.Scheduled;

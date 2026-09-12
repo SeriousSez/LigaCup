@@ -31,6 +31,7 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
         match.HomePlaceholder = request.HomePlaceholder;
         match.AwayPlaceholder = request.AwayPlaceholder;
         match.KickoffUtc = request.KickoffUtc;
+        match.PitchNumber = request.PitchNumber is > 0 ? request.PitchNumber : null;
         match.Venue = request.Venue;
         match.UpdatedUtc = DateTime.UtcNow;
 

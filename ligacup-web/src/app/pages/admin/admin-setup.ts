@@ -494,6 +494,10 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                   {{ t().setup.kickoff }}
                   <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
                 </label>
+                <label>
+                  {{ t().setup.pitchNumber }}
+                  <input type="number" min="1" [(ngModel)]="match.pitchNumber" />
+                </label>
                 <div class="schedule-actions">
                   <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
                   <button type="button" class="danger" (click)="confirmDeleteSchedule(match)">
@@ -759,7 +763,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
 
     @media (min-width: 700px) {
       .schedule-row {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 13rem auto;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 13rem 6rem auto;
       }
 
       .schedule-row > strong {
@@ -1166,6 +1170,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
       awayPlaceholder: match.awayTeamId === null ? match.awayTeamName : null,
       kickoffUtc: match.kickoffUtc,
+      pitchNumber: match.pitchNumber,
       venue: match.venue,
     }));
     await this.store.reload();
@@ -1359,6 +1364,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         homePlaceholder: null,
         awayPlaceholder: null,
         kickoffUtc: null,
+        pitchNumber: null,
         venue: null,
       }));
       await this.store.reload();
