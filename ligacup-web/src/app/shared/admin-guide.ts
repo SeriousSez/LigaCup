@@ -45,6 +45,8 @@ interface AdminGuideStep {
   title: () => string;
   text: () => string;
   action?: 'click';
+  activate?: string;
+  scrollBlock?: ScrollLogicalPosition;
   /** Skip auto-scrolling the target into view on this viewport; useful when scrolling would hide the step's content. */
   noScroll?: 'mobile' | 'desktop' | 'both';
 }
@@ -126,7 +128,7 @@ interface AdminGuideStep {
           </div>
         </section>
       } @else {
-        <section class="guide-dialog" role="dialog" aria-modal="true" [attr.aria-label]="t().adminGuide.title" [style.top.px]="dialogPosition().top" [style.left.px]="dialogPosition().left">
+        <section class="guide-dialog" [class.guide-dialog-top]="mobileDialogAtTop()" role="dialog" aria-modal="true" [attr.aria-label]="t().adminGuide.title" [style.top.px]="dialogPosition().top" [style.left.px]="dialogPosition().left">
           <header>
             <div>
               <span class="guide-kicker">{{ t().adminGuide.kicker }}</span>
@@ -193,6 +195,7 @@ interface AdminGuideStep {
       .guide-dialog { display: flex; flex-direction: column; max-height: calc(100vh - 2rem); overflow: hidden; }
       .guide-dialog header { flex: 0 0 auto; }
       .guide-dialog:not(.guide-library) { top: auto; left: 1rem; right: 1rem; bottom: calc(1rem + var(--safe-bottom)); width: auto; max-height: min(24rem, calc(100vh - 3rem)); padding: 0.9rem; }
+      .guide-dialog:not(.guide-library).guide-dialog-top { top: calc(1rem + env(safe-area-inset-top, 0px)); bottom: auto; }
       .guide-dialog.guide-library { top: 50%; left: 1rem; right: 1rem; bottom: auto; width: auto; transform: translateY(-50%); max-height: calc(100vh - 2.5rem); padding: 1rem; }
       .guide-dialog header h2 { font-size: 1.15rem; }
       .guide-dialog header p { font-size: 0.8rem; margin-top: 0.2rem; }
@@ -225,6 +228,7 @@ export class AdminGuide {
   protected readonly step = signal(0);
   protected readonly guideCategory = signal<'visitor' | 'organizer'>('visitor');
   protected readonly targetRect = signal<{ top: number; left: number; width: number; height: number } | null>(null);
+  protected readonly mobileDialogAtTop = signal(false);
   private readonly visitorGuideIds: GuideId[] = ['overview', 'fixtures', 'knockout', 'match', 'connectivity'];
   private readonly organizerGuideIds: GuideId[] = ['create', 'setup', 'rules', 'squads', 'schedule', 'live', 'events', 'users'];
   protected readonly guideIds: GuideId[] = [...this.visitorGuideIds, ...this.organizerGuideIds];
@@ -243,7 +247,7 @@ export class AdminGuide {
       { target: '[data-guide-target="tournament-header"]', title: () => this.t().guide.headerTitle, text: () => this.t().guide.headerText },
       { target: '[data-guide-target="tournament-status"]', title: () => this.t().guide.statusTitle, text: () => this.t().guide.statusText },
       { target: '[data-guide-target="tournament-tabs"]', title: () => this.t().guide.tabsTitle, text: () => this.t().guide.tabsText },
-      { target: '[data-guide-target="tournament-table"]', title: () => this.t().guide.tableTitle, text: () => this.t().guide.tableText },
+      { target: '[data-guide-target="tournament-table"]', title: () => this.t().guide.tableTitle, text: () => this.t().guide.tableText, activate: '[data-guide-tab="tables"]' },
     ],
     fixtures: [
       { target: '[data-guide-tab="fixtures"]', title: () => this.t().guide.fixturesTabsTitle, text: () => this.t().guide.fixturesTabsText, action: 'click' },
@@ -266,11 +270,9 @@ export class AdminGuide {
       { target: '[data-guide-target="admin-create-submit"]', title: () => this.t().adminGuide.createSubmitTitle, text: () => this.t().adminGuide.createSubmitText },
     ],
     setup: [
-      { target: '[data-guide-target="admin-rules"]', title: () => this.t().adminGuide.setupRulesTitle, text: () => this.t().adminGuide.setupRulesText, noScroll: 'both' },
-      { target: '[data-guide-tab="structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText, action: 'click' },
-      { target: '[data-guide-target="admin-structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText },
-      { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, action: 'click' },
-      { target: '[data-guide-target="admin-fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, noScroll: 'both' },
+      { target: '[data-guide-target="admin-rules"]', title: () => this.t().adminGuide.setupRulesTitle, text: () => this.t().adminGuide.setupRulesText, activate: '[data-guide-tab="rules"]', noScroll: 'both' },
+      { target: '[data-guide-target="admin-structure"]', title: () => this.t().adminGuide.setupTeamsTitle, text: () => this.t().adminGuide.setupTeamsText, activate: '[data-guide-tab="structure"]' },
+      { target: '[data-guide-target="admin-fixtures"]', title: () => this.t().adminGuide.setupFixturesTitle, text: () => this.t().adminGuide.setupFixturesText, activate: '[data-guide-tab="fixtures"]', noScroll: 'both' },
     ],
     live: [
       { target: '[data-guide-target="admin-match-picker"]', title: () => this.t().adminGuide.livePickerTitle, text: () => this.t().adminGuide.livePickerText },
@@ -282,18 +284,18 @@ export class AdminGuide {
       { target: '[data-guide-target="admin-event-form"]', title: () => this.t().adminGuide.eventsFormTitle, text: () => this.t().adminGuide.eventsFormText },
     ],
     squads: [
-      { target: '[data-guide-tab="squads"]', title: () => this.t().adminGuide.squadsTabTitle, text: () => this.t().adminGuide.squadsTabText, action: 'click' },
-      { target: '[data-guide-target="admin-squads"]', title: () => this.t().adminGuide.squadsManageTitle, text: () => this.t().adminGuide.squadsManageText },
+      { target: '[data-guide-tab="squads"]', title: () => this.t().adminGuide.squadsTabTitle, text: () => this.t().adminGuide.squadsTabText, action: 'click', scrollBlock: 'center' },
+      { target: '[data-guide-target="admin-squads"]', title: () => this.t().adminGuide.squadsManageTitle, text: () => this.t().adminGuide.squadsManageText, scrollBlock: 'center' },
     ],
     rules: [
-      { target: '[data-guide-target="admin-rule-settings"]', title: () => this.t().adminGuide.rulesBasicsTitle, text: () => this.t().adminGuide.rulesBasicsText, noScroll: 'both' },
-      { target: '[data-guide-target="admin-clock-settings"]', title: () => this.t().adminGuide.rulesClockTitle, text: () => this.t().adminGuide.rulesClockText },
-      { target: '[data-guide-target="admin-tiebreakers"]', title: () => this.t().adminGuide.rulesTiebreakersTitle, text: () => this.t().adminGuide.rulesTiebreakersText },
+      { target: '[data-guide-target="admin-rule-settings"]', title: () => this.t().adminGuide.rulesBasicsTitle, text: () => this.t().adminGuide.rulesBasicsText, activate: '[data-guide-tab="rules"]', noScroll: 'both' },
+      { target: '[data-guide-target="admin-clock-settings"]', title: () => this.t().adminGuide.rulesClockTitle, text: () => this.t().adminGuide.rulesClockText, scrollBlock: 'center' },
+      { target: '[data-guide-target="admin-tiebreakers"]', title: () => this.t().adminGuide.rulesTiebreakersTitle, text: () => this.t().adminGuide.rulesTiebreakersText, scrollBlock: 'center' },
     ],
     schedule: [
       { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.scheduleTabTitle, text: () => this.t().adminGuide.scheduleTabText, action: 'click' },
       { target: '[data-guide-target="admin-fixture-generator"]', title: () => this.t().adminGuide.scheduleGenerateTitle, text: () => this.t().adminGuide.scheduleGenerateText },
-      { target: '[data-guide-target="admin-schedule-list"]', title: () => this.t().adminGuide.scheduleEditTitle, text: () => this.t().adminGuide.scheduleEditText },
+      { target: '[data-guide-target="admin-schedule-list"]', title: () => this.t().adminGuide.scheduleEditTitle, text: () => this.t().adminGuide.scheduleEditText, noScroll: 'desktop' },
     ],
     users: [
       { target: '[data-guide-target="admin-user-create"]', title: () => this.t().adminGuide.usersCreateTitle, text: () => this.t().adminGuide.usersCreateText },
@@ -301,8 +303,7 @@ export class AdminGuide {
     ],
     connectivity: [
       { target: '[data-guide-target="tournament-status"]', title: () => this.t().adminGuide.connectivityStatusTitle, text: () => this.t().adminGuide.connectivityStatusText },
-      { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.connectivityUpdatesTitle, text: () => this.t().adminGuide.connectivityUpdatesText, action: 'click' },
-      { target: '[data-guide-target="tournament-match"]', title: () => this.t().adminGuide.connectivityUpdatesTitle, text: () => this.t().adminGuide.connectivityUpdatesText },
+      { target: '[data-guide-target="tournament-match"]', title: () => this.t().adminGuide.connectivityUpdatesTitle, text: () => this.t().adminGuide.connectivityUpdatesText, activate: '[data-guide-tab="fixtures"]' },
     ],
   };
 
@@ -414,6 +415,7 @@ export class AdminGuide {
   }
   openLibrary(): void {
     this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null);
+    this.mobileDialogAtTop.set(false);
     this.guideCategory.set(this.router.url.startsWith('/admin') && this.canSeeOrganizerGuides() ? 'organizer' : 'visitor');
     this.isOpen.set(true);
     this.contextPromise = this.resolveGuideContexts();
@@ -425,8 +427,16 @@ export class AdminGuide {
   private async resolveGuideContexts(): Promise<void> {
     try {
       const tournaments = await firstValueFrom(this.api.getTournaments());
-      const withBracket = tournaments.find((tournament) => tournament.format === 'GroupsThenKnockout' || tournament.format === 'KnockoutOnly');
-      const withPlayers = tournaments.find((tournament) => tournament.trackPlayers);
+      const bracketCandidates = tournaments.filter((tournament) => tournament.format === 'GroupsThenKnockout' || tournament.format === 'KnockoutOnly');
+      let withBracket = null;
+      for (const tournament of bracketCandidates) {
+        const detail = await firstValueFrom(this.api.getTournament(tournament.slug));
+        if (detail.bracket.length) {
+          withBracket = tournament;
+          break;
+        }
+      }
+      const withPlayers = tournaments.find((tournament) => tournament.trackPlayers && tournament.teamCount > 0);
       const withPlayerMatches = tournaments.find((tournament) => tournament.trackPlayers && tournament.matchCount > 0);
       const withFixtures = tournaments.find((tournament) => tournament.matchCount > 0);
       this.defaultSlug.set(tournaments[0]?.slug ?? null);
@@ -481,7 +491,7 @@ export class AdminGuide {
     }
     this.measureTarget();
   }
-  close(): void { this.isOpen.set(false); this.activeGuide.set(null); this.targetRect.set(null); }
+  close(): void { this.isOpen.set(false); this.activeGuide.set(null); this.targetRect.set(null); this.mobileDialogAtTop.set(false); }
   previous(): void { this.step.update((value) => Math.max(0, value - 1)); this.measureTarget(); }
   next(): void { if (this.step() < this.currentSteps().length - 1) { const current = this.currentStep(); if (current?.action === 'click') document.querySelector<HTMLElement>(current.target)?.click(); this.step.update((value) => value + 1); this.measureTarget(); } else { const guide = this.activeGuide(); if (guide) this.markGuideCompleted(guide); this.close(); } }
   private markGuideCompleted(id: GuideId): void {
@@ -505,6 +515,9 @@ export class AdminGuide {
     }
 
     window.setTimeout(() => {
+      if (attempt === 0 && step.activate) {
+        document.querySelector<HTMLElement>(step.activate)?.click();
+      }
       const element = document.querySelector<HTMLElement>(target);
       if (!element) {
         if (attempt < 20 && this.isOpen()) {
@@ -520,17 +533,38 @@ export class AdminGuide {
 
       // Tabs scroll horizontally on mobile, so the target can sit outside the visible area until scrolled into view.
       // Only do this when a step is first shown; re-running it on the user's own scroll/resize would fight their input.
-      if (!skipScroll) element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (!skipScroll) {
+        const rect = element.getBoundingClientRect();
+        if (rect.height > window.innerHeight) {
+          const headerHeight = document.querySelector<HTMLElement>('.site-header')?.getBoundingClientRect().height ?? 0;
+          window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - headerHeight - 8) });
+        } else {
+          element.scrollIntoView({ block: step.scrollBlock ?? 'nearest', inline: 'nearest' });
+        }
+      }
       window.setTimeout(() => {
         const rect = element.getBoundingClientRect();
-        this.targetRect.set({
+        const targetRect = {
           top: rect.top - 4,
           left: rect.left - 4,
           width: rect.width + 8,
           height: rect.height + 8,
-        });
+        };
+        this.targetRect.set(targetRect);
+        this.updateMobileDialogPosition(targetRect);
       }, 0);
     }, attempt === 0 ? 0 : 50);
+  }
+  private updateMobileDialogPosition(target: { top: number; height: number }): void {
+    if (window.innerWidth > 560) {
+      this.mobileDialogAtTop.set(false);
+      return;
+    }
+
+    const dialog = document.querySelector<HTMLElement>('.guide-dialog:not(.guide-library)');
+    const bottomDialogTop = window.innerHeight - 16 - (dialog?.offsetHeight ?? 0);
+    const fillsViewport = target.height >= window.innerHeight - 32;
+    this.mobileDialogAtTop.set(!fillsViewport && target.top + target.height > bottomDialogTop - 8);
   }
   private loadHintVisibility(): boolean { return typeof localStorage === 'undefined' || localStorage.getItem('ligacup-guide-hint-dismissed') !== 'true'; }
 }

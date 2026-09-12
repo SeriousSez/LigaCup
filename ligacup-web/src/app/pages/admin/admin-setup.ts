@@ -332,7 +332,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         </div>
         </section>
 
-        <section class="card stack" data-guide-target="admin-squads">
+        <section class="card stack">
         <h3>{{ t().setup.teams }}</h3>
         <div class="team-rows">
           @for (team of data.teams; track team.id) {
@@ -433,7 +433,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         <section class="card stack">
           <h3>{{ t().setup.squads }}</h3>
           @for (team of data.teams; track team.id) {
-            <div class="squad">
+            <div class="squad" data-guide-target="admin-squads">
               <strong>{{ team.name }}</strong>
               <div class="row players">
                 @for (player of team.players; track player.id) {
@@ -1187,7 +1187,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     };
 
     this.tiebreakers.set(data.tournament.tiebreakers);
-  this.settingsSnapshot = this.settingsState();
+    this.settingsSnapshot = this.settingsState();
   }
 
   ngAfterViewChecked(): void {
