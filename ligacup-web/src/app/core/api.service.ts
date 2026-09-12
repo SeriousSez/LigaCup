@@ -62,6 +62,12 @@ export class ApiService {
         return this.http.delete<void>(`${this.base}/api/admin/tournaments/${id}`);
     }
 
+    uploadRulesImage(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post<{ url: string }>(`${this.base}/api/admin/tournaments/rules/images`, formData);
+    }
+
     createGroup(tournamentId: number, name: string, sortOrder: number) {
         return this.http.post<Group>(`${this.base}/api/admin/tournaments/${tournamentId}/groups`, {
             name,

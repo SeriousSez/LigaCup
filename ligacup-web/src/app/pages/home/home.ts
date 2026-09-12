@@ -2,14 +2,17 @@ import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { mapsUrl } from '../../core/maps';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 
 @Component({
   selector: 'app-home',
-  imports: [DatePipe, RouterLink, CardListSkeleton],
+  imports: [DatePipe, RouterLink, FontAwesomeModule, CardListSkeleton],
   template: `
     <section class="hero card">
       <div class="hero-copy">
@@ -25,9 +28,9 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
     @if (tournaments(); as list) {
       <div class="grid-auto tournaments">
         @for (tournament of list; track tournament.id) {
-          <a class="card tournament" [routerLink]="['/', tournament.slug]">
+          <article class="card tournament">
             <div class="spread">
-              <h3>{{ tournament.name }}</h3>
+              <h3><a class="tournament-link" [routerLink]="['/', tournament.slug]">{{ tournament.name }}</a></h3>
               @if (tournament.tournamentDateUtc) {
                 <span class="badge">
                   {{ tournament.tournamentDateUtc | date: 'd MMM yyyy' : undefined : locale() }}
@@ -42,7 +45,19 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
               <span>{{ tournament.matchCount }} {{ t().common.matches }}</span>
               <span>{{ t().tournamentStatus[tournament.status] }}</span>
             </div>
-          </a>
+            @if (tournament.location) {
+              <a
+                class="location muted"
+                [href]="mapsUrl(tournament.location)"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="mapsLabel(tournament.location)"
+              >
+                <fa-icon [icon]="faLocationDot" aria-hidden="true" />
+                <span>{{ tournament.location }}</span>
+              </a>
+            }
+          </article>
         } @empty {
           <p class="muted">{{ t().home.empty }}</p>
         }
@@ -93,19 +108,39 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
     }
 
     .tournament {
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: 0.6rem;
       color: inherit;
-      align-content: start;
+      position: relative;
     }
 
     .tournament:hover {
       border-color: var(--accent);
-      text-decoration: none;
+    }
+
+    .tournament-link {
+      color: inherit;
+    }
+
+    .tournament-link::after {
+      content: '';
+      position: absolute;
+      inset: 0;
     }
 
     .tournament p {
       margin: 0;
+    }
+
+    .tournament .location {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: auto;
+      font-size: 0.85rem;
+      position: relative;
+      z-index: 1;
     }
 
     .stats {
@@ -117,9 +152,15 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
 export class Home {
   protected readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
+  protected readonly faLocationDot = faLocationDot;
+  protected readonly mapsUrl = mapsUrl;
 
   private readonly i18n = inject(I18nService);
   protected readonly t = this.i18n.t;
   protected readonly locale = this.i18n.locale;
   protected readonly tournaments = toSignal(this.api.getTournaments());
+
+  protected mapsLabel(address: string): string {
+    return this.i18n.format(this.t().matchCard.openMaps, { address });
+  }
 }

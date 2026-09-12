@@ -214,10 +214,11 @@ export interface Strings {
         playingNow: string;
         setup: string;
         liveConsole: string;
-        tabs: { tables: string; fixtures: string; bracket: string; scorers: string; rules: string };
+        tabs: { tables: string; fixtures: string; bracket: string; scorers: string; rules: string; parking: string };
         noTables: string;
         noFixtures: string;
         noRules: string;
+        noParking: string;
         matchday: string;
         league: string;
         bye: string;
@@ -302,6 +303,9 @@ export interface Strings {
         useStoppageTime: string;
         rulesContent: string;
         rulesContentHelp: string;
+        parking: string;
+        parkingContent: string;
+        parkingContentHelp: string;
         rulesBold: string;
         rulesItalic: string;
         rulesList: string;
@@ -312,6 +316,16 @@ export interface Strings {
         rulesUndo: string;
         rulesRedo: string;
         rulesClear: string;
+        rulesImageUrl: string;
+        rulesImageUpload: string;
+        rulesImageUrlPrompt: string;
+        rulesImageAltPrompt: string;
+        rulesImageInvalidUrl: string;
+        rulesImageUploadFailed: string;
+        rulesImageSmall: string;
+        rulesImageMedium: string;
+        rulesImageLarge: string;
+        rulesImageFull: string;
         clockSection: string;
         clockHelp: string;
         tiebreakersTitle: string;
@@ -319,6 +333,7 @@ export interface Strings {
         moveUp: string;
         moveDown: string;
         saveRules: string;
+        saveParking: string;
         saveFailed: string;
         groups: string;
         noGroups: string;
@@ -661,10 +676,12 @@ export const danish: Strings = {
             bracket: 'Slutspil',
             scorers: 'Topscorere',
             rules: 'Regler',
+            parking: 'Parkering',
         },
         noTables: 'Ingen gruppetabeller endnu. Tilføj hold og generer kampprogrammet.',
         noFixtures: 'Der er ikke genereret et kampprogram endnu.',
         noRules: 'Turneringsreglerne er ikke offentliggjort endnu.',
+        noParking: 'Der er ikke offentliggjort parkeringsinformation endnu.',
         matchday: 'Spillerunde',
         league: 'Række',
         bye: 'Oversidder',
@@ -755,6 +772,9 @@ export const danish: Strings = {
         useStoppageTime: 'Tæl tillægstid (45+2)',
         rulesContent: 'Turneringsregler',
         rulesContentHelp: 'Skriv regler og praktiske oplysninger, som deltagerne skal kunne se på den offentlige side.',
+        parking: 'Parkering',
+        parkingContent: 'Parkeringsinformation',
+        parkingContentHelp: 'Skriv parkeringsvejledning, og indsæt eventuelt et kort eller billede.',
         rulesBold: 'Fed tekst',
         rulesItalic: 'Kursiv tekst',
         rulesList: 'Punktopstilling',
@@ -765,6 +785,16 @@ export const danish: Strings = {
         rulesUndo: 'Fortryd',
         rulesRedo: 'Gentag',
         rulesClear: 'Fjern formatering',
+        rulesImageUrl: 'Indsæt billede fra link',
+        rulesImageUpload: 'Upload billede',
+        rulesImageUrlPrompt: 'Indtast billedets HTTPS-adresse:',
+        rulesImageAltPrompt: 'Beskriv billedet kort for skærmlæsere:',
+        rulesImageInvalidUrl: 'Billedadressen skal være en gyldig HTTPS-adresse.',
+        rulesImageUploadFailed: 'Billedet kunne ikke uploades. Brug PNG, JPEG, GIF eller WebP på højst 5 MB.',
+        rulesImageSmall: 'Lille billede',
+        rulesImageMedium: 'Mellemstort billede',
+        rulesImageLarge: 'Stort billede',
+        rulesImageFull: 'Fuld bredde',
         clockSection: 'Kampur',
         clockHelp:
             'Uret starter, når du trykker Live, og står stille i pausen. To perioder à 45 minutter giver en almindelig fodboldkamp.',
@@ -774,6 +804,7 @@ export const danish: Strings = {
         moveUp: 'Flyt op',
         moveDown: 'Flyt ned',
         saveRules: 'Gem regler',
+        saveParking: 'Gem parkering',
         saveFailed: 'Reglerne kunne ikke gemmes.',
         groups: 'Grupper',
         noGroups: 'Ingen grupper. Hold uden gruppe danner én samlet række.',
@@ -1119,10 +1150,12 @@ export const english: Strings = {
             bracket: 'Knockout',
             scorers: 'Top scorers',
             rules: 'Rules',
+            parking: 'Parking',
         },
         noTables: 'No group tables yet. Add teams and generate the fixtures.',
         noFixtures: 'No fixtures have been generated yet.',
         noRules: 'Tournament rules have not been published yet.',
+        noParking: 'Parking information has not been published yet.',
         matchday: 'Matchday',
         league: 'League',
         bye: 'Sitting out',
@@ -1213,6 +1246,9 @@ export const english: Strings = {
         useStoppageTime: 'Count added time (45+2)',
         rulesContent: 'Tournament rules',
         rulesContentHelp: 'Write rules and practical information for participants to read on the public page.',
+        parking: 'Parking',
+        parkingContent: 'Parking information',
+        parkingContentHelp: 'Add parking directions and, if useful, a map or image.',
         rulesBold: 'Bold text',
         rulesItalic: 'Italic text',
         rulesList: 'Bullet list',
@@ -1223,6 +1259,16 @@ export const english: Strings = {
         rulesUndo: 'Undo',
         rulesRedo: 'Redo',
         rulesClear: 'Clear formatting',
+        rulesImageUrl: 'Insert image from URL',
+        rulesImageUpload: 'Upload image',
+        rulesImageUrlPrompt: 'Enter the image HTTPS address:',
+        rulesImageAltPrompt: 'Briefly describe the image for screen readers:',
+        rulesImageInvalidUrl: 'The image address must be a valid HTTPS URL.',
+        rulesImageUploadFailed: 'Could not upload the image. Use PNG, JPEG, GIF or WebP up to 5 MB.',
+        rulesImageSmall: 'Small image',
+        rulesImageMedium: 'Medium image',
+        rulesImageLarge: 'Large image',
+        rulesImageFull: 'Full width',
         clockSection: 'Match clock',
         clockHelp:
             'The clock starts when you press Live and stands still during the interval. Two periods of 45 minutes gives a normal football match.',
@@ -1232,6 +1278,7 @@ export const english: Strings = {
         moveUp: 'Move up',
         moveDown: 'Move down',
         saveRules: 'Save rules',
+        saveParking: 'Save parking',
         saveFailed: 'Could not save the rules.',
         groups: 'Groups',
         noGroups: 'No groups. Teams without a group form one combined league.',

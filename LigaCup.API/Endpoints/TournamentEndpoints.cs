@@ -7,6 +7,8 @@ namespace LigaCup.API.Endpoints;
 
 public static class TournamentEndpoints
 {
+    private const long MaximumRuleImageSize = 5 * 1024 * 1024;
+
     public static void MapTournamentEndpoints(this IEndpointRouteBuilder app)
     {
         var publicApi = app.MapGroup("/api/tournaments").WithTags("Tournaments");
@@ -38,6 +40,50 @@ public static class TournamentEndpoints
 
         adminApi.MapDelete("/{id:int}", async (int id, TournamentService service, CancellationToken cancellationToken) =>
             await service.DeleteTournamentAsync(id, cancellationToken) ? Results.NoContent() : Results.NotFound());
+
+        adminApi.MapPost("/rules/images", async (
+            IFormFile file,
+            HttpRequest request,
+            IWebHostEnvironment environment,
+            CancellationToken cancellationToken) =>
+        {
+            if (file.Length is 0 or > MaximumRuleImageSize)
+            {
+                return Results.BadRequest(new { message = "Images must be between 1 byte and 5 MB." });
+            }
+
+            var extension = ResolveImageExtension(file);
+            if (extension is null)
+            {
+                return Results.BadRequest(new { message = "Only PNG, JPEG, GIF and WebP images are supported." });
+            }
+
+            await using (var source = file.OpenReadStream())
+            {
+                var header = new byte[12];
+                var bytesRead = await source.ReadAsync(header, cancellationToken);
+                if (!HasValidImageSignature(extension, header.AsSpan(0, bytesRead)))
+                {
+                    return Results.BadRequest(new { message = "The uploaded file is not a valid image." });
+                }
+            }
+
+            var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+            var uploadDirectory = Path.Combine(webRoot, "uploads", "rules");
+            Directory.CreateDirectory(uploadDirectory);
+
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadDirectory, fileName);
+            await using (var target = File.Create(filePath))
+            {
+                await file.CopyToAsync(target, cancellationToken);
+            }
+
+            var url = $"{request.Scheme}://{request.Host}{request.PathBase}/uploads/rules/{fileName}";
+            return Results.Ok(new { url });
+        })
+            .DisableAntiforgery()
+            .WithMetadata(new RequestSizeLimitAttribute(MaximumRuleImageSize + 64 * 1024));
 
         adminApi.MapPost("/{id:int}/groups", async (int id, SaveGroupRequest request, TournamentService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.SaveGroupAsync(id, null, request, cancellationToken)));
@@ -92,6 +138,44 @@ public static class TournamentEndpoints
         adminApi.MapDelete("/{id:int}/matches/{matchId:int}", async (int id, int matchId, MatchService service, CancellationToken cancellationToken) =>
             await service.DeleteMatchAsync(id, matchId, cancellationToken) ? Results.NoContent() : Results.NotFound());
     }
+
+    private static readonly IReadOnlyDictionary<string, string> AllowedImageTypes =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".gif"] = "image/gif",
+            [".webp"] = "image/webp"
+        };
+
+    private static string? ResolveImageExtension(IFormFile file)
+    {
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (AllowedImageTypes.TryGetValue(extension, out var expectedContentType) &&
+            string.Equals(file.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
+        {
+            return extension;
+        }
+
+        return file.ContentType.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/jpeg" => ".jpg",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            _ => null
+        };
+    }
+
+    private static bool HasValidImageSignature(string extension, ReadOnlySpan<byte> header) => extension switch
+    {
+        ".png" => header.StartsWith(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
+        ".jpg" or ".jpeg" => header.StartsWith(new byte[] { 0xFF, 0xD8, 0xFF }),
+        ".gif" => header.StartsWith("GIF87a"u8) || header.StartsWith("GIF89a"u8),
+        ".webp" => header.Length >= 12 && header[..4].SequenceEqual("RIFF"u8) && header[8..12].SequenceEqual("WEBP"u8),
+        _ => false
+    };
 
     public static void MapLiveEndpoints(this IEndpointRouteBuilder app)
     {

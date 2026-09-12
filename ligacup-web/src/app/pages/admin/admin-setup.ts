@@ -2,17 +2,20 @@ import { AfterViewChecked, Component, ElementRef, HostListener, OnInit, ViewChil
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faFloppyDisk, faTrashCan } from '@fortawesome/free-solid-svg-icons';
+import { faFloppyDisk, faLink, faTrashCan, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
+import { defaultTournamentParking, defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
 import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
 import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
+
+type RichTextEditor = 'rules' | 'parking';
+type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
 
 @Component({
   selector: 'app-admin-setup',
@@ -44,6 +47,16 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           (click)="activeTab.set('rules')"
         >
           {{ t().setup.rules }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          data-guide-tab="parking"
+          [class.active]="activeTab() === 'parking'"
+          [attr.aria-selected]="activeTab() === 'parking'"
+          (click)="activeTab.set('parking')"
+        >
+          {{ t().setup.parking }}
         </button>
         <button
           type="button"
@@ -187,11 +200,20 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
               <button type="button" [title]="t().setup.rulesHeading" [attr.aria-label]="t().setup.rulesHeading" (click)="formatRules('formatBlock', 'h3')">H</button>
               <button type="button" [title]="t().setup.rulesUnderline" [attr.aria-label]="t().setup.rulesUnderline" (click)="formatRules('underline')"><u>U</u></button>
               <button type="button" [title]="t().setup.rulesQuote" [attr.aria-label]="t().setup.rulesQuote" (click)="formatRules('formatBlock', 'blockquote')">&ldquo;</button>
+              <button type="button" [title]="t().setup.rulesImageUrl" [attr.aria-label]="t().setup.rulesImageUrl" (click)="insertRulesImageFromUrl()"><fa-icon [icon]="faLink" aria-hidden="true" /></button>
+              <button type="button" [title]="t().setup.rulesImageUpload" [attr.aria-label]="t().setup.rulesImageUpload" [disabled]="uploadingRuleImage()" (click)="rulesImageInput.click()"><fa-icon [icon]="faUpload" aria-hidden="true" /></button>
+              <span class="image-size-controls" role="group">
+                <button type="button" [title]="t().setup.rulesImageSmall" [attr.aria-label]="t().setup.rulesImageSmall" [disabled]="!selectedRulesImage()" (click)="resizeSelectedImage('rules', 'small')">S</button>
+                <button type="button" [title]="t().setup.rulesImageMedium" [attr.aria-label]="t().setup.rulesImageMedium" [disabled]="!selectedRulesImage()" (click)="resizeSelectedImage('rules', 'medium')">M</button>
+                <button type="button" [title]="t().setup.rulesImageLarge" [attr.aria-label]="t().setup.rulesImageLarge" [disabled]="!selectedRulesImage()" (click)="resizeSelectedImage('rules', 'large')">L</button>
+                <button type="button" [title]="t().setup.rulesImageFull" [attr.aria-label]="t().setup.rulesImageFull" [disabled]="!selectedRulesImage()" (click)="resizeSelectedImage('rules', 'full')">100%</button>
+              </span>
               <button type="button" [title]="t().setup.rulesUndo" [attr.aria-label]="t().setup.rulesUndo" (click)="formatRules('undo')">&larr;</button>
               <button type="button" [title]="t().setup.rulesRedo" [attr.aria-label]="t().setup.rulesRedo" (click)="formatRules('redo')">&rarr;</button>
               <button type="button" [title]="t().setup.rulesClear" [attr.aria-label]="t().setup.rulesClear" (click)="formatRules('removeFormat')">&times;</button>
             </div>
-            <div #rulesContent class="rules-content" contenteditable="true" (mouseup)="saveRulesSelection()" (keyup)="saveRulesSelection()" (input)="updateRules($event)"></div>
+            <input #rulesImageInput class="sr-only" type="file" accept="image/png,image/jpeg,image/gif,image/webp" (change)="uploadRulesImage($event)" />
+            <div #rulesContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'rules')" (mouseup)="saveRulesSelection()" (keyup)="saveRulesSelection()" (paste)="pasteRulesImage($event)" (input)="updateRules($event)"></div>
           </div>
           <span class="muted">{{ t().setup.rulesContentHelp }}</span>
         </div>
@@ -310,6 +332,50 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           </div>
         </details>
 
+        </section>
+      }
+
+      @if (activeTab() === 'parking') {
+        <section class="card stack rules-section">
+          <div class="rules-header">
+            <h3>{{ t().setup.parking }}</h3>
+            <div class="rules-actions">
+              @if (message()) {
+                <span class="muted">{{ message() }}</span>
+              }
+              <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
+                {{ t().setup.saveParking }}
+              </button>
+            </div>
+          </div>
+          <div class="stack rules-content-panel">
+            <h4>{{ t().setup.parkingContent }}</h4>
+            <div class="rules-editor">
+              <div class="rules-toolbar" role="toolbar" [attr.aria-label]="t().setup.parkingContent" (mousedown)="$event.preventDefault()">
+                <button type="button" [title]="t().setup.rulesBold" [attr.aria-label]="t().setup.rulesBold" (click)="formatParking('bold')"><strong>B</strong></button>
+                <button type="button" [title]="t().setup.rulesItalic" [attr.aria-label]="t().setup.rulesItalic" (click)="formatParking('italic')"><em>I</em></button>
+                <button type="button" [title]="t().setup.rulesList" [attr.aria-label]="t().setup.rulesList" (click)="formatParking('insertUnorderedList')">&#8226;</button>
+                <button type="button" [title]="t().setup.rulesNumberedList" [attr.aria-label]="t().setup.rulesNumberedList" (click)="formatParking('insertOrderedList')">&#35;</button>
+                <button type="button" [title]="t().setup.rulesHeading" [attr.aria-label]="t().setup.rulesHeading" (click)="formatParking('formatBlock', 'h3')">H</button>
+                <button type="button" [title]="t().setup.rulesUnderline" [attr.aria-label]="t().setup.rulesUnderline" (click)="formatParking('underline')"><u>U</u></button>
+                <button type="button" [title]="t().setup.rulesQuote" [attr.aria-label]="t().setup.rulesQuote" (click)="formatParking('formatBlock', 'blockquote')">&ldquo;</button>
+                <button type="button" [title]="t().setup.rulesImageUrl" [attr.aria-label]="t().setup.rulesImageUrl" (click)="insertParkingImageFromUrl()"><fa-icon [icon]="faLink" aria-hidden="true" /></button>
+                <button type="button" [title]="t().setup.rulesImageUpload" [attr.aria-label]="t().setup.rulesImageUpload" [disabled]="uploadingRuleImage()" (click)="parkingImageInput.click()"><fa-icon [icon]="faUpload" aria-hidden="true" /></button>
+                <span class="image-size-controls" role="group">
+                  <button type="button" [title]="t().setup.rulesImageSmall" [attr.aria-label]="t().setup.rulesImageSmall" [disabled]="!selectedParkingImage()" (click)="resizeSelectedImage('parking', 'small')">S</button>
+                  <button type="button" [title]="t().setup.rulesImageMedium" [attr.aria-label]="t().setup.rulesImageMedium" [disabled]="!selectedParkingImage()" (click)="resizeSelectedImage('parking', 'medium')">M</button>
+                  <button type="button" [title]="t().setup.rulesImageLarge" [attr.aria-label]="t().setup.rulesImageLarge" [disabled]="!selectedParkingImage()" (click)="resizeSelectedImage('parking', 'large')">L</button>
+                  <button type="button" [title]="t().setup.rulesImageFull" [attr.aria-label]="t().setup.rulesImageFull" [disabled]="!selectedParkingImage()" (click)="resizeSelectedImage('parking', 'full')">100%</button>
+                </span>
+                <button type="button" [title]="t().setup.rulesUndo" [attr.aria-label]="t().setup.rulesUndo" (click)="formatParking('undo')">&larr;</button>
+                <button type="button" [title]="t().setup.rulesRedo" [attr.aria-label]="t().setup.rulesRedo" (click)="formatParking('redo')">&rarr;</button>
+                <button type="button" [title]="t().setup.rulesClear" [attr.aria-label]="t().setup.rulesClear" (click)="formatParking('removeFormat')">&times;</button>
+              </div>
+              <input #parkingImageInput class="sr-only" type="file" accept="image/png,image/jpeg,image/gif,image/webp" (change)="uploadParkingImage($event)" />
+              <div #parkingContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'parking')" (mouseup)="saveParkingSelection()" (keyup)="saveParkingSelection()" (paste)="pasteParkingImage($event)" (input)="updateParking($event)"></div>
+            </div>
+            <span class="muted">{{ t().setup.parkingContentHelp }}</span>
+          </div>
         </section>
       }
 
@@ -783,6 +849,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
 
     .rules-toolbar {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.25rem;
       padding: 0.35rem;
       border-bottom: 1px solid var(--surface-line);
@@ -793,6 +860,16 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
       width: 2.25rem;
       min-height: 2.25rem;
       padding: 0;
+    }
+
+    .rules-toolbar .image-size-controls {
+      display: inline-flex;
+      gap: 0.25rem;
+    }
+
+    .rules-toolbar .image-size-controls button:last-child {
+      width: auto;
+      padding-inline: 0.45rem;
     }
 
     .rules-content {
@@ -1021,7 +1098,9 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
 })
 export class AdminSetup implements OnInit, AfterViewChecked {
   protected readonly faFloppyDisk = faFloppyDisk;
+  protected readonly faLink = faLink;
   protected readonly faTrashCan = faTrashCan;
+  protected readonly faUpload = faUpload;
   readonly slug = input.required<string>();
 
   private readonly api = inject(ApiService);
@@ -1029,9 +1108,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected readonly t = this.i18n.t;
   protected readonly store = inject(TournamentStore);
   protected readonly detail = this.store.detail;
-  protected readonly activeTab = signal<'rules' | 'structure' | 'squads' | 'fixtures'>('rules');
+  protected readonly activeTab = signal<'rules' | 'parking' | 'structure' | 'squads' | 'fixtures'>('rules');
 
   protected readonly busy = signal(false);
+  protected readonly uploadingRuleImage = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
   protected readonly pendingConfirmation = signal<{ message: string; action: () => Promise<void> | void } | null>(null);
@@ -1040,8 +1120,13 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   private readonly structuralFixtureChange = signal(false);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
   @ViewChild('rulesContent') private rulesContent?: ElementRef<HTMLElement>;
+  @ViewChild('parkingContent') private parkingContent?: ElementRef<HTMLElement>;
   private initializedRulesEditor: HTMLElement | null = null;
+  private initializedParkingEditor: HTMLElement | null = null;
   private rulesSelection: Range | null = null;
+  private parkingSelection: Range | null = null;
+  protected readonly selectedRulesImage = signal<HTMLImageElement | null>(null);
+  protected readonly selectedParkingImage = signal<HTMLImageElement | null>(null);
   private settingsSnapshot: string | null = null;
   private readonly scheduleSnapshots = new WeakMap<Match, string>();
   protected readonly editingTeamId = signal<number | null>(null);
@@ -1116,6 +1201,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     slug: null,
     description: null,
     rules: defaultTournamentRulesWithoutDate,
+    parking: defaultTournamentParking,
     location: null,
     tournamentDateUtc: '2026-09-06T15:00',
     season: new Date().getFullYear(),
@@ -1157,6 +1243,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       rules: data.tournament.rules
         ? removeLegacyDefaultDateTime(data.tournament.rules)
         : defaultTournamentRulesWithoutDate,
+      parking: data.tournament.parking,
       location: data.tournament.location,
       tournamentDateUtc: data.tournament.tournamentDateUtc
         ? data.tournament.tournamentDateUtc.slice(0, 16)
@@ -1196,6 +1283,15 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       editor.innerHTML = this.settings.rules ?? '';
       this.initializedRulesEditor = editor;
       this.rulesSelection = null;
+      this.selectedRulesImage.set(null);
+    }
+
+    const parkingEditor = this.parkingContent?.nativeElement;
+    if (parkingEditor && parkingEditor !== this.initializedParkingEditor && document.activeElement !== parkingEditor) {
+      parkingEditor.innerHTML = this.settings.parking ?? '';
+      this.initializedParkingEditor = parkingEditor;
+      this.parkingSelection = null;
+      this.selectedParkingImage.set(null);
     }
   }
 
@@ -1247,32 +1343,254 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   formatRules(command: string, value?: string): void {
+    this.formatEditor('rules', command, value);
+  }
+
+  formatParking(command: string, value?: string): void {
+    this.formatEditor('parking', command, value);
+  }
+
+  private formatEditor(kind: RichTextEditor, command: string, value?: string): void {
     const selection = window.getSelection();
-    if (this.rulesSelection && selection) {
+    const savedSelection = this.editorSelection(kind);
+    if (savedSelection && selection) {
       selection.removeAllRanges();
-      selection.addRange(this.rulesSelection);
+      selection.addRange(savedSelection);
     }
-    this.rulesContent?.nativeElement.focus();
+    this.editor(kind)?.focus();
     document.execCommand(command, false, value);
-    this.saveRulesSelection();
-    this.updateRules({ target: this.rulesContent?.nativeElement } as unknown as Event);
+    this.saveEditorSelection(kind);
+    this.updateEditor(kind);
+  }
+
+  insertRulesImageFromUrl(): void {
+    this.insertImageFromUrl('rules');
+  }
+
+  insertParkingImageFromUrl(): void {
+    this.insertImageFromUrl('parking');
+  }
+
+  private insertImageFromUrl(kind: RichTextEditor): void {
+    const value = window.prompt(this.t().setup.rulesImageUrlPrompt)?.trim();
+    if (!value) {
+      return;
+    }
+
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'https:') {
+        throw new Error('Invalid image protocol');
+      }
+
+      const alt = window.prompt(this.t().setup.rulesImageAltPrompt);
+      if (alt !== null) {
+        this.insertImage(kind, url.href, alt.trim());
+      }
+    } catch {
+      this.message.set(this.t().setup.rulesImageInvalidUrl);
+    }
+  }
+
+  async uploadRulesImage(event: Event): Promise<void> {
+    await this.uploadEditorImage(event, 'rules');
+  }
+
+  async uploadParkingImage(event: Event): Promise<void> {
+    await this.uploadEditorImage(event, 'parking');
+  }
+
+  private async uploadEditorImage(event: Event, kind: RichTextEditor): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    await this.uploadImageFile(file, kind, true);
+    input.value = '';
+  }
+
+  async pasteRulesImage(event: ClipboardEvent): Promise<void> {
+    await this.pasteEditorImage(event, 'rules');
+  }
+
+  async pasteParkingImage(event: ClipboardEvent): Promise<void> {
+    await this.pasteEditorImage(event, 'parking');
+  }
+
+  private async pasteEditorImage(event: ClipboardEvent, kind: RichTextEditor): Promise<void> {
+    const clipboard = event.clipboardData;
+    const imageItem = Array.from(clipboard?.items ?? [])
+      .find((item) => item.kind === 'file' && item.type.startsWith('image/'));
+    const file = imageItem?.getAsFile()
+      ?? Array.from(clipboard?.files ?? []).find((candidate) => candidate.type.startsWith('image/'));
+    if (!file) {
+      return;
+    }
+
+    event.preventDefault();
+    this.saveEditorSelection(kind);
+    await this.uploadImageFile(file, kind, false);
+  }
+
+  private async uploadImageFile(file: File, kind: RichTextEditor, promptForAlt: boolean): Promise<void> {
+    this.uploadingRuleImage.set(true);
+    this.message.set(null);
+    try {
+      const result = await firstValueFrom(this.api.uploadRulesImage(file));
+      const defaultAlt = file.name.replace(/\.[^.]+$/, '')
+        || (kind === 'parking' ? this.t().setup.parking : this.t().setup.rulesContent);
+      const alt = promptForAlt
+        ? window.prompt(this.t().setup.rulesImageAltPrompt, defaultAlt)
+        : defaultAlt;
+      if (alt !== null && !this.insertImage(kind, result.url, alt.trim())) {
+        this.message.set(this.t().setup.rulesImageUploadFailed);
+      }
+    } catch {
+      this.message.set(this.t().setup.rulesImageUploadFailed);
+    } finally {
+      this.uploadingRuleImage.set(false);
+    }
+  }
+
+  private insertImage(kind: RichTextEditor, source: string, alt: string): boolean {
+    const editor = this.editor(kind);
+    const selection = window.getSelection();
+    if (!editor || !selection) {
+      return false;
+    }
+
+    const savedSelection = this.editorSelection(kind);
+    if (savedSelection && editor.contains(savedSelection.commonAncestorContainer)) {
+      selection.removeAllRanges();
+      selection.addRange(savedSelection);
+    } else {
+      const end = document.createRange();
+      end.selectNodeContents(editor);
+      end.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(end);
+    }
+
+    editor.focus();
+    const inserted = document.execCommand('insertImage', false, source);
+    if (!inserted) {
+      const image = document.createElement('img');
+      image.src = source;
+      editor.append(image);
+    }
+
+    const image = [...editor.querySelectorAll('img')]
+      .reverse()
+      .find((candidate) => candidate.src === source);
+    if (image) {
+      image.alt = alt;
+      image.loading = 'lazy';
+      this.setSelectedImage(kind, image);
+    }
+
+    this.saveEditorSelection(kind);
+    this.updateEditor(kind);
+    return true;
+  }
+
+  selectEditorImage(event: MouseEvent, kind: RichTextEditor): void {
+    const image = event.target instanceof HTMLImageElement ? event.target : null;
+    this.setSelectedImage(kind, image);
+  }
+
+  resizeSelectedImage(kind: RichTextEditor, size: RichTextImageSize): void {
+    const editor = this.editor(kind);
+    const image = this.selectedImage(kind);
+    if (!editor || !image || !editor.contains(image)) {
+      this.setSelectedImage(kind, null);
+      return;
+    }
+
+    image.classList.remove('rte-image-small', 'rte-image-medium', 'rte-image-large', 'rte-image-full');
+    image.classList.add(`rte-image-${size}`);
+    this.updateEditor(kind);
   }
 
   saveRulesSelection(): void {
+    this.saveEditorSelection('rules');
+  }
+
+  saveParkingSelection(): void {
+    this.saveEditorSelection('parking');
+  }
+
+  private saveEditorSelection(kind: RichTextEditor): void {
     const selection = window.getSelection();
-    const editor = this.rulesContent?.nativeElement;
+    const editor = this.editor(kind);
     if (!selection || !editor || selection.rangeCount === 0) {
       return;
     }
 
     const range = selection.getRangeAt(0);
     if (editor.contains(range.commonAncestorContainer)) {
-      this.rulesSelection = range.cloneRange();
+      this.setEditorSelection(kind, range.cloneRange());
     }
   }
 
   updateRules(event: Event): void {
-    this.settings.rules = (event.target as HTMLElement).innerHTML;
+    this.settings.rules = this.serializedEditorHtml(event.target as HTMLElement);
+  }
+
+  updateParking(event: Event): void {
+    this.settings.parking = this.serializedEditorHtml(event.target as HTMLElement);
+  }
+
+  private editor(kind: RichTextEditor): HTMLElement | undefined {
+    return kind === 'rules' ? this.rulesContent?.nativeElement : this.parkingContent?.nativeElement;
+  }
+
+  private editorSelection(kind: RichTextEditor): Range | null {
+    return kind === 'rules' ? this.rulesSelection : this.parkingSelection;
+  }
+
+  private selectedImage(kind: RichTextEditor): HTMLImageElement | null {
+    return kind === 'rules' ? this.selectedRulesImage() : this.selectedParkingImage();
+  }
+
+  private setSelectedImage(kind: RichTextEditor, image: HTMLImageElement | null): void {
+    const current = this.selectedImage(kind);
+    if (current !== image) {
+      current?.classList.remove('is-selected');
+    }
+    image?.classList.add('is-selected');
+
+    if (kind === 'rules') {
+      this.selectedRulesImage.set(image);
+    } else {
+      this.selectedParkingImage.set(image);
+    }
+  }
+
+  private setEditorSelection(kind: RichTextEditor, selection: Range | null): void {
+    if (kind === 'rules') {
+      this.rulesSelection = selection;
+    } else {
+      this.parkingSelection = selection;
+    }
+  }
+
+  private updateEditor(kind: RichTextEditor): void {
+    const editor = this.editor(kind);
+    if (editor) {
+      if (kind === 'rules') {
+        this.settings.rules = this.serializedEditorHtml(editor);
+      } else {
+        this.settings.parking = this.serializedEditorHtml(editor);
+      }
+    }
+  }
+
+  private serializedEditorHtml(editor: HTMLElement): string {
+    const copy = editor.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('.is-selected').forEach((element) => element.classList.remove('is-selected'));
+    return copy.innerHTML;
   }
 
   localKickoff(value: string | null): string {

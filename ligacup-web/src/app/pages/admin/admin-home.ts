@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { defaultTournamentRulesWithoutDate } from '../../core/default-rules';
+import { defaultTournamentParking, defaultTournamentRulesWithoutDate } from '../../core/default-rules';
 import { CardListSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
@@ -196,6 +196,7 @@ export class AdminHome {
       slug: null,
       description: null,
       rules: defaultTournamentRulesWithoutDate,
+      parking: defaultTournamentParking,
       location: null,
       season: new Date(this.draft.tournamentDateUtc).getFullYear(),
       tournamentDateUtc: this.draft.tournamentDateUtc,

@@ -1,19 +1,22 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { mapsUrl } from '../../core/maps';
 import { TournamentStore } from '../../core/tournament.store';
 import { HeadingSkeleton, StandingsSkeleton } from '../../shared/loading-skeletons';
 import { MatchCard } from '../../shared/match-card';
 import { StandingsTable } from '../../shared/standings-table';
 
-type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules';
+type Tab = 'tables' | 'fixtures' | 'bracket' | 'scorers' | 'rules' | 'parking';
 type FixtureView = 'rounds' | 'all';
 
 @Component({
   selector: 'app-tournament',
-  imports: [DatePipe, RouterLink, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
+  imports: [DatePipe, RouterLink, FontAwesomeModule, StandingsTable, MatchCard, HeadingSkeleton, StandingsSkeleton],
   template: `
     @if (store.loading()) {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
@@ -30,6 +33,19 @@ type FixtureView = 'rounds' | 'all';
             {{ t().format[data.tournament.format] }}
             @if (data.tournament.tournamentDateUtc) {
               &middot; {{ data.tournament.tournamentDateUtc | date: 'd MMM yyyy HH:mm' : undefined : locale() }}
+            }
+            @if (data.tournament.location; as address) {
+              &middot;
+              <a
+                class="tournament-location"
+                [href]="mapsUrl(address)"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="mapsLabel(address)"
+              >
+                <fa-icon [icon]="faLocationDot" aria-hidden="true" />
+                <span>{{ address }}</span>
+              </a>
             }
           </p>
         </div>
@@ -205,6 +221,16 @@ type FixtureView = 'rounds' | 'all';
             }
           </article>
         }
+        @case ('parking') {
+          <article class="card rules-page">
+            <h2>{{ t().setup.parkingContent }}</h2>
+            @if (data.tournament.parking; as parking) {
+              <div class="rules-content" [innerHTML]="parking"></div>
+            } @else {
+              <p class="muted">{{ t().tournament.noParking }}</p>
+            }
+          </article>
+        }
       }
     }
   `,
@@ -216,6 +242,13 @@ type FixtureView = 'rounds' | 'all';
     .heading p {
       margin: 0;
       font-size: 0.9rem;
+    }
+
+    .tournament-location {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-muted);
     }
 
     .live-console-link {
@@ -348,6 +381,8 @@ type FixtureView = 'rounds' | 'all';
 })
 export class Tournament implements OnInit {
   readonly slug = input.required<string>();
+  protected readonly faLocationDot = faLocationDot;
+  protected readonly mapsUrl = mapsUrl;
 
   protected readonly store = inject(TournamentStore);
   protected readonly auth = inject(AuthService);
@@ -365,11 +400,16 @@ export class Tournament implements OnInit {
       { id: 'bracket', label: labels.bracket },
       { id: 'scorers', label: labels.scorers },
       { id: 'rules', label: labels.rules },
+      { id: 'parking', label: labels.parking },
     ];
   });
 
   protected readonly detail = this.store.detail;
   protected readonly liveMatches = this.store.liveMatches;
+
+  protected mapsLabel(address: string): string {
+    return this.i18n.format(this.t().matchCard.openMaps, { address });
+  }
 
   protected readonly fixtureMatches = computed(() =>
     [...(this.detail()?.matches ?? [])].sort((left, right) => {
