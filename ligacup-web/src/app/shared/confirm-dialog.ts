@@ -8,9 +8,12 @@ import { Component, HostListener, input, output } from '@angular/core';
         <section class="dialog" role="alertdialog" aria-modal="true" [attr.aria-labelledby]="titleId" [attr.aria-describedby]="messageId">
           <h2 [id]="titleId">{{ title() }}</h2>
           <p [id]="messageId">{{ message() }}</p>
-          <div class="actions">
-            <button type="button" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
-            <button type="button" class="danger" (click)="confirmed.emit()">{{ confirmLabel() }}</button>
+          <div class="actions" [class.has-alternate]="alternateLabel() !== null">
+            <button type="button" class="cancel-action" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
+            <button type="button" class="danger confirm-action" (click)="confirmed.emit()">{{ confirmLabel() }}</button>
+            @if (alternateLabel(); as label) {
+              <button type="button" class="primary alternate-action" (click)="alternate.emit()">{{ label }}</button>
+            }
           </div>
         </section>
       </div>
@@ -58,6 +61,29 @@ import { Component, HostListener, input, output } from '@angular/core';
       gap: 0.5rem;
       margin-top: 1.1rem;
     }
+
+    .actions.has-alternate {
+      display: flex;
+      align-items: center;
+    }
+
+    .has-alternate .cancel-action { margin-right: auto; }
+
+    .has-alternate .confirm-action {
+      border-color: var(--danger);
+      background: transparent;
+    }
+
+    @media (max-width: 399px) {
+      .actions.has-alternate {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .has-alternate .cancel-action { margin-right: 0; }
+      .has-alternate .alternate-action { grid-column: 1 / -1; }
+      .has-alternate button { width: 100%; }
+    }
   `,
 })
 export class ConfirmDialog {
@@ -66,8 +92,10 @@ export class ConfirmDialog {
     readonly message = input('');
     readonly confirmLabel = input('Confirm');
     readonly cancelLabel = input('Cancel');
+    readonly alternateLabel = input<string | null>(null);
     readonly confirmed = output<void>();
     readonly cancelled = output<void>();
+    readonly alternate = output<void>();
 
     protected readonly titleId = `confirm-dialog-title-${Math.random().toString(36).slice(2)}`;
     protected readonly messageId = `confirm-dialog-message-${Math.random().toString(36).slice(2)}`;
@@ -83,7 +111,11 @@ export class ConfirmDialog {
             this.cancelled.emit();
         } else if (event.key === 'Enter') {
             event.preventDefault();
-            this.confirmed.emit();
+            if (this.alternateLabel()) {
+                this.alternate.emit();
+            } else {
+                this.confirmed.emit();
+            }
         }
     }
 }

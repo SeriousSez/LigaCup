@@ -14,6 +14,7 @@ public static class DtoMapper
         tournament.Slug,
         tournament.Description,
         tournament.Rules,
+        tournament.Location,
         tournament.TournamentDateUtc,
         tournament.Season,
         tournament.Format,

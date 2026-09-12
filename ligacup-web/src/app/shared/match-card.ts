@@ -1,16 +1,25 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { I18nService } from '../core/i18n/i18n.service';
+import { mapsUrl } from '../core/maps';
 import { MatchClockService } from '../core/match-clock.service';
 import { Match, TournamentSummary } from '../core/models';
 
 @Component({
   selector: 'app-match-card',
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink, FontAwesomeModule],
   template: `
     <article class="match" [class.is-live]="isLive()">
+      <a
+        class="match-link"
+        [routerLink]="['/', tournament().slug, 'matches', match().id]"
+        [attr.aria-label]="detailLabel()"
+      >
       <div class="meta">
-        <span>{{ match().groupName ?? t().stage[match().stage] }}</span>
+        <span>{{ stageLabel() }}</span>
         @if (match().kickoffUtc) {
           <span>
             {{ match().kickoffUtc | date: 'EEE d MMM HH:mm' : undefined : locale() }}
@@ -21,9 +30,6 @@ import { Match, TournamentSummary } from '../core/models';
         }
         @if (match().pitchNumber) {
           <span>{{ t().matchCard.pitch }} {{ match().pitchNumber }}</span>
-        }
-        @if (match().venue) {
-          <span>{{ match().venue }}</span>
         }
       </div>
 
@@ -65,9 +71,45 @@ import { Match, TournamentSummary } from '../core/models';
           }
         </ul>
       }
+      </a>
+
+      @if (location(); as address) {
+        <a
+          class="location muted"
+          [href]="mapsUrl(address)"
+          target="_blank"
+          rel="noopener noreferrer"
+          [attr.aria-label]="mapsLabel(address)"
+        >
+          <fa-icon [icon]="faLocationDot" aria-hidden="true" />
+          <span>{{ address }}</span>
+        </a>
+      }
     </article>
   `,
   styles: `
+    .match-link {
+      display: grid;
+      gap: 0.6rem;
+      color: inherit;
+      text-decoration: none;
+      border-radius: var(--radius);
+    }
+
+    .match-link:hover {
+      text-decoration: none;
+    }
+
+    .match:hover {
+      border-color: var(--accent);
+      background: var(--surface-raised);
+    }
+
+    .match-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
     .match {
       background: var(--surface);
       border: 1px solid var(--surface-line);
@@ -75,6 +117,8 @@ import { Match, TournamentSummary } from '../core/models';
       padding: 1rem;
       display: grid;
       gap: 0.6rem;
+      height: 100%;
+      transition: background 120ms ease, border-color 120ms ease;
     }
 
     .match.is-live {
@@ -142,9 +186,31 @@ import { Match, TournamentSummary } from '../core/models';
       font-variant-numeric: tabular-nums;
       min-width: 2.2rem;
     }
+
+    .location {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--surface-line);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .location:hover span { text-decoration: underline; }
+
+    .location fa-icon {
+      display: flex;
+      flex: none;
+      color: var(--accent);
+    }
   `,
 })
 export class MatchCard {
+  protected readonly faLocationDot = faLocationDot;
+  protected readonly mapsUrl = mapsUrl;
   readonly match = input.required<Match>();
   readonly tournament = input.required<TournamentSummary>();
 
@@ -160,6 +226,25 @@ export class MatchCard {
   protected readonly awayName = computed(() =>
     this.i18n.teamName(this.match().awayTeamName, this.match().awayTeamId),
   );
+
+  protected readonly stageLabel = computed(() =>
+    this.match().stage === 'Group' && this.tournament().format === 'League'
+      ? this.t().tournament.league
+      : this.match().groupName ?? this.t().stage[this.match().stage],
+  );
+
+  protected readonly location = computed(() => this.match().venue ?? this.tournament().location);
+
+  protected readonly detailLabel = computed(() =>
+    this.i18n.format(this.t().matchPage.open, {
+      home: this.homeName(),
+      away: this.awayName(),
+    }),
+  );
+
+  protected mapsLabel(address: string): string {
+    return this.i18n.format(this.t().matchCard.openMaps, { address });
+  }
 
   protected readonly minuteLabel = computed(() => {
     const label = this.clock.label(this.match(), this.tournament());

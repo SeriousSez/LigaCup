@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/api.service';
@@ -8,7 +9,7 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, CardListSkeleton],
+  imports: [DatePipe, RouterLink, CardListSkeleton],
   template: `
     <section class="hero card">
       <div class="hero-copy">
@@ -27,7 +28,11 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
           <a class="card tournament" [routerLink]="['/', tournament.slug]">
             <div class="spread">
               <h3>{{ tournament.name }}</h3>
-              <span class="badge">{{ tournament.season }}</span>
+              @if (tournament.tournamentDateUtc) {
+                <span class="badge">
+                  {{ tournament.tournamentDateUtc | date: 'd MMM yyyy' : undefined : locale() }}
+                </span>
+              }
             </div>
             @if (tournament.description) {
               <p class="muted">{{ tournament.description }}</p>
@@ -113,6 +118,8 @@ export class Home {
   protected readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
 
-  protected readonly t = inject(I18nService).t;
+  private readonly i18n = inject(I18nService);
+  protected readonly t = this.i18n.t;
+  protected readonly locale = this.i18n.locale;
   protected readonly tournaments = toSignal(this.api.getTournaments());
 }

@@ -1,12 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
     selector: 'app-login',
-    imports: [FormsModule],
+    imports: [FormsModule, FontAwesomeModule],
     template: `
     <section class="card login">
       <h1>{{ t().login.title }}</h1>
@@ -35,11 +37,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
               [attr.aria-pressed]="showPassword()"
               (click)="showPassword.set(!showPassword())"
             >
-              <i
-                class="fa-duotone fa-solid"
-                [class.fa-eye]="!showPassword()"
-                [class.fa-eye-slash]="showPassword()"
-              ></i>
+              <fa-icon [icon]="showPassword() ? faEyeSlash : faEye" />
             </button>
           </div>
         </div>
@@ -99,6 +97,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
   `,
 })
 export class Login {
+  protected readonly faEye = faEye;
+  protected readonly faEyeSlash = faEyeSlash;
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);

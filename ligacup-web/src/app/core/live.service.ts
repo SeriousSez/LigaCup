@@ -17,6 +17,7 @@ export class LiveService {
     private connection: HubConnection | null = null;
     private currentSlug: string | null = null;
     private handler: ((update: LiveUpdate) => void) | null = null;
+    private reconnectHandler: (() => Promise<void>) | null = null;
 
     readonly state = signal<LiveConnectionState>('disconnected');
 
@@ -24,8 +25,13 @@ export class LiveService {
         inject(DestroyRef).onDestroy(() => void this.stop());
     }
 
-    async watch(slug: string, onUpdate: (update: LiveUpdate) => void): Promise<void> {
+    async watch(
+        slug: string,
+        onUpdate: (update: LiveUpdate) => void,
+        onReconnect: () => Promise<void>,
+    ): Promise<void> {
         this.handler = onUpdate;
+        this.reconnectHandler = onReconnect;
 
         if (this.connection && this.currentSlug === slug) {
             return;
@@ -47,9 +53,10 @@ export class LiveService {
 
         this.connection.onreconnecting(() => this.state.set('connecting'));
         this.connection.onreconnected(async () => {
-            this.state.set('connected');
             // Group membership is per connection, so rejoin after a reconnect.
             await this.connection?.invoke('JoinTournament', slug);
+            await this.reconnectHandler?.();
+            this.state.set('connected');
         });
         this.connection.onclose(() => this.state.set('disconnected'));
 

@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -39,6 +39,11 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
           <a [routerLink]="['/', data.tournament.slug]">
             <button class="ghost" type="button">{{ t().live.publicPage }}</button>
           </a>
+          @if (selectedId(); as matchId) {
+            <a [routerLink]="['/', data.tournament.slug, 'matches', matchId]">
+              <button class="primary" type="button">{{ t().live.matchPage }}</button>
+            </a>
+          }
         </div>
       </section>
 
@@ -164,7 +169,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
         </section>
 
         @if (data.tournament.trackPlayers) {
-          <section class="card stack">
+          <section class="card stack" data-guide-target="admin-event-form">
             <h3>{{ t().live.recordEvent }}</h3>
             <div class="form-grid">
               <label>
@@ -440,6 +445,7 @@ export class LiveConsole implements OnInit {
   readonly slug = input.required<string>();
 
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly clock = inject(MatchClockService);
   protected readonly i18n = inject(I18nService);
   protected readonly t = this.i18n.t;
@@ -536,23 +542,32 @@ export class LiveConsole implements OnInit {
     await this.store.load(this.slug());
 
     const matches = this.detail()?.matches ?? [];
+    const requestedId = Number(this.route.snapshot.queryParamMap.get('match'));
+    const nextScheduled = matches
+      .filter((match) => match.status === 'Scheduled')
+      .sort((left, right) => {
+        if (!left.kickoffUtc) return 1;
+        if (!right.kickoffUtc) return -1;
+        return left.kickoffUtc.localeCompare(right.kickoffUtc);
+      })[0];
     // Jump straight to whatever is in progress, otherwise the next kickoff.
     const preferred =
-      matches.find((match) => match.status === 'Live' || match.status === 'HalfTime') ??
-      matches.find((match) => match.status === 'Scheduled') ??
+      matches.find((match) => match.id === requestedId) ??
+      matches.find((match) =>
+        match.status === 'Live' || match.status === 'Paused' || match.status === 'HalfTime'
+      ) ??
+      nextScheduled ??
       matches[0];
 
     if (preferred) {
-      this.selectedId.set(preferred.id);
-      this.eventTeamId.set(preferred.homeTeamId);
-      this.homePenalties = preferred.homePenalties;
-      this.awayPenalties = preferred.awayPenalties;
-      this.stoppage = preferred.clock.stoppageMinutes;
+      this.selectMatch(preferred.id);
     }
   }
 
   matchLabel(match: Match): string {
-    const stage = match.groupName ?? this.t().stage[match.stage];
+    const stage = match.stage === 'Group' && this.detail()?.tournament.format === 'League'
+      ? this.t().tournament.league
+      : match.groupName ?? this.t().stage[match.stage];
     const home = this.i18n.teamName(match.homeTeamName, match.homeTeamId);
     const away = this.i18n.teamName(match.awayTeamName, match.awayTeamId);
     return `${stage} - ${home} ${match.homeScore}-${match.awayScore} ${away}`;

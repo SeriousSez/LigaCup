@@ -1,4 +1,6 @@
 <Solution>
+  <Folder Name="/scripts/" />
+  <Folder Name="/scripts/schema-check-temp/" />
   <Project Path="LigaCup.API/LigaCup.API.csproj" />
   <Project Path="LigaCup.ApplicationService/LigaCup.ApplicationService.csproj" />
   <Project Path="LigaCup.Domain.Tests/LigaCup.Domain.Tests.csproj" />

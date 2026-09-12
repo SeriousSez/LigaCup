@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard, administratorGuard } from './core/admin.guard';
+import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
 export const routes: Routes = [
     {
@@ -27,6 +28,7 @@ export const routes: Routes = [
     {
         path: 'admin/:slug',
         canActivate: [adminGuard],
+        canDeactivate: [unsavedChangesGuard],
         loadComponent: () => import('./pages/admin/admin-setup').then((module) => module.AdminSetup),
         title: 'Setup - Liga Cup',
     },
@@ -35,6 +37,11 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () => import('./pages/admin/live-console').then((module) => module.LiveConsole),
         title: 'Live console - Liga Cup',
+    },
+    {
+        path: ':slug/matches/:matchId',
+        loadComponent: () => import('./pages/match/match-detail').then((module) => module.MatchDetail),
+        title: 'Match - Liga Cup',
     },
     {
         path: ':slug',

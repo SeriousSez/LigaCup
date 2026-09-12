@@ -9,6 +9,8 @@ import {
   signal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faCheck, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 
 export interface SelectOption<T = unknown> {
   value: T;
@@ -25,6 +27,7 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-select',
+  imports: [FontAwesomeModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -49,7 +52,7 @@ let nextId = 0;
       <span class="value" [class.placeholder]="!selectedOption()">
         {{ selectedOption()?.label ?? placeholder() }}
       </span>
-      <i class="fa-duotone fa-solid fa-chevron-down chevron" [class.up]="open()"></i>
+      <fa-icon [icon]="faChevronDown" class="chevron" [class.up]="open()" />
     </button>
 
     @if (open()) {
@@ -63,11 +66,11 @@ let nextId = 0;
             [class.selected]="option.value === value()"
             [class.disabled]="option.disabled === true"
             (mouseenter)="activeIndex.set($index)"
-            (click)="choose($index)"
+            (click)="choose($index, $event)"
           >
             <span>{{ option.label }}</span>
             @if (option.value === value()) {
-              <i class="fa-duotone fa-solid fa-check"></i>
+              <fa-icon [icon]="faCheck" />
             }
           </li>
         }
@@ -172,6 +175,8 @@ let nextId = 0;
   `,
 })
 export class SelectField<T = unknown> implements ControlValueAccessor {
+  protected readonly faCheck = faCheck;
+  protected readonly faChevronDown = faChevronDown;
   readonly options = input<SelectOption<T>[]>([]);
   readonly placeholder = input('');
   readonly label = input('');
@@ -217,12 +222,14 @@ export class SelectField<T = unknown> implements ControlValueAccessor {
     this.open() ? this.close() : this.openList();
   }
 
-  protected choose(index: number): void {
+  protected choose(index: number, event?: MouseEvent): void {
     const option = this.options()[index];
     if (!option || option.disabled) {
       return;
     }
 
+    event?.preventDefault();
+    event?.stopPropagation();
     this.value.set(option.value);
     this.onChange(option.value);
     this.close();

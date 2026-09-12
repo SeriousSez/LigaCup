@@ -148,6 +148,7 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.Slug = Slugify(string.IsNullOrWhiteSpace(request.Slug) ? request.Name : request.Slug);
         tournament.Description = request.Description;
         tournament.Rules = string.IsNullOrWhiteSpace(request.Rules) ? null : request.Rules.Trim();
+        tournament.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
         tournament.TournamentDateUtc = request.TournamentDateUtc;
         tournament.Season = request.Season;
         tournament.Format = request.Format;

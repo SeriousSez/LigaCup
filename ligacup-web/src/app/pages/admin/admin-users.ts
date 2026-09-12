@@ -2,6 +2,8 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -13,7 +15,7 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
 
 @Component({
   selector: 'app-admin-users',
-  imports: [FormsModule, RouterLink, DatePipe, CardListSkeleton, SelectField, ConfirmDialog],
+  imports: [FormsModule, RouterLink, DatePipe, FontAwesomeModule, CardListSkeleton, SelectField, ConfirmDialog],
   template: `
     <div class="users-page">
     <section class="spread heading">
@@ -24,7 +26,7 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
       <a routerLink="/admin"><button class="ghost" type="button">{{ t().adminHome.title }}</button></a>
     </section>
 
-    <section class="card stack create-card">
+    <section class="card stack create-card" data-guide-target="admin-user-create">
       <div class="section-heading">
         <div>
           <h2>{{ t().users.newUser }}</h2>
@@ -57,11 +59,7 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
               [attr.aria-pressed]="showPassword()"
               (click)="showPassword.set(!showPassword())"
             >
-              <i
-                class="fa-duotone fa-solid"
-                [class.fa-eye]="!showPassword()"
-                [class.fa-eye-slash]="showPassword()"
-              ></i>
+              <fa-icon [icon]="showPassword() ? faEyeSlash : faEye" />
             </button>
           </div>
         </div>
@@ -88,7 +86,7 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
       <app-card-list-skeleton [count]="2" />
     } @else {
-      <div class="stack user-list">
+      <div class="stack user-list" data-guide-target="admin-user-list">
         @for (user of users(); track user.id) {
           <section class="card stack user">
             <div class="spread">
@@ -312,6 +310,8 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
   `,
 })
 export class AdminUsers {
+  protected readonly faEye = faEye;
+  protected readonly faEyeSlash = faEyeSlash;
   private readonly api = inject(ApiService);
   private readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);

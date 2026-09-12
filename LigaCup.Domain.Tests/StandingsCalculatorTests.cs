@@ -208,6 +208,20 @@ public class FixtureGeneratorTests
     }
 
     [Fact]
+    public void GeneratedFixturesUseTheTournamentLocation()
+    {
+        var tournament = BuildTournament();
+        tournament.Location = "Stadion 5, 4600 Køge";
+        var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };
+
+        var groupFixtures = FixtureGenerator.GenerateGroupFixtures(tournament, group, BuildTeams(4));
+        var knockoutFixtures = FixtureGenerator.GenerateKnockoutBracket(tournament, slots: 4);
+
+        Assert.All(groupFixtures, fixture => Assert.Equal(tournament.Location, fixture.Venue));
+        Assert.All(knockoutFixtures, fixture => Assert.Equal(tournament.Location, fixture.Venue));
+    }
+
+    [Fact]
     public void BuildsABracketWithPlaceholdersThatChainBetweenRounds()
     {
         var tournament = BuildTournament();

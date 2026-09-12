@@ -12,6 +12,7 @@ public class Tournament
 
     public string? Description { get; set; }
     public string? Rules { get; set; }
+    public string? Location { get; set; }
     public DateTime? TournamentDateUtc { get; set; }
     public int Season { get; set; }
     public TournamentFormat Format { get; set; } = TournamentFormat.League;

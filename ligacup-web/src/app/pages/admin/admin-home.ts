@@ -196,6 +196,7 @@ export class AdminHome {
       slug: null,
       description: null,
       rules: defaultTournamentRulesWithoutDate,
+      location: null,
       season: new Date(this.draft.tournamentDateUtc).getFullYear(),
       tournamentDateUtc: this.draft.tournamentDateUtc,
       format: this.draft.format,

@@ -1,6 +1,8 @@
-import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faFloppyDisk, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -14,7 +16,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
 
 @Component({
   selector: 'app-admin-setup',
-  imports: [FormsModule, RouterLink, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
+  imports: [FormsModule, RouterLink, FontAwesomeModule, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -57,6 +59,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           <button
             type="button"
             role="tab"
+            data-guide-tab="squads"
             [class.active]="activeTab() === 'squads'"
             [attr.aria-selected]="activeTab() === 'squads'"
             (click)="activeTab.set('squads')"
@@ -76,10 +79,30 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         </button>
       </nav>
 
+      @if (fixturesNeedReview()) {
+        <aside class="fixture-warning" role="status">
+          <div>
+            <strong>{{ t().setup.fixturesNeedReviewTitle }}</strong>
+            <p>{{ t().setup.fixturesNeedReviewMessage }}</p>
+          </div>
+          <button type="button" (click)="activeTab.set('fixtures')">{{ t().setup.reviewFixtures }}</button>
+        </aside>
+      }
+
       @if (activeTab() === 'rules') {
         <section class="card stack rules-section" data-guide-target="admin-rules">
-        <h3>{{ t().setup.rules }}</h3>
-        <details class="collapsible default-settings" open>
+        <div class="rules-header">
+          <h3>{{ t().setup.rules }}</h3>
+          <div class="rules-actions">
+            @if (message()) {
+              <span class="muted">{{ message() }}</span>
+            }
+            <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
+              {{ t().setup.saveRules }}
+            </button>
+          </div>
+        </div>
+        <details class="collapsible default-settings" data-guide-target="admin-rule-settings" open>
         <summary class="section-summary">{{ t().setup.defaultSettings }}</summary>
         <div class="form-grid">
           <label>
@@ -89,6 +112,14 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           <label>
             {{ t().common.tournamentDateTime }}
             <app-date-time-picker [(ngModel)]="settings.tournamentDateUtc" />
+          </label>
+          <label>
+            {{ t().setup.location }}
+            <input
+              [(ngModel)]="settings.location"
+              [placeholder]="t().setup.locationPlaceholder"
+              maxlength="160"
+            />
           </label>
           <label>
             {{ t().setup.status }}
@@ -166,7 +197,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         </div>
         </details>
 
-        <details class="collapsible">
+        <details class="collapsible" data-guide-target="admin-clock-settings">
           <summary>{{ t().setup.clockSection }}</summary>
           <div class="stack collapsible-content">
           <p class="muted">{{ t().setup.clockHelp }}</p>
@@ -234,7 +265,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           </div>
         </details>
 
-        <details class="collapsible">
+        <details class="collapsible" data-guide-target="admin-tiebreakers">
           <summary>{{ t().setup.tiebreakersTitle }}</summary>
           <div class="stack collapsible-content">
           <p class="muted">{{ t().setup.tiebreakersHelp }}</p>
@@ -279,14 +310,6 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           </div>
         </details>
 
-        <div class="row">
-          <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy()">
-            {{ t().setup.saveRules }}
-          </button>
-          @if (message()) {
-            <span class="muted">{{ message() }}</span>
-          }
-        </div>
         </section>
       }
 
@@ -309,7 +332,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         </div>
         </section>
 
-        <section class="card stack">
+        <section class="card stack" data-guide-target="admin-squads">
         <h3>{{ t().setup.teams }}</h3>
         <div class="team-rows">
           @for (team of data.teams; track team.id) {
@@ -445,7 +468,7 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         <section class="card stack" data-guide-target="admin-fixtures">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
-        <div class="row">
+        <div class="row" data-guide-target="admin-fixture-generator">
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="generateGroups" />
             {{ t().setup.groupStage }}
@@ -474,8 +497,19 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
           <p class="muted">{{ fixtureMessage() }}</p>
         }
         @if (data.matches.length) {
-          <div class="schedule-list">
-            <h4>{{ t().setup.schedule }}</h4>
+          <div class="schedule-list" data-guide-target="admin-schedule-list">
+            <div class="schedule-heading">
+              <h4>{{ t().setup.schedule }}</h4>
+              <button
+                type="button"
+                class="primary"
+                [disabled]="busy() || !hasUnsavedScheduleChanges()"
+                (click)="saveAllSchedules()"
+              >
+                <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
+                {{ t().setup.saveAllSchedule }}
+              </button>
+            </div>
             @for (match of scheduleMatches(data.matches); track match.id) {
               <div class="schedule-row">
                 @if (match.stage === 'Group') {
@@ -498,10 +532,33 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
                   {{ t().setup.pitchNumber }}
                   <input type="number" min="1" [(ngModel)]="match.pitchNumber" />
                 </label>
+                <label>
+                  {{ t().setup.location }}
+                  <input
+                    [(ngModel)]="match.venue"
+                    [placeholder]="t().setup.locationOverridePlaceholder"
+                    maxlength="160"
+                  />
+                </label>
                 <div class="schedule-actions">
-                  <button type="button" (click)="saveSchedule(match)">{{ t().setup.saveSchedule }}</button>
-                  <button type="button" class="danger" (click)="confirmDeleteSchedule(match)">
-                    {{ t().common.remove }}
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [disabled]="busy() || !hasScheduleChanges(match)"
+                    [attr.aria-label]="t().setup.saveSchedule"
+                    [title]="t().setup.saveSchedule"
+                    (click)="saveSchedule(match)"
+                  >
+                    <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    class="danger icon-button"
+                    [attr.aria-label]="t().common.remove"
+                    [title]="t().common.remove"
+                    (click)="confirmDeleteSchedule(match)"
+                  >
+                    <fa-icon [icon]="faTrashCan" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -519,6 +576,26 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
         [cancelLabel]="t().common.cancel"
         (confirmed)="confirmPendingAction()"
         (cancelled)="pendingConfirmation.set(null)"
+      />
+      <app-confirm-dialog
+        [open]="leaveConfirmation() !== null"
+        [title]="t().setup.unsavedScheduleTitle"
+        [message]="t().setup.unsavedScheduleMessage"
+        [confirmLabel]="t().setup.discardScheduleChanges"
+        [cancelLabel]="t().setup.stayOnPage"
+        [alternateLabel]="t().setup.saveScheduleChanges"
+        (confirmed)="resolveLeave(true)"
+        (cancelled)="resolveLeave(false)"
+        (alternate)="saveAllAndLeave()"
+      />
+      <app-confirm-dialog
+        [open]="fixtureReviewConfirmation() !== null"
+        [title]="t().setup.fixturesNeedReviewTitle"
+        [message]="t().setup.fixturesNeedReviewMessage"
+        [confirmLabel]="t().setup.leaveAnyway"
+        [cancelLabel]="t().setup.reviewFixtures"
+        (confirmed)="resolveFixtureReview(true)"
+        (cancelled)="reviewFixturesBeforeLeaving()"
       />
     } @else {
       <p class="sr-only" role="status">{{ t().common.loading }}</p>
@@ -565,6 +642,26 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
     section.card {
       margin-bottom: 1rem;
     }
+
+    .fixture-warning {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--warning);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--warning) 8%, var(--surface-raised));
+    }
+
+    .fixture-warning p {
+      margin: 0.2rem 0 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .fixture-warning button { flex: none; }
 
     .toggles {
       gap: 0.5rem;
@@ -665,8 +762,23 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
       margin-top: 0.5rem;
     }
 
-    .rules-section > .row:last-child {
-      margin-top: 0.5rem;
+    .rules-header,
+    .rules-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .rules-header {
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .rules-header h3 { margin: 0; }
+
+    .rules-actions {
+      justify-content: flex-end;
+      margin-left: auto;
     }
 
     .rules-toolbar {
@@ -731,6 +843,21 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
       gap: 0.6rem;
     }
 
+    .schedule-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .schedule-heading h4 { margin: 0; }
+
+    .schedule-heading button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
     .schedule-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -761,9 +888,9 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
       white-space: nowrap;
     }
 
-    @media (min-width: 700px) {
+    @media (min-width: 1000px) {
       .schedule-row {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 13rem 6rem auto;
+        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) 13rem 6rem minmax(12rem, 1fr) auto;
       }
 
       .schedule-row > strong {
@@ -893,6 +1020,8 @@ import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFo
   `,
 })
 export class AdminSetup implements OnInit, AfterViewChecked {
+  protected readonly faFloppyDisk = faFloppyDisk;
+  protected readonly faTrashCan = faTrashCan;
   readonly slug = input.required<string>();
 
   private readonly api = inject(ApiService);
@@ -906,10 +1035,15 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
   protected readonly pendingConfirmation = signal<{ message: string; action: () => Promise<void> | void } | null>(null);
+  protected readonly leaveConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
+  protected readonly fixtureReviewConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
+  private readonly structuralFixtureChange = signal(false);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
   @ViewChild('rulesContent') private rulesContent?: ElementRef<HTMLElement>;
-  private rulesContentInitialized = false;
+  private initializedRulesEditor: HTMLElement | null = null;
   private rulesSelection: Range | null = null;
+  private settingsSnapshot: string | null = null;
+  private readonly scheduleSnapshots = new WeakMap<Match, string>();
   protected readonly editingTeamId = signal<number | null>(null);
 
   protected readonly allRules: TiebreakerRule[] = [
@@ -982,6 +1116,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     slug: null,
     description: null,
     rules: defaultTournamentRulesWithoutDate,
+    location: null,
     tournamentDateUtc: '2026-09-06T15:00',
     season: new Date().getFullYear(),
     format: 'League',
@@ -1022,6 +1157,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       rules: data.tournament.rules
         ? removeLegacyDefaultDateTime(data.tournament.rules)
         : defaultTournamentRulesWithoutDate,
+      location: data.tournament.location,
       tournamentDateUtc: data.tournament.tournamentDateUtc
         ? data.tournament.tournamentDateUtc.slice(0, 16)
         : null,
@@ -1051,13 +1187,15 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     };
 
     this.tiebreakers.set(data.tournament.tiebreakers);
+  this.settingsSnapshot = this.settingsState();
   }
 
   ngAfterViewChecked(): void {
     const editor = this.rulesContent?.nativeElement;
-    if (editor && !this.rulesContentInitialized && document.activeElement !== editor) {
+    if (editor && editor !== this.initializedRulesEditor && document.activeElement !== editor) {
       editor.innerHTML = this.settings.rules ?? '';
-      this.rulesContentInitialized = true;
+      this.initializedRulesEditor = editor;
+      this.rulesSelection = null;
     }
   }
 
@@ -1094,15 +1232,12 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.busy.set(true);
     this.message.set(null);
+    const hasDirtySchedules = this.hasUnsavedScheduleChanges();
 
     try {
-      await firstValueFrom(
-        this.api.updateTournament(data.tournament.id, {
-          ...this.settings,
-          tiebreakers: this.tiebreakers(),
-        }),
-      );
-      await this.store.reload();
+      await this.saveSettingsRequest(data.tournament.id);
+      this.settingsSnapshot = this.settingsState();
+      if (!hasDirtySchedules) await this.store.reload();
       this.message.set(this.t().common.saved);
     } catch {
       this.message.set(this.t().setup.saveFailed);
@@ -1155,13 +1290,108 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     match.kickoffUtc = value || null;
   }
 
+  protected hasScheduleChanges(match: Match): boolean {
+    const current = this.scheduleState(match);
+    const initial = this.scheduleSnapshots.get(match);
+
+    if (initial === undefined) {
+      this.scheduleSnapshots.set(match, current);
+      return false;
+    }
+    return initial !== current;
+  }
+
+  protected hasUnsavedSettingsChanges(): boolean {
+    return this.settingsSnapshot !== null && this.settingsSnapshot !== this.settingsState();
+  }
+
+  protected hasUnsavedChanges(): boolean {
+    return this.hasUnsavedSettingsChanges() || this.hasUnsavedScheduleChanges();
+  }
+
+  protected fixturesNeedReview(): boolean {
+    if (this.structuralFixtureChange()) return true;
+
+    const data = this.detail();
+    const groupMatches = data?.matches.filter((match) => match.stage === 'Group') ?? [];
+    if (!data || !groupMatches.length) return false;
+
+    const league = data.tournament.format === 'League' || data.groups.length === 0;
+    const scheduledTeamIds = new Set(
+      groupMatches.flatMap((match) => [match.homeTeamId, match.awayTeamId]).filter((id): id is number => id !== null),
+    );
+    if (data.teams.some((team) => !scheduledTeamIds.has(team.id))) return true;
+
+    return !league && groupMatches.some((match) => {
+      const home = data.teams.find((team) => team.id === match.homeTeamId);
+      const away = data.teams.find((team) => team.id === match.awayTeamId);
+      return home?.groupId !== match.groupId || away?.groupId !== match.groupId;
+    });
+  }
+
+  private settingsState(): string {
+    return JSON.stringify({ ...this.settings, tiebreakers: this.tiebreakers() });
+  }
+
+  private scheduleState(match: Match): string {
+    return JSON.stringify([
+      match.homeTeamId,
+      match.awayTeamId,
+      match.kickoffUtc,
+      match.pitchNumber,
+      match.venue,
+    ]);
+  }
+
+  protected hasUnsavedScheduleChanges(): boolean {
+    return this.detail()?.matches.some((match) => this.hasScheduleChanges(match)) ?? false;
+  }
+
   async saveSchedule(match: Match): Promise<void> {
     const data = this.detail();
     if (!data) {
       return;
     }
 
-    await firstValueFrom(this.api.saveMatch(data.tournament.id, match.id, {
+    this.busy.set(true);
+    try {
+      const saved = await this.saveScheduleRequest(data.tournament.id, match);
+      this.scheduleSnapshots.set(saved, this.scheduleState(saved));
+      this.store.patchMatch(saved);
+      this.structuralFixtureChange.set(false);
+      this.message.set(this.t().common.saved);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async saveAllSchedules(): Promise<boolean> {
+    const data = this.detail();
+    if (!data) return false;
+
+    const changedMatches = data.matches.filter((match) => this.hasScheduleChanges(match));
+    if (!changedMatches.length) return true;
+
+    this.busy.set(true);
+    try {
+      for (const match of changedMatches) {
+        const saved = await this.saveScheduleRequest(data.tournament.id, match);
+        this.scheduleSnapshots.set(saved, this.scheduleState(saved));
+        this.store.patchMatch(saved);
+      }
+      this.structuralFixtureChange.set(false);
+      this.message.set(this.t().common.saved);
+      return true;
+    } catch {
+      this.message.set(this.t().common.somethingWentWrong);
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private saveScheduleRequest(tournamentId: number, match: Match) {
+    return firstValueFrom(this.api.saveMatch(tournamentId, match.id, {
       groupId: match.groupId,
       stage: match.stage,
       round: match.round,
@@ -1173,8 +1403,77 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       pitchNumber: match.pitchNumber,
       venue: match.venue,
     }));
-    await this.store.reload();
-    this.message.set(this.t().common.saved);
+  }
+
+  private saveSettingsRequest(tournamentId: number) {
+    return firstValueFrom(this.api.updateTournament(tournamentId, {
+      ...this.settings,
+      tiebreakers: this.tiebreakers(),
+    }));
+  }
+
+  public canDeactivate(): boolean | Promise<boolean> {
+    if (this.hasUnsavedChanges()) {
+      return new Promise<boolean>((resolve) => this.leaveConfirmation.set({ resolve }));
+    }
+    if (this.fixturesNeedReview()) {
+      return new Promise<boolean>((resolve) => this.fixtureReviewConfirmation.set({ resolve }));
+    }
+    return true;
+  }
+
+  protected resolveFixtureReview(canLeave: boolean): void {
+    const confirmation = this.fixtureReviewConfirmation();
+    this.fixtureReviewConfirmation.set(null);
+    confirmation?.resolve(canLeave);
+  }
+
+  protected reviewFixturesBeforeLeaving(): void {
+    this.activeTab.set('fixtures');
+    this.resolveFixtureReview(false);
+  }
+
+  protected resolveLeave(canLeave: boolean): void {
+    const confirmation = this.leaveConfirmation();
+    this.leaveConfirmation.set(null);
+    confirmation?.resolve(canLeave);
+  }
+
+  protected async saveAllAndLeave(): Promise<void> {
+    if (await this.saveAllChanges()) this.resolveLeave(true);
+  }
+
+  private async saveAllChanges(): Promise<boolean> {
+    const data = this.detail();
+    if (!data) return false;
+
+    const settingsChanged = this.hasUnsavedSettingsChanges();
+    const changedMatches = data.matches.filter((match) => this.hasScheduleChanges(match));
+    if (!settingsChanged && !changedMatches.length) return true;
+
+    this.busy.set(true);
+    try {
+      if (settingsChanged) await this.saveSettingsRequest(data.tournament.id);
+      for (const match of changedMatches) {
+        await this.saveScheduleRequest(data.tournament.id, match);
+      }
+      this.settingsSnapshot = this.settingsState();
+      await this.store.reload();
+      this.message.set(this.t().common.saved);
+      return true;
+    } catch {
+      this.message.set(this.t().common.somethingWentWrong);
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  protected warnAboutUnsavedChanges(event: BeforeUnloadEvent): void {
+    if (!this.hasUnsavedChanges() && !this.fixturesNeedReview()) return;
+    event.preventDefault();
+    event.returnValue = '';
   }
 
   async addGroup(): Promise<void> {
@@ -1220,6 +1519,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.newTeamName = '';
     this.newTeamShort = '';
+    this.structuralFixtureChange.set(true);
     await this.store.reload();
   }
 
@@ -1235,6 +1535,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     }
 
     await firstValueFrom(this.api.saveTeam(data.tournament.id, teamId, { name, shortName, groupId }));
+    this.structuralFixtureChange.set(true);
     await this.store.reload();
   }
 
@@ -1275,6 +1576,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     try {
       await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
+      this.structuralFixtureChange.set(true);
       await this.store.reload();
     } catch (failure) {
       const serverMessage = (failure as { error?: { message?: string } })?.error?.message;
@@ -1333,6 +1635,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         ),
       );
       await this.store.reload();
+      this.structuralFixtureChange.set(false);
       this.fixtureMessage.set(
         this.i18n.format(this.t().setup.generated, { count: result.generated }),
       );

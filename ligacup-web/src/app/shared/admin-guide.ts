@@ -1,10 +1,43 @@
 import { Component, HostListener, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faBookOpen,
+  faBullhorn,
+  faCalendarCheck,
+  faCalendarDays,
+  faEye,
+  faFutbol,
+  faGear,
+  faListUl,
+  faPlay,
+  faPlus,
+  faScaleBalanced,
+  faSignal,
+  faTrophy,
+  faUsers,
+  faUserShield,
+} from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../core/api.service';
+import { AuthService } from '../core/auth.service';
 import { I18nService } from '../core/i18n/i18n.service';
 
-type GuideId = 'overview' | 'fixtures' | 'knockout' | 'create' | 'setup' | 'live';
+type GuideId =
+  | 'overview'
+  | 'fixtures'
+  | 'knockout'
+  | 'match'
+  | 'create'
+  | 'setup'
+  | 'live'
+  | 'events'
+  | 'squads'
+  | 'rules'
+  | 'schedule'
+  | 'users'
+  | 'connectivity';
 
 interface AdminGuideStep {
   target: string;
@@ -18,6 +51,7 @@ interface AdminGuideStep {
 
 @Component({
   selector: 'app-admin-guide',
+  imports: [FontAwesomeModule],
   template: `
     @if (showHint() && !isOpen()) {
       <aside class="guide-hint" aria-live="polite">
@@ -49,17 +83,41 @@ interface AdminGuideStep {
             </div>
             <button class="guide-close" type="button" [attr.aria-label]="t().adminGuide.close" (click)="close()">&times;</button>
           </header>
+          @if (canSeeOrganizerGuides()) {
+            <div class="guide-tabs" role="tablist" [attr.aria-label]="t().adminGuide.libraryTitle">
+              <button
+                type="button"
+                role="tab"
+                [class.active]="guideCategory() === 'visitor'"
+                [attr.aria-selected]="guideCategory() === 'visitor'"
+                (click)="guideCategory.set('visitor')"
+              >
+                <fa-icon [icon]="faEye" aria-hidden="true" />
+                {{ t().adminGuide.visitorGuides }}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                [class.active]="guideCategory() === 'organizer'"
+                [attr.aria-selected]="guideCategory() === 'organizer'"
+                (click)="guideCategory.set('organizer')"
+              >
+                <fa-icon [icon]="faBullhorn" aria-hidden="true" />
+                {{ t().adminGuide.organizerGuides }}
+              </button>
+            </div>
+          }
           <div class="guide-list">
-            @for (guide of guideIds; track guide) {
+            @for (guide of visibleGuideIds(); track guide) {
               <article class="guide-card">
                 <div>
-                  <i class="fa-duotone fa-solid guide-icon {{ guideIcon(guide) }}" aria-hidden="true"></i>
+                  <fa-icon class="guide-icon" [icon]="guideIcon(guide)" aria-hidden="true" />
                   <h3>{{ guideTitle(guide) }}</h3>
                   <p>{{ guideText(guide) }}</p>
                   @if (isGuideCompleted(guide)) {
                     <span class="guide-complete">&#10003; {{ t().adminGuide.completed }}</span>
-                  } @else if (guide === 'knockout' && !canStart(guide)) {
-                    <span class="guide-complete">{{ t().adminGuide.noKnockout }}</span>
+                  } @else if (unavailableText(guide); as reason) {
+                    <span class="guide-complete">{{ reason }}</span>
                   }
                 </div>
                 <button class="guide-primary" type="button" [disabled]="!canStart(guide)" (click)="startGuide(guide)">{{ isGuideCompleted(guide) ? t().adminGuide.restart : t().adminGuide.start }}</button>
@@ -118,6 +176,9 @@ interface AdminGuideStep {
     h2, h3, p { margin: 0; } h2 { margin-top: 0.15rem; font-size: 1.3rem; } h3 { margin-top: 0.9rem; font-size: 1.05rem; }
     .guide-dialog > header p, .guide-card p, .guide-body p { margin-top: 0.4rem; color: var(--text-muted); line-height: 1.5; font-size: 0.85rem; }
     .guide-close { width: 2.25rem; min-height: 2.25rem; padding: 0; border: 0; background: transparent; color: var(--text-muted); font-size: 1.35rem; }
+    .guide-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem; margin-top: 1rem; padding: 0.25rem; border: 1px solid var(--surface-line); border-radius: 8px; background: var(--pitch-800); }
+    .guide-tabs button { display: inline-flex; justify-content: center; align-items: center; gap: 0.45rem; min-height: 40px; padding: 0.45rem 0.7rem; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 700; }
+    .guide-tabs button.active { background: var(--surface-raised); color: var(--text); }
     .guide-list { display: grid; gap: 0.8rem; margin-top: 1.25rem; } .guide-card { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; padding: 1rem; border: 1px solid var(--surface-line); border-radius: 10px; background: var(--surface-raised); }
     .guide-card h3 { grid-column: 2; margin: 0; align-self: start; font-size: 1rem; } .guide-icon { grid-column: 1; grid-row: 1 / span 3; align-self: center; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-top: 0.05rem; border-radius: 7px; background: rgb(53 208 127 / 16%); color: var(--accent); font-size: 1.05rem; }
     .guide-card > div { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); column-gap: 0.7rem; row-gap: 0.1rem; align-items: start; min-width: 0; } .guide-card p { grid-column: 2; margin: 0; } .guide-progress { display: flex; gap: 0.35rem; margin-top: 1rem; } .guide-progress span { height: 0.25rem; flex: 1; border-radius: 999px; background: var(--surface-line); } .guide-progress span.active, .guide-progress span.complete { background: var(--accent-strong); }
@@ -151,19 +212,31 @@ interface AdminGuideStep {
   `,
 })
 export class AdminGuide {
+  protected readonly faBullhorn = faBullhorn;
+  protected readonly faEye = faEye;
   readonly slug = input<string | null>(null);
   protected readonly t = inject(I18nService).t;
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   protected readonly isOpen = signal(false);
   protected readonly showHint = signal(this.loadHintVisibility());
   protected readonly activeGuide = signal<GuideId | null>(null);
   protected readonly step = signal(0);
+  protected readonly guideCategory = signal<'visitor' | 'organizer'>('visitor');
   protected readonly targetRect = signal<{ top: number; left: number; width: number; height: number } | null>(null);
+  private readonly visitorGuideIds: GuideId[] = ['overview', 'fixtures', 'knockout', 'match', 'connectivity'];
+  private readonly organizerGuideIds: GuideId[] = ['create', 'setup', 'rules', 'squads', 'schedule', 'live', 'events', 'users'];
+  protected readonly guideIds: GuideId[] = [...this.visitorGuideIds, ...this.organizerGuideIds];
   protected readonly completedGuides = signal<GuideId[]>(this.loadCompletedGuides());
   private readonly guideSlug = signal<string | null>(null);
+  private readonly defaultSlug = signal<string | null | undefined>(undefined);
   private readonly knockoutSlug = signal<string | null | undefined>(undefined);
-  protected readonly guideIds: GuideId[] = ['overview', 'fixtures', 'knockout', 'create', 'setup', 'live'];
+  private readonly squadSlug = signal<string | null | undefined>(undefined);
+  private readonly eventSlug = signal<string | null | undefined>(undefined);
+  private readonly fixtureSlug = signal<string | null | undefined>(undefined);
+  private readonly matchRoute = signal<string | null | undefined>(undefined);
+  private contextPromise: Promise<void> | null = null;
 
   private readonly guideSteps: Record<GuideId, Omit<AdminGuideStep, 'route'>[]> = {
     overview: [
@@ -182,6 +255,11 @@ export class AdminGuide {
       { target: '[data-guide-target="tournament-bracket"]', title: () => this.t().guide.knockoutBracketTitle, text: () => this.t().guide.knockoutBracketText },
       { target: '[data-guide-target="tournament-match"]', title: () => this.t().guide.knockoutMatchTitle, text: () => this.t().guide.knockoutMatchText },
     ],
+    match: [
+      { target: '[data-guide-target="match-scoreboard"]', title: () => this.t().adminGuide.matchScoreTitle, text: () => this.t().adminGuide.matchScoreText },
+      { target: '[data-guide-target="match-events"]', title: () => this.t().adminGuide.matchEventsTitle, text: () => this.t().adminGuide.matchEventsText },
+      { target: '[data-guide-target="match-details"]', title: () => this.t().adminGuide.matchDetailsTitle, text: () => this.t().adminGuide.matchDetailsText },
+    ],
     create: [
       { target: '[data-guide-target="admin-create"]', title: () => this.t().adminGuide.createNameTitle, text: () => this.t().adminGuide.createNameText },
       { target: '[data-guide-target="admin-create-format"]', title: () => this.t().adminGuide.createFormatTitle, text: () => this.t().adminGuide.createFormatText },
@@ -199,6 +277,33 @@ export class AdminGuide {
       { target: '[data-guide-target="admin-score-control"]', title: () => this.t().adminGuide.liveScoreTitle, text: () => this.t().adminGuide.liveScoreText },
       { target: '[data-guide-target="admin-status-control"]', title: () => this.t().adminGuide.liveStatusTitle, text: () => this.t().adminGuide.liveStatusText },
     ],
+    events: [
+      { target: '[data-guide-target="admin-match-picker"]', title: () => this.t().adminGuide.eventsPickerTitle, text: () => this.t().adminGuide.eventsPickerText },
+      { target: '[data-guide-target="admin-event-form"]', title: () => this.t().adminGuide.eventsFormTitle, text: () => this.t().adminGuide.eventsFormText },
+    ],
+    squads: [
+      { target: '[data-guide-tab="squads"]', title: () => this.t().adminGuide.squadsTabTitle, text: () => this.t().adminGuide.squadsTabText, action: 'click' },
+      { target: '[data-guide-target="admin-squads"]', title: () => this.t().adminGuide.squadsManageTitle, text: () => this.t().adminGuide.squadsManageText },
+    ],
+    rules: [
+      { target: '[data-guide-target="admin-rule-settings"]', title: () => this.t().adminGuide.rulesBasicsTitle, text: () => this.t().adminGuide.rulesBasicsText, noScroll: 'both' },
+      { target: '[data-guide-target="admin-clock-settings"]', title: () => this.t().adminGuide.rulesClockTitle, text: () => this.t().adminGuide.rulesClockText },
+      { target: '[data-guide-target="admin-tiebreakers"]', title: () => this.t().adminGuide.rulesTiebreakersTitle, text: () => this.t().adminGuide.rulesTiebreakersText },
+    ],
+    schedule: [
+      { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.scheduleTabTitle, text: () => this.t().adminGuide.scheduleTabText, action: 'click' },
+      { target: '[data-guide-target="admin-fixture-generator"]', title: () => this.t().adminGuide.scheduleGenerateTitle, text: () => this.t().adminGuide.scheduleGenerateText },
+      { target: '[data-guide-target="admin-schedule-list"]', title: () => this.t().adminGuide.scheduleEditTitle, text: () => this.t().adminGuide.scheduleEditText },
+    ],
+    users: [
+      { target: '[data-guide-target="admin-user-create"]', title: () => this.t().adminGuide.usersCreateTitle, text: () => this.t().adminGuide.usersCreateText },
+      { target: '[data-guide-target="admin-user-list"]', title: () => this.t().adminGuide.usersManageTitle, text: () => this.t().adminGuide.usersManageText },
+    ],
+    connectivity: [
+      { target: '[data-guide-target="tournament-status"]', title: () => this.t().adminGuide.connectivityStatusTitle, text: () => this.t().adminGuide.connectivityStatusText },
+      { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.connectivityUpdatesTitle, text: () => this.t().adminGuide.connectivityUpdatesText, action: 'click' },
+      { target: '[data-guide-target="tournament-match"]', title: () => this.t().adminGuide.connectivityUpdatesTitle, text: () => this.t().adminGuide.connectivityUpdatesText },
+    ],
   };
 
   protected currentSteps(): AdminGuideStep[] {
@@ -206,8 +311,10 @@ export class AdminGuide {
     if (!guide) return [];
     const slug = this.slug() ?? this.guideSlug() ?? this.currentSlug();
     const route = guide === 'create' ? '/admin'
-      : ['overview', 'fixtures', 'knockout'].includes(guide) ? `/${slug ?? ''}`
-        : `/admin/${slug ?? ''}${guide === 'live' ? '/live' : ''}`;
+      : guide === 'users' ? '/admin/users'
+        : guide === 'match' ? this.matchRoute() ?? ''
+          : ['overview', 'fixtures', 'knockout', 'connectivity'].includes(guide) ? `/${slug ?? ''}`
+            : `/admin/${slug ?? ''}${['live', 'events'].includes(guide) ? '/live' : ''}`;
     return this.guideSteps[guide].map((step) => ({ ...step, route }));
   }
 
@@ -216,31 +323,73 @@ export class AdminGuide {
     if (!id) return this.t().adminGuide.title;
     return ['overview', 'fixtures', 'knockout'].includes(id)
       ? this.t().guide[`${id}Title` as 'overviewTitle' | 'fixturesTitle' | 'knockoutTitle']
-      : this.t().adminGuide[`${id}Title` as 'createTitle' | 'setupTitle' | 'liveTitle'];
+      : this.t().adminGuide[`${id}Title` as 'createTitle' | 'setupTitle' | 'liveTitle' | 'matchTitle' | 'eventsTitle' | 'squadsTitle' | 'rulesTitle' | 'scheduleTitle' | 'usersTitle' | 'connectivityTitle'];
   }
   protected guideText(id: GuideId): string {
     return ['overview', 'fixtures', 'knockout'].includes(id)
       ? this.t().guide[`${id}Text` as 'overviewText' | 'fixturesText' | 'knockoutText']
-      : this.t().adminGuide[`${id}Text` as 'createText' | 'setupText' | 'liveText'];
+      : this.t().adminGuide[`${id}Text` as 'createText' | 'setupText' | 'liveText' | 'matchText' | 'eventsText' | 'squadsText' | 'rulesText' | 'scheduleText' | 'usersText' | 'connectivityText'];
   }
-  protected guideIcon(id: GuideId): string {
+  protected guideIcon(id: GuideId): IconDefinition {
     return id === 'overview'
-      ? 'fa-book-open'
+      ? faBookOpen
       : id === 'fixtures'
-        ? 'fa-calendar-days'
+        ? faCalendarDays
         : id === 'knockout'
-          ? 'fa-trophy'
-          : id === 'create'
-            ? 'fa-plus'
-            : id === 'setup'
-              ? 'fa-gear'
-              : 'fa-play';
+          ? faTrophy
+          : id === 'match'
+            ? faFutbol
+            : id === 'connectivity'
+              ? faSignal
+              : id === 'create'
+                ? faPlus
+                : id === 'setup'
+                  ? faGear
+                  : id === 'rules'
+                    ? faScaleBalanced
+                    : id === 'squads'
+                      ? faUsers
+                      : id === 'schedule'
+                        ? faCalendarCheck
+                        : id === 'events'
+                          ? faListUl
+                          : id === 'users'
+                            ? faUserShield
+                            : faPlay;
   }
-  protected canStart(id: GuideId): boolean { return id === 'knockout' ? this.knockoutSlug() !== null : true; }
+  protected canStart(id: GuideId): boolean {
+    if (this.organizerGuideIds.includes(id) && !this.canSeeOrganizerGuides()) return false;
+    if (id === 'knockout') return !!this.knockoutSlug();
+    if (id === 'match') return !!this.matchRoute();
+    if (id === 'events') return !!this.eventSlug();
+    if (id === 'squads') return !!this.squadSlug();
+    if (id === 'schedule') return !!this.fixtureSlug();
+    if (id === 'users') return this.auth.isAdmin();
+    return true;
+  }
+  protected unavailableText(id: GuideId): string | null {
+    if (this.canStart(id)) return null;
+    if (this.organizerGuideIds.includes(id) && !this.canSeeOrganizerGuides()) return this.t().adminGuide.organizerOnly;
+    if (id === 'knockout') return this.t().adminGuide.noKnockout;
+    if (id === 'match' || id === 'schedule') return this.t().adminGuide.noMatches;
+    if (id === 'events' || id === 'squads') return this.t().adminGuide.noPlayerTracking;
+    if (id === 'users') return this.t().adminGuide.adminOnly;
+    return null;
+  }
   protected isGuideCompleted(id: GuideId): boolean { return this.completedGuides().includes(id); }
+  protected canSeeOrganizerGuides(): boolean {
+    const role = this.auth.user()?.role;
+    return role === 'Editor' || role === 'Admin';
+  }
+  protected visibleGuideIds(): GuideId[] {
+    return this.guideCategory() === 'organizer' && this.canSeeOrganizerGuides()
+      ? this.organizerGuideIds
+      : this.visitorGuideIds;
+  }
   private currentSlug(): string | null {
-    const match = this.router.url.match(/^\/(?:admin\/)?([^/?]+)/);
-    return match && match[1] !== 'admin' ? match[1] : null;
+    const segments = this.router.url.split(/[/?]/).filter(Boolean);
+    if (segments[0] === 'admin') return segments[1] && segments[1] !== 'users' ? segments[1] : null;
+    return segments[0] && segments[0] !== 'login' ? segments[0] : null;
   }
 
   protected dialogPosition(): { top?: number; left?: number } {
@@ -264,26 +413,61 @@ export class AdminGuide {
     }
   }
   openLibrary(): void {
-    this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null); this.isOpen.set(true);
-    if (this.knockoutSlug() === undefined) this.loadKnockoutSlug();
+    this.dismissHint(); this.activeGuide.set(null); this.step.set(0); this.targetRect.set(null);
+    this.guideCategory.set(this.router.url.startsWith('/admin') && this.canSeeOrganizerGuides() ? 'organizer' : 'visitor');
+    this.isOpen.set(true);
+    this.contextPromise = this.resolveGuideContexts();
   }
-  private async loadKnockoutSlug(): Promise<void> {
-    const tournaments = await firstValueFrom(this.api.getTournaments());
-    const withBracket = tournaments.find((tournament) => tournament.format === 'GroupsThenKnockout' || tournament.format === 'KnockoutOnly');
-    this.knockoutSlug.set(withBracket?.slug ?? null);
+  private loadGuideContexts(): Promise<void> {
+    this.contextPromise ??= this.resolveGuideContexts();
+    return this.contextPromise;
+  }
+  private async resolveGuideContexts(): Promise<void> {
+    try {
+      const tournaments = await firstValueFrom(this.api.getTournaments());
+      const withBracket = tournaments.find((tournament) => tournament.format === 'GroupsThenKnockout' || tournament.format === 'KnockoutOnly');
+      const withPlayers = tournaments.find((tournament) => tournament.trackPlayers);
+      const withPlayerMatches = tournaments.find((tournament) => tournament.trackPlayers && tournament.matchCount > 0);
+      const withFixtures = tournaments.find((tournament) => tournament.matchCount > 0);
+      this.defaultSlug.set(tournaments[0]?.slug ?? null);
+      this.knockoutSlug.set(withBracket?.slug ?? null);
+      this.squadSlug.set(withPlayers?.slug ?? null);
+      this.eventSlug.set(withPlayerMatches?.slug ?? null);
+      this.fixtureSlug.set(withFixtures?.slug ?? null);
+
+      if (withFixtures) {
+        const detail = await firstValueFrom(this.api.getTournament(withFixtures.slug));
+        const match = detail.matches[0];
+        this.matchRoute.set(match ? `/${withFixtures.slug}/matches/${match.id}` : null);
+      } else {
+        this.matchRoute.set(null);
+      }
+    } catch {
+      this.defaultSlug.set(null);
+      this.knockoutSlug.set(null);
+      this.squadSlug.set(null);
+      this.eventSlug.set(null);
+      this.fixtureSlug.set(null);
+      this.matchRoute.set(null);
+    }
   }
   dismissHint(): void { this.showHint.set(false); localStorage.setItem('ligacup-guide-hint-dismissed', 'true'); }
   async startGuide(id: GuideId): Promise<void> {
     this.activeGuide.set(id);
     this.step.set(0);
+    await this.loadGuideContexts();
 
     if (id === 'knockout') {
       // The current page's tournament may not have a bracket, so always jump to one that does.
-      if (this.knockoutSlug() === undefined) await this.loadKnockoutSlug();
       this.guideSlug.set(this.knockoutSlug() ?? null);
-    } else if (id !== 'create' && !this.slug() && !this.guideSlug() && !this.currentSlug()) {
-      const tournaments = await firstValueFrom(this.api.getTournaments());
-      this.guideSlug.set(tournaments[0]?.slug ?? null);
+    } else if (id === 'events') {
+      this.guideSlug.set(this.eventSlug() ?? null);
+    } else if (id === 'squads') {
+      this.guideSlug.set(this.squadSlug() ?? null);
+    } else if (['match', 'schedule', 'live', 'fixtures', 'connectivity'].includes(id)) {
+      this.guideSlug.set(this.fixtureSlug() ?? null);
+    } else if (!['create', 'users'].includes(id) && !this.slug() && !this.currentSlug()) {
+      this.guideSlug.set(this.defaultSlug() ?? null);
     }
 
     const route = this.currentSteps()[0]?.route;

@@ -37,6 +37,7 @@ public static class FixtureGenerator
                     Round = (round * matchdaysPerLeg) + matchday,
                     HomeTeamId = swap ? away.Id : home.Id,
                     AwayTeamId = swap ? home.Id : away.Id,
+                    Venue = tournament.Location,
                     Status = MatchStatus.Scheduled
                 });
             }
@@ -127,6 +128,7 @@ public static class FixtureGenerator
                 Round = tieNumber,
                 HomePlaceholder = $"Seed {(tie * 2) + 1}",
                 AwayPlaceholder = $"Seed {(tie * 2) + 2}",
+                Venue = tournament.Location,
                 Status = MatchStatus.Scheduled
             });
 
@@ -150,6 +152,7 @@ public static class FixtureGenerator
                     Round = tieNumber,
                     HomePlaceholder = $"Winner {previousLabels[tie * 2]}",
                     AwayPlaceholder = $"Winner {previousLabels[(tie * 2) + 1]}",
+                    Venue = tournament.Location,
                     Status = MatchStatus.Scheduled
                 });
 
@@ -171,6 +174,7 @@ public static class FixtureGenerator
                 Round = tieNumber,
                 HomePlaceholder = $"Loser SF{semiFinals[0].Round}",
                 AwayPlaceholder = $"Loser SF{semiFinals[1].Round}",
+                Venue = tournament.Location,
                 Status = MatchStatus.Scheduled
             });
         }

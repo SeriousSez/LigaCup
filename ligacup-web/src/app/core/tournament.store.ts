@@ -36,7 +36,11 @@ export class TournamentStore {
 
         try {
             this.detail.set(await firstValueFrom(this.api.getTournament(slug)));
-            await this.live.watch(slug, (update) => this.apply(update));
+            await this.live.watch(
+                slug,
+                (update) => this.apply(update),
+                async () => this.reload(),
+            );
         } catch {
             this.detail.set(null);
             this.error.set('That tournament could not be loaded.');

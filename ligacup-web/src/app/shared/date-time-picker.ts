@@ -1,16 +1,18 @@
 import { Component, ElementRef, HostListener, forwardRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
     selector: 'app-date-time-picker',
-    imports: [FormsModule],
+    imports: [FormsModule, FontAwesomeModule],
     providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => DateTimePicker), multi: true }],
     template: `
     <div class="picker">
       <button class="picker-input" type="button" [disabled]="disabled()" (click)="toggle()">
         <span>{{ displayValue() || placeholder() || t().datePicker.placeholder }}</span>
-        <i class="fa-duotone fa-solid fa-calendar-days" aria-hidden="true"></i>
+        <fa-icon [icon]="faCalendarDays" aria-hidden="true" />
       </button>
       @if (open()) {
         <div class="calendar" role="dialog" [attr.aria-label]="ariaLabel() || t().datePicker.ariaLabel">
@@ -45,6 +47,7 @@ import { I18nService } from '../core/i18n/i18n.service';
     .picker { width: 100%; }
     .picker-input { width: 100%; min-height: var(--tap); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px solid var(--surface-line); border-radius: 10px; font: inherit; font-size: 16px; text-align: left; color: var(--text); background: var(--pitch-800); }
     .picker-input i { color: var(--accent); }
+      .picker-input fa-icon { color: var(--accent); }
     .calendar { position: absolute; top: calc(100% + 0.45rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: 0.8rem; border: 1px solid var(--surface-line); border-radius: 12px; background: var(--surface-raised); box-shadow: var(--shadow); z-index: 50; }
     .calendar-header, .weekdays, .days, .calendar-footer { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; }
     .calendar-header { grid-template-columns: auto 1fr auto; align-items: center; margin-bottom: 0.65rem; }
@@ -68,6 +71,7 @@ import { I18nService } from '../core/i18n/i18n.service';
   `,
 })
 export class DateTimePicker implements ControlValueAccessor {
+      protected readonly faCalendarDays = faCalendarDays;
     readonly placeholder = input<string | null>(null);
     readonly ariaLabel = input<string | null>(null);
     protected readonly open = signal(false);

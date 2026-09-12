@@ -26,8 +26,8 @@ type FixtureView = 'rounds' | 'all';
         <div>
           <h1>{{ data.tournament.name }}</h1>
           <p class="muted">
-            {{ data.tournament.season }} &middot; {{ data.teams.length }} {{ t().common.teams }}
-            &middot; {{ t().format[data.tournament.format] }}
+            {{ data.teams.length }} {{ t().common.teams }} &middot;
+            {{ t().format[data.tournament.format] }}
             @if (data.tournament.tournamentDateUtc) {
               &middot; {{ data.tournament.tournamentDateUtc | date: 'd MMM yyyy HH:mm' : undefined : locale() }}
             }
@@ -50,8 +50,8 @@ type FixtureView = 'rounds' | 'all';
             <a [routerLink]="['/admin', data.tournament.slug]">
               <button class="ghost" type="button">{{ t().tournament.setup }}</button>
             </a>
-            <a [routerLink]="['/admin', data.tournament.slug, 'live']">
-              <button type="button">{{ t().tournament.liveConsole }}</button>
+            <a class="live-console-link" [routerLink]="['/admin', data.tournament.slug, 'live']">
+              {{ t().tournament.liveConsole }}
             </a>
           }
         </div>
@@ -216,6 +216,16 @@ type FixtureView = 'rounds' | 'all';
     .heading p {
       margin: 0;
       font-size: 0.9rem;
+    }
+
+    .live-console-link {
+      padding: 0.6rem 0.9rem;
+      border: 1px solid var(--accent-strong);
+      border-radius: 10px;
+      background: var(--accent-strong);
+      color: var(--pitch-900);
+      font-weight: 600;
+      text-decoration: none;
     }
 
     .live-strip {

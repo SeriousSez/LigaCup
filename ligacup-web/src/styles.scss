@@ -369,8 +369,3 @@ th.numeric {
     white-space: nowrap;
     border: 0;
 }
-
-/* The FontAwesome kit ships duotone only, so both layers are drawn solid. */
-.fa-duotone {
-    --fa-secondary-opacity: 1;
-}

@@ -37,7 +37,7 @@ import { AdminGuide } from './shared/admin-guide';
             [attr.aria-label]="t().nav.languageLabel"
             (click)="i18n.toggle()"
           >
-            {{ i18n.language() === 'da' ? 'EN' : 'DA' }}
+            {{ i18n.language() === 'da' ? 'DA' : 'EN' }}
           </button>
         </nav>
       </div>

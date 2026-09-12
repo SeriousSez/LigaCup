@@ -77,6 +77,7 @@ export interface TournamentSummary {
     slug: string;
     description: string | null;
     rules: string | null;
+    location: string | null;
     tournamentDateUtc: string | null;
     season: number;
     format: TournamentFormat;
@@ -109,6 +110,7 @@ export interface SaveTournamentRequest {
     slug: string | null;
     description: string | null;
     rules: string | null;
+    location: string | null;
     tournamentDateUtc: string | null;
     season: number;
     format: TournamentFormat;

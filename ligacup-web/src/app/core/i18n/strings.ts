@@ -1,10 +1,18 @@
 type AdminGuideKey =
     | 'open' | 'close' | 'kicker' | 'title' | 'libraryTitle' | 'libraryText' | 'start' | 'restart' | 'completed' | 'allGuides'
-    | 'hintTitle' | 'hintText' | 'show' | 'dismiss' | 'back' | 'next' | 'done' | 'createTitle' | 'createText' | 'createNameTitle' | 'createNameText'
+    | 'hintTitle' | 'hintText' | 'show' | 'dismiss' | 'back' | 'next' | 'done' | 'visitorGuides' | 'organizerGuides' | 'createTitle' | 'createText' | 'createNameTitle' | 'createNameText'
     | 'createFormatTitle' | 'createFormatText' | 'createSubmitTitle' | 'createSubmitText' | 'setupTitle'
     | 'setupText' | 'setupRulesTitle' | 'setupRulesText' | 'setupTeamsTitle' | 'setupTeamsText'
     | 'setupFixturesTitle' | 'setupFixturesText' | 'liveTitle' | 'liveText' | 'livePickerTitle'
-    | 'livePickerText' | 'liveScoreTitle' | 'liveScoreText' | 'liveStatusTitle' | 'liveStatusText' | 'noKnockout';
+    | 'livePickerText' | 'liveScoreTitle' | 'liveScoreText' | 'liveStatusTitle' | 'liveStatusText'
+    | 'matchTitle' | 'matchText' | 'matchScoreTitle' | 'matchScoreText' | 'matchEventsTitle' | 'matchEventsText' | 'matchDetailsTitle' | 'matchDetailsText'
+    | 'eventsTitle' | 'eventsText' | 'eventsPickerTitle' | 'eventsPickerText' | 'eventsFormTitle' | 'eventsFormText'
+    | 'squadsTitle' | 'squadsText' | 'squadsTabTitle' | 'squadsTabText' | 'squadsManageTitle' | 'squadsManageText'
+    | 'rulesTitle' | 'rulesText' | 'rulesBasicsTitle' | 'rulesBasicsText' | 'rulesClockTitle' | 'rulesClockText' | 'rulesTiebreakersTitle' | 'rulesTiebreakersText'
+    | 'scheduleTitle' | 'scheduleText' | 'scheduleTabTitle' | 'scheduleTabText' | 'scheduleGenerateTitle' | 'scheduleGenerateText' | 'scheduleEditTitle' | 'scheduleEditText'
+    | 'usersTitle' | 'usersText' | 'usersCreateTitle' | 'usersCreateText' | 'usersManageTitle' | 'usersManageText'
+    | 'connectivityTitle' | 'connectivityText' | 'connectivityStatusTitle' | 'connectivityStatusText' | 'connectivityUpdatesTitle' | 'connectivityUpdatesText'
+    | 'noKnockout' | 'noMatches' | 'noPlayerTracking' | 'organizerOnly' | 'adminOnly';
 
 export interface Strings {
     nav: {
@@ -223,6 +231,18 @@ export interface Strings {
         ownGoalShort: string;
         penaltyShort: string;
         pitch: string;
+        openMaps: string;
+    };
+    matchPage: {
+        open: string;
+        back: string;
+        notFound: string;
+        events: string;
+        noEvents: string;
+        details: string;
+        kickoff: string;
+        venue: string;
+        notes: string;
     };
     placeholder: {
         winner: string;
@@ -320,8 +340,21 @@ export interface Strings {
         schedule: string;
         addMatch: string;
         saveSchedule: string;
+        saveAllSchedule: string;
+        saveScheduleChanges: string;
+        unsavedScheduleTitle: string;
+        unsavedScheduleMessage: string;
+        stayOnPage: string;
+        discardScheduleChanges: string;
+        fixturesNeedReviewTitle: string;
+        fixturesNeedReviewMessage: string;
+        reviewFixtures: string;
+        leaveAnyway: string;
         kickoff: string;
         pitchNumber: string;
+        location: string;
+        locationPlaceholder: string;
+        locationOverridePlaceholder: string;
         homeTeam: string;
         awayTeam: string;
         groupStage: string;
@@ -338,6 +371,7 @@ export interface Strings {
         title: string;
         setup: string;
         publicPage: string;
+        matchPage: string;
         match: string;
         homeGoalAdd: string;
         homeGoalRemove: string;
@@ -438,11 +472,36 @@ export const danish: Strings = {
         knockoutMatchText: 'Kampkortet viser hold, resultat og status for hver kamp i slutspillet.',
     },
     adminGuide: {
-        open: 'Åbn arrangørguide', close: 'Luk guide', kicker: 'Arrangørguide', title: 'Kom godt i gang',
-        libraryTitle: 'Hvad vil du gøre?', libraryText: 'Vælg en guide til de vigtigste arrangøropgaver.', start: 'Start guide', restart: 'Start igen', completed: 'Gennemført', allGuides: 'Alle guider', hintTitle: 'Ny til Liga Cup?', hintText: 'Se en kort guide til de vigtigste funktioner.', show: 'Vis guide', dismiss: 'Luk guide', back: 'Tilbage', next: 'Næste', done: 'Færdig', noKnockout: 'Ingen af dine turneringer har et slutspil endnu.',
+        open: 'Åbn guide', close: 'Luk guide', kicker: 'Liga Cup guide', title: 'Kom godt i gang',
+        libraryTitle: 'Hvad vil du vide?', libraryText: 'Vælg en kort guide til Liga Cups vigtigste funktioner.', visitorGuides: 'Tilskuerguides', organizerGuides: 'Arrangørguides', start: 'Start guide', restart: 'Start igen', completed: 'Gennemført', allGuides: 'Alle guider', hintTitle: 'Ny til Liga Cup?', hintText: 'Se en kort guide til de vigtigste funktioner.', show: 'Vis guide', dismiss: 'Luk guide', back: 'Tilbage', next: 'Næste', done: 'Færdig', noKnockout: 'Ingen af dine turneringer har et slutspil endnu.',
         createTitle: 'Opret turnering', createText: 'Opret en ny turnering fra administrationsforsiden.', createNameTitle: 'Giv turneringen et navn', createNameText: 'Skriv turneringens navn og vælg sæsonen, så den er let at finde.', createFormatTitle: 'Vælg format', createFormatText: 'Vælg liga, grupper eller knockout efter den turnering, du vil afvikle.', createSubmitTitle: 'Opret turneringen', createSubmitText: 'Tryk på Opret for at gemme turneringen og åbne den i administrationen.',
         setupTitle: 'Konfigurer turnering', setupText: 'Tilføj hold, grupper og regler, før kampene spilles.', setupRulesTitle: 'Start med reglerne', setupRulesText: 'Vælg format, point, tiebreakere og eventuelt kampur.', setupTeamsTitle: 'Tilføj hold og grupper', setupTeamsText: 'Opret grupper og tilføj hold med navn og forkortelse.', setupFixturesTitle: 'Generer kampprogrammet', setupFixturesText: 'Når holdene er klar, genererer du gruppekampe og eventuelt slutspil.',
         liveTitle: 'Opdater live-resultater', liveText: 'Brug livekonsollen under kampene.', livePickerTitle: 'Vælg kampen', livePickerText: 'Vælg den kamp, du vil styre, fra kampvælgeren.', liveScoreTitle: 'Opdater stillingen', liveScoreText: 'Brug plus- og minusknapperne til at registrere mål for hvert hold.', liveStatusTitle: 'Styr kampens status', liveStatusText: 'Start kampen, sæt den på pause eller afslut den, når dommeren fløjter.',
+        matchTitle: 'Følg en livekamp', matchText: 'Se resultat, kampur, hændelser og praktiske oplysninger på kampens egen side.',
+        matchScoreTitle: 'Følg resultatet', matchScoreText: 'Resultat, kampstatus og kampur opdateres automatisk, mens kampen spilles.',
+        matchEventsTitle: 'Se kampens hændelser', matchEventsText: 'Mål, kort, assists og udskiftninger vises her, så snart arrangøren registrerer dem.',
+        matchDetailsTitle: 'Find kampoplysninger', matchDetailsText: 'Her finder du kampstart, bane, spillested og eventuelle noter.',
+        eventsTitle: 'Registrer kamphændelser', eventsText: 'Registrer målscorere, kort, assists og udskiftninger under kampen.',
+        eventsPickerTitle: 'Vælg den rigtige kamp', eventsPickerText: 'Start med at vælge kampen, som hændelsen hører til.',
+        eventsFormTitle: 'Tilføj en hændelse', eventsFormText: 'Vælg hold, spiller, hændelsestype og minut. Resultatet opdateres automatisk ved mål.',
+        squadsTitle: 'Opbyg spillertrupper', squadsText: 'Tilføj spillernavne og trøjenumre til turneringens hold.',
+        squadsTabTitle: 'Åbn spillertrupper', squadsTabText: 'Fanen vises, når spillerregistrering er slået til for turneringen.',
+        squadsManageTitle: 'Administrer spillerne', squadsManageText: 'Tilføj eller fjern spillere for hvert hold efter den valgte registreringsform.',
+        rulesTitle: 'Konfigurer turneringsregler', rulesText: 'Tilpas format, point, kampur og rækkefølgen af tiebreakere.',
+        rulesBasicsTitle: 'Vælg grundreglerne', rulesBasicsText: 'Indstil turneringsformat, point, antal runder, oprykning og spillerregistrering.',
+        rulesClockTitle: 'Indstil kampuret', rulesClockText: 'Vælg perioder, spilletid, pauser, kampinterval og tillægstid.',
+        rulesTiebreakersTitle: 'Prioriter tiebreakere', rulesTiebreakersText: 'Rækkefølgen bestemmer, hvordan hold med lige mange point placeres.',
+        scheduleTitle: 'Administrer kampprogrammet', scheduleText: 'Generer kampe og tilpas hold, kampstart og bane.',
+        scheduleTabTitle: 'Åbn kampprogrammet', scheduleTabText: 'Her genererer og redigerer du turneringens kampe.',
+        scheduleGenerateTitle: 'Generer kampe', scheduleGenerateText: 'Vælg gruppespil eller slutspil. Brug kun Erstat eksisterende, når det nuværende program må overskrives.',
+        scheduleEditTitle: 'Tilpas tidsplanen', scheduleEditText: 'Rediger hold, kampstart, bane og eventuelt spillested for hver kamp, og gem ændringerne enkeltvis.',
+        usersTitle: 'Administrer brugere', usersText: 'Opret brugere og styr deres adgang til administrationen.',
+        usersCreateTitle: 'Opret en bruger', usersCreateText: 'Angiv brugernavn, adgangskode og rolle. Redaktører kan afvikle kampe, mens administratorer også kan styre brugere.',
+        usersManageTitle: 'Vedligehold adgang', usersManageText: 'Skift rolle, deaktiver konti, nulstil adgangskoder eller fjern brugere.',
+        connectivityTitle: 'Forstå liveforbindelsen', connectivityText: 'Se, hvordan live-status og automatiske opdateringer fungerer for tilskuere.',
+        connectivityStatusTitle: 'Kontrollér forbindelsen', connectivityStatusText: 'Statusmærket viser, om siden modtager liveopdateringer. Siden forbinder automatisk igen efter en afbrydelse.',
+        connectivityUpdatesTitle: 'Følg opdateringerne', connectivityUpdatesText: 'Resultater, status og hændelser ændres automatisk uden at genindlæse siden.',
+        noMatches: 'Opret et kampprogram først.', noPlayerTracking: 'Kræver en turnering med spillerregistrering.', organizerOnly: 'Kræver adgang som arrangør.', adminOnly: 'Kræver administratoradgang.',
     },
     home: {
         tagline:
@@ -625,6 +684,18 @@ export const danish: Strings = {
         ownGoalShort: '(selvmål)',
         penaltyShort: '(straffe)',
         pitch: 'Bane',
+        openMaps: 'Åbn {address} i Kort',
+    },
+    matchPage: {
+        open: 'Åbn kampen mellem {home} og {away}',
+        back: 'Tilbage til turneringen',
+        notFound: 'Kampen kunne ikke findes.',
+        events: 'Kamphændelser',
+        noEvents: 'Der er endnu ikke registreret nogen hændelser.',
+        details: 'Kampoplysninger',
+        kickoff: 'Kampstart',
+        venue: 'Spillested',
+        notes: 'Noter',
     },
     placeholder: {
         winner: 'Vinder af {label}',
@@ -722,9 +793,22 @@ export const danish: Strings = {
         fixtures: 'Kampprogram',
         schedule: 'Tidspunkter for kampe',
         addMatch: 'Tilføj kamp',
-        saveSchedule: 'Gem tidspunkt',
+        saveSchedule: 'Gem kamp',
+        saveAllSchedule: 'Gem alle',
+        saveScheduleChanges: 'Gem ændringer',
+        unsavedScheduleTitle: 'Gem ændringer?',
+        unsavedScheduleMessage: 'Dine ændringer er ikke blevet gemt.',
+        stayOnPage: 'Fortsæt redigering',
+        discardScheduleChanges: 'Kassér',
+        fixturesNeedReviewTitle: 'Gennemgå kampprogrammet',
+        fixturesNeedReviewMessage: 'Holdene eller gruppeinddelingen er ændret. Gennemgå eller gendan kampprogrammet, så det stadig passer.',
+        reviewFixtures: 'Gennemgå kampe',
+        leaveAnyway: 'Forlad alligevel',
         kickoff: 'Starttidspunkt',
         pitchNumber: 'Bane nr.',
+        location: 'Sted',
+        locationPlaceholder: 'Adresse eller spillested',
+        locationOverridePlaceholder: 'Brug turneringens sted',
         homeTeam: 'Hjemmehold',
         awayTeam: 'Udehold',
         fixturesHelp:
@@ -744,6 +828,7 @@ export const danish: Strings = {
         title: 'Livekonsol',
         setup: 'Opsætning',
         publicPage: 'Offentlig side',
+        matchPage: 'Kampside',
         match: 'Kamp',
         homeGoalAdd: 'Tilføj mål til hjemmeholdet',
         homeGoalRemove: 'Fjern mål fra hjemmeholdet',
@@ -845,11 +930,36 @@ export const english: Strings = {
         knockoutMatchText: 'Each match card shows the teams, result and status for a knockout tie.',
     },
     adminGuide: {
-        open: 'Open organiser guide', close: 'Close guide', kicker: 'Organiser guide', title: 'Getting started',
-        libraryTitle: 'What would you like to do?', libraryText: 'Choose a guide for the most important organiser tasks.', start: 'Start guide', restart: 'Restart guide', completed: 'Completed', allGuides: 'All guides', hintTitle: 'New to Liga Cup?', hintText: 'Take a short tour of the most important features.', show: 'Show me', dismiss: 'Dismiss guide', back: 'Back', next: 'Next', done: 'Done', noKnockout: 'None of your tournaments have a knockout stage yet.',
+        open: 'Open guide', close: 'Close guide', kicker: 'Liga Cup guide', title: 'Getting started',
+        libraryTitle: 'What would you like to explore?', libraryText: 'Choose a short guide to the most important Liga Cup features.', visitorGuides: 'Visitor guides', organizerGuides: 'Organiser guides', start: 'Start guide', restart: 'Restart guide', completed: 'Completed', allGuides: 'All guides', hintTitle: 'New to Liga Cup?', hintText: 'Take a short tour of the most important features.', show: 'Show me', dismiss: 'Dismiss guide', back: 'Back', next: 'Next', done: 'Done', noKnockout: 'None of your tournaments have a knockout stage yet.',
         createTitle: 'Create a tournament', createText: 'Create a new tournament from the admin home.', createNameTitle: 'Name the tournament', createNameText: 'Enter the tournament name and season so it is easy to find.', createFormatTitle: 'Choose the format', createFormatText: 'Choose league, groups or knockout for the tournament you want to run.', createSubmitTitle: 'Create the tournament', createSubmitText: 'Press Create to save the tournament and open it in admin.',
         setupTitle: 'Set up the tournament', setupText: 'Add teams, groups and rules before matches are played.', setupRulesTitle: 'Start with the rules', setupRulesText: 'Choose the format, points, tiebreakers and optional match clock.', setupTeamsTitle: 'Add teams and groups', setupTeamsText: 'Create groups and add teams with a name and short name.', setupFixturesTitle: 'Generate fixtures', setupFixturesText: 'When teams are ready, generate group fixtures and optionally the knockout stage.',
         liveTitle: 'Update live results', liveText: 'Use the live console during matches.', livePickerTitle: 'Choose the match', livePickerText: 'Select the match you want to control from the match picker.', liveScoreTitle: 'Update the score', liveScoreText: 'Use the plus and minus buttons to record goals for each team.', liveStatusTitle: 'Control match status', liveStatusText: 'Start, pause or finish the match as the referee calls it.',
+        matchTitle: 'Follow a live match', matchText: 'See the score, clock, events and practical details on the dedicated match page.',
+        matchScoreTitle: 'Follow the score', matchScoreText: 'The score, match status and clock update automatically while the match is played.',
+        matchEventsTitle: 'Read the match events', matchEventsText: 'Goals, cards, assists and substitutions appear here as soon as the organiser records them.',
+        matchDetailsTitle: 'Find match information', matchDetailsText: 'Kickoff, pitch, venue and any match notes are shown here.',
+        eventsTitle: 'Record match events', eventsText: 'Record goalscorers, cards, assists and substitutions during a match.',
+        eventsPickerTitle: 'Choose the right match', eventsPickerText: 'Start by selecting the match that the event belongs to.',
+        eventsFormTitle: 'Add an event', eventsFormText: 'Choose the team, player, event type and minute. Goals update the score automatically.',
+        squadsTitle: 'Build squads', squadsText: 'Add player names and shirt numbers to the tournament teams.',
+        squadsTabTitle: 'Open squads', squadsTabText: 'This tab is available when player tracking is enabled for the tournament.',
+        squadsManageTitle: 'Manage players', squadsManageText: 'Add or remove players for each team using the configured registration mode.',
+        rulesTitle: 'Configure tournament rules', rulesText: 'Adjust the format, points, match clock and tiebreaker order.',
+        rulesBasicsTitle: 'Choose the basic rules', rulesBasicsText: 'Set the tournament format, points, rounds, advancement and player tracking.',
+        rulesClockTitle: 'Configure the match clock', rulesClockText: 'Choose periods, playing time, breaks, match intervals and added time.',
+        rulesTiebreakersTitle: 'Prioritise tiebreakers', rulesTiebreakersText: 'The order determines how teams level on points are ranked.',
+        scheduleTitle: 'Manage the schedule', scheduleText: 'Generate fixtures and adjust teams, kickoff times and pitches.',
+        scheduleTabTitle: 'Open the schedule', scheduleTabText: 'Generate and edit the tournament fixtures here.',
+        scheduleGenerateTitle: 'Generate fixtures', scheduleGenerateText: 'Choose group or knockout fixtures. Use Replace existing only when the current schedule may be overwritten.',
+        scheduleEditTitle: 'Adjust the schedule', scheduleEditText: 'Edit teams, kickoff, pitch and an optional location override for each match, then save each change individually.',
+        usersTitle: 'Manage users', usersText: 'Create users and control their access to administration.',
+        usersCreateTitle: 'Create a user', usersCreateText: 'Set a username, password and role. Editors can run matches, while administrators can also manage users.',
+        usersManageTitle: 'Maintain access', usersManageText: 'Change roles, deactivate accounts, reset passwords or remove users.',
+        connectivityTitle: 'Understand live connectivity', connectivityText: 'See how live status and automatic updates work for visitors.',
+        connectivityStatusTitle: 'Check the connection', connectivityStatusText: 'The status badge shows whether live updates are arriving. The page reconnects automatically after an interruption.',
+        connectivityUpdatesTitle: 'Follow the updates', connectivityUpdatesText: 'Scores, status and events change automatically without reloading the page.',
+        noMatches: 'Create a fixture schedule first.', noPlayerTracking: 'Requires a tournament with player tracking.', organizerOnly: 'Requires organiser access.', adminOnly: 'Requires administrator access.',
     },
     home: {
         tagline:
@@ -1015,7 +1125,7 @@ export const english: Strings = {
         noRules: 'Tournament rules have not been published yet.',
         matchday: 'Matchday',
         league: 'League',
-        bye: 'Bye',
+        bye: 'Sitting out',
         fixtureViewLabel: 'Fixture view',
         byRounds: 'Rounds',
         allMatches: 'All matches',
@@ -1032,6 +1142,18 @@ export const english: Strings = {
         ownGoalShort: '(og)',
         penaltyShort: '(pen)',
         pitch: 'Pitch',
+        openMaps: 'Open {address} in Maps',
+    },
+    matchPage: {
+        open: 'Open the match between {home} and {away}',
+        back: 'Back to tournament',
+        notFound: 'That match could not be found.',
+        events: 'Match events',
+        noEvents: 'No events have been recorded yet.',
+        details: 'Match details',
+        kickoff: 'Kickoff',
+        venue: 'Venue',
+        notes: 'Notes',
     },
     placeholder: {
         winner: 'Winner {label}',
@@ -1129,9 +1251,22 @@ export const english: Strings = {
         fixtures: 'Fixtures',
         schedule: 'Match schedule',
         addMatch: 'Add match',
-        saveSchedule: 'Save time',
+        saveSchedule: 'Save match',
+        saveAllSchedule: 'Save all',
+        saveScheduleChanges: 'Save changes',
+        unsavedScheduleTitle: 'Save changes?',
+        unsavedScheduleMessage: 'Your changes have not been saved.',
+        stayOnPage: 'Keep editing',
+        discardScheduleChanges: 'Discard',
+        fixturesNeedReviewTitle: 'Review fixtures',
+        fixturesNeedReviewMessage: 'Teams or group assignments have changed. Review or regenerate the fixtures to keep the schedule accurate.',
+        reviewFixtures: 'Review fixtures',
+        leaveAnyway: 'Leave anyway',
         kickoff: 'Kickoff',
         pitchNumber: 'Pitch no.',
+        location: 'Location',
+        locationPlaceholder: 'Address or venue',
+        locationOverridePlaceholder: 'Use tournament location',
         homeTeam: 'Home team',
         awayTeam: 'Away team',
         fixturesHelp:
@@ -1150,6 +1285,7 @@ export const english: Strings = {
         title: 'Live console',
         setup: 'Setup',
         publicPage: 'Public page',
+        matchPage: 'Match page',
         match: 'Match',
         homeGoalAdd: 'Add a home goal',
         homeGoalRemove: 'Remove a home goal',
