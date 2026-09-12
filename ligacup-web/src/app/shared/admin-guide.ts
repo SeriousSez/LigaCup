@@ -46,6 +46,7 @@ interface AdminGuideStep {
   text: () => string;
   action?: 'click';
   activate?: string;
+  expand?: boolean;
   scrollBlock?: ScrollLogicalPosition;
   /** Skip auto-scrolling the target into view on this viewport; useful when scrolling would hide the step's content. */
   noScroll?: 'mobile' | 'desktop' | 'both';
@@ -288,9 +289,9 @@ export class AdminGuide {
       { target: '[data-guide-target="admin-squads"]', title: () => this.t().adminGuide.squadsManageTitle, text: () => this.t().adminGuide.squadsManageText, scrollBlock: 'center' },
     ],
     rules: [
-      { target: '[data-guide-target="admin-rule-settings"]', title: () => this.t().adminGuide.rulesBasicsTitle, text: () => this.t().adminGuide.rulesBasicsText, activate: '[data-guide-tab="rules"]', noScroll: 'both' },
-      { target: '[data-guide-target="admin-clock-settings"]', title: () => this.t().adminGuide.rulesClockTitle, text: () => this.t().adminGuide.rulesClockText, scrollBlock: 'center' },
-      { target: '[data-guide-target="admin-tiebreakers"]', title: () => this.t().adminGuide.rulesTiebreakersTitle, text: () => this.t().adminGuide.rulesTiebreakersText, scrollBlock: 'center' },
+      { target: '[data-guide-target="admin-rule-settings"]', title: () => this.t().adminGuide.rulesBasicsTitle, text: () => this.t().adminGuide.rulesBasicsText, activate: '[data-guide-tab="rules"]', expand: true, noScroll: 'both' },
+      { target: '[data-guide-target="admin-clock-settings"]', title: () => this.t().adminGuide.rulesClockTitle, text: () => this.t().adminGuide.rulesClockText, expand: true, scrollBlock: 'center' },
+      { target: '[data-guide-target="admin-tiebreakers"]', title: () => this.t().adminGuide.rulesTiebreakersTitle, text: () => this.t().adminGuide.rulesTiebreakersText, expand: true, scrollBlock: 'center' },
     ],
     schedule: [
       { target: '[data-guide-tab="fixtures"]', title: () => this.t().adminGuide.scheduleTabTitle, text: () => this.t().adminGuide.scheduleTabText, action: 'click' },
@@ -527,6 +528,9 @@ export class AdminGuide {
         }
         return;
       }
+      if (step.expand && element instanceof HTMLDetailsElement) {
+        element.open = true;
+      }
 
       const isMobile = typeof window !== 'undefined' && window.innerWidth <= 560;
       const skipScroll = !allowScroll || step?.noScroll === 'both' || step?.noScroll === (isMobile ? 'mobile' : 'desktop');
@@ -544,11 +548,12 @@ export class AdminGuide {
       }
       window.setTimeout(() => {
         const rect = element.getBoundingClientRect();
+        const spotlightMargin = 10;
         const targetRect = {
-          top: rect.top - 4,
-          left: rect.left - 4,
-          width: rect.width + 8,
-          height: rect.height + 8,
+          top: rect.top - spotlightMargin,
+          left: rect.left - spotlightMargin,
+          width: rect.width + spotlightMargin * 2,
+          height: rect.height + spotlightMargin * 2,
         };
         this.targetRect.set(targetRect);
         this.updateMobileDialogPosition(targetRect);
