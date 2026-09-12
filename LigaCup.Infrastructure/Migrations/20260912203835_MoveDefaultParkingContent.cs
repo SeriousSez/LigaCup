@@ -27,7 +27,7 @@ namespace LigaCup.Infrastructure.Migrations
         {
             migrationBuilder.Sql("""
                                 UPDATE "Tournaments"
-                                SET "Rules" = COALESCE("Rules", '') || '<h3>Parkering</h3><p><strong>Adresse:</strong> Ved stadion 5, 4600 Køge. Se gul ring rundt om P på kortet.</p><p>Følg derefter grusstien markeret med blå over til bane 6, markeret med gul ring, hvor kampene spilles.</p>',
+                                SET "Rules" = COALESCE("Rules", '') || '<p><strong>Adresse:</strong> Ved stadion 5, 4600 Køge. Se gul ring rundt om P på kortet.</p><p>Følg derefter grusstien markeret med blå over til bane 6, markeret med gul ring, hvor kampene spilles.</p>',
                                         "Parking" = NULL
                                 WHERE "Parking" = '<h3>Parkering</h3><p><strong>Adresse:</strong> Ved stadion 5, 4600 Køge. Se gul ring rundt om P på kortet.</p><p>Følg derefter grusstien markeret med blå over til bane 6, markeret med gul ring, hvor kampene spilles.</p>'
                                     AND INSTR(COALESCE("Rules", ''), '<h3>Parkering</h3><p><strong>Adresse:</strong> Ved stadion 5, 4600 Køge. Se gul ring rundt om P på kortet.</p><p>Følg derefter grusstien markeret med blå over til bane 6, markeret med gul ring, hvor kampene spilles.</p>') = 0;
