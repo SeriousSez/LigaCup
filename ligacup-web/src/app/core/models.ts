@@ -91,6 +91,7 @@ export interface TournamentSummary {
     breakDurationMinutes: number;
     matchIntervalMinutes: number | null;
     matchesPerTimeSlot: number;
+    firstHomeTeamId: number | null;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
     useStoppageTime: boolean;

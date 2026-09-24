@@ -129,10 +129,12 @@ export class ApiService {
         includeGroupStage: boolean,
         includeKnockoutStage: boolean,
         replaceExisting: boolean,
+        byeTeamIds: (number | null)[] | null,
+        firstHomeTeamId: number | null,
     ) {
         return this.http.post<{ generated: number }>(
             `${this.base}/api/admin/tournaments/${tournamentId}/fixtures`,
-            { includeGroupStage, includeKnockoutStage, replaceExisting },
+            { includeGroupStage, includeKnockoutStage, replaceExisting, byeTeamIds, firstHomeTeamId },
         );
     }
 

@@ -48,6 +48,7 @@ public record TournamentSummaryDto(
     int BreakDurationMinutes,
     int? MatchIntervalMinutes,
     int MatchesPerTimeSlot,
+    int? FirstHomeTeamId,
     bool TrackMatchClock,
     bool AllowTimeouts,
     bool UseStoppageTime,
@@ -229,7 +230,12 @@ public record TournamentDetailDto(
     IReadOnlyList<ScorerDto> TopScorers,
     string? Rules);
 
-public record GenerateFixturesRequest(bool IncludeGroupStage, bool IncludeKnockoutStage, bool ReplaceExisting);
+public record GenerateFixturesRequest(
+    bool IncludeGroupStage,
+    bool IncludeKnockoutStage,
+    bool ReplaceExisting,
+    IReadOnlyList<int?>? ByeTeamIds,
+    int? FirstHomeTeamId);
 
 /// <summary>Everything a connected client needs to repaint after a live change.</summary>
 public record LiveUpdateDto(

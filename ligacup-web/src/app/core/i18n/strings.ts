@@ -352,6 +352,9 @@ export interface Strings {
         shirtNumberPlaceholder: string;
         fixtures: string;
         fixturesHelp: string;
+        byeTeamForRound: string;
+        autoBye: string;
+        firstHomeTeam: string;
         schedule: string;
         addMatch: string;
         saveSchedule: string;
@@ -823,6 +826,9 @@ export const danish: Strings = {
         shirtNumberPlaceholder: 'Nr.',
         fixtures: 'Kampprogram',
         schedule: 'Tidspunkter for kampe',
+        byeTeamForRound: 'Hold der sidder over i runde',
+        autoBye: 'Automatisk',
+        firstHomeTeam: 'Første hjemmehold',
         addMatch: 'Tilføj kamp',
         saveSchedule: 'Gem kamp',
         saveAllSchedule: 'Gem alle',
@@ -850,8 +856,7 @@ export const danish: Strings = {
         generate: 'Generer kampprogram',
         seedKnockout: 'Sæt slutspil ud fra stillingen',
         generated: 'Der blev oprettet {count} kampe.',
-        generateBlocked:
-            'Der findes allerede kampe. Sæt flueben i "Erstat eksisterende kampe" for at generere igen.',
+        generateBlocked: 'Kampprogrammet kunne ikke genereres.',
         seeded: 'Der blev sat {count} slutspilskampe ud fra stillingen.',
         seedFailed: 'Slutspillet kunne ikke sættes.',
     },
@@ -1297,6 +1302,9 @@ export const english: Strings = {
         shirtNumberPlaceholder: 'No.',
         fixtures: 'Fixtures',
         schedule: 'Match schedule',
+        byeTeamForRound: 'Team sitting out in round',
+        autoBye: 'Automatic',
+        firstHomeTeam: 'First home team',
         addMatch: 'Add match',
         saveSchedule: 'Save match',
         saveAllSchedule: 'Save all',
@@ -1324,7 +1332,7 @@ export const english: Strings = {
         generate: 'Generate fixtures',
         seedKnockout: 'Seed knockout from tables',
         generated: 'Generated {count} fixtures.',
-        generateBlocked: 'Fixtures already exist. Tick "replace existing fixtures" to regenerate them.',
+        generateBlocked: 'The fixtures could not be generated.',
         seeded: 'Filled {count} knockout ties from the group tables.',
         seedFailed: 'The knockout bracket could not be seeded.',
     },

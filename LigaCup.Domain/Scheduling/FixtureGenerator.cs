@@ -9,7 +9,12 @@ namespace LigaCup.Domain.Scheduling;
 /// </summary>
 public static class FixtureGenerator
 {
-    public static List<Match> GenerateGroupFixtures(Tournament tournament, TournamentGroup group, IReadOnlyList<Team> teams)
+    public static List<Match> GenerateGroupFixtures(
+        Tournament tournament,
+        TournamentGroup group,
+        IReadOnlyList<Team> teams,
+        IReadOnlyList<int?>? byeTeamIds = null,
+        int? firstHomeTeamId = null)
     {
         var fixtures = new List<Match>();
         if (teams.Count < 2)
@@ -19,7 +24,7 @@ public static class FixtureGenerator
 
         var rounds = Math.Max(1, tournament.GroupRounds);
 
-        var legFixtures = BuildSingleRoundRobin(teams);
+        var legFixtures = BuildSingleRoundRobin(teams, byeTeamIds, firstHomeTeamId);
         var matchdaysPerLeg = legFixtures.Count == 0 ? 0 : legFixtures.Max(fixture => fixture.Matchday);
 
         for (var round = 0; round < rounds; round++)
@@ -50,7 +55,10 @@ public static class FixtureGenerator
     /// Circle method round robin. A bye team is added when the count is odd so that
     /// every real team sits out exactly one matchday.
     /// </summary>
-    private static List<(Team Home, Team Away, int Matchday)> BuildSingleRoundRobin(IReadOnlyList<Team> teams)
+    private static List<(Team Home, Team Away, int Matchday)> BuildSingleRoundRobin(
+        IReadOnlyList<Team> teams,
+        IReadOnlyList<int?>? byeTeamIds,
+        int? firstHomeTeamId)
     {
         var participants = teams.ToList();
         Team? bye = null;
@@ -58,13 +66,25 @@ public static class FixtureGenerator
         if (participants.Count % 2 == 1)
         {
             bye = new Team { Id = -1, Name = "BYE" };
-            participants.Add(bye);
+            var firstHome = firstHomeTeamId is null
+                ? null
+                : participants.FirstOrDefault(team => team.Id == firstHomeTeamId.Value);
+            if (firstHome is null)
+            {
+                participants.Add(bye);
+            }
+            else
+            {
+                participants.Remove(firstHome);
+                participants.Insert(0, firstHome);
+                participants.Insert(1, bye);
+            }
         }
 
         var count = participants.Count;
         var matchdays = count - 1;
         var half = count / 2;
-        var fixtures = new List<(Team, Team, int)>();
+        var fixtures = new List<(Team Home, Team Away, int Matchday)>();
 
         var rotation = participants.Skip(1).ToList();
 
@@ -97,7 +117,65 @@ public static class FixtureGenerator
             rotation.Insert(0, last);
         }
 
-        return fixtures;
+        var rounds = fixtures
+            .GroupBy(fixture => fixture.Matchday)
+            .OrderBy(round => round.Key)
+            .Select(round => round.ToList())
+            .ToList();
+        var orderedRounds = rounds;
+
+        if (byeTeamIds is not null && byeTeamIds.Any(teamId => teamId is not null))
+        {
+            var automaticByeIds = teams
+                .Select(team => team.Id)
+                .Except(rounds.Select(round => teams.Select(team => team.Id)
+                    .Except(round.SelectMany(fixture => new[] { fixture.Home.Id, fixture.Away.Id }))
+                    .Single()))
+                .ToList();
+            var requestedByeIds = byeTeamIds
+                .Take(rounds.Count)
+                .Select((teamId, index) => teamId ?? automaticByeIds[index])
+                .ToList();
+
+            if (requestedByeIds.Count != rounds.Count ||
+                requestedByeIds.Distinct().Count() != rounds.Count ||
+                requestedByeIds.Any(teamId => !teams.Any(team => team.Id == teamId)))
+            {
+                throw new ArgumentException("Each round must select a different team to sit out.", nameof(byeTeamIds));
+            }
+
+            var roundsByBye = rounds.ToDictionary(
+                round => teams.Select(team => team.Id)
+                    .Except(round.SelectMany(fixture => new[] { fixture.Home.Id, fixture.Away.Id }))
+                    .Single(),
+                round => round);
+
+            orderedRounds = requestedByeIds.Select(byeTeamId => roundsByBye[byeTeamId]).ToList();
+        }
+
+        if (firstHomeTeamId is not null)
+        {
+            var firstRound = orderedRounds[0].ToList();
+            var firstHomeIndex = firstRound.FindIndex(fixture => fixture.Home.Id == firstHomeTeamId || fixture.Away.Id == firstHomeTeamId);
+            if (firstHomeIndex < 0)
+            {
+                throw new ArgumentException("The first home team must play in the first round.", nameof(firstHomeTeamId));
+            }
+
+            var firstHomeFixture = firstRound[firstHomeIndex];
+            if (firstHomeFixture.Away.Id == firstHomeTeamId)
+            {
+                firstHomeFixture = (firstHomeFixture.Away, firstHomeFixture.Home, firstHomeFixture.Matchday);
+            }
+
+            firstRound.RemoveAt(firstHomeIndex);
+            firstRound.Insert(0, firstHomeFixture);
+            orderedRounds[0] = firstRound;
+        }
+
+        return orderedRounds
+            .SelectMany((round, index) => round.Select(fixture => (fixture.Home, fixture.Away, index + 1)))
+            .ToList();
     }
 
     /// <summary>

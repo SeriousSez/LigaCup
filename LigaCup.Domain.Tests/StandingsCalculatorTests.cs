@@ -195,6 +195,39 @@ public class FixtureGeneratorTests
     }
 
     [Fact]
+    public void CanChooseTheByeTeamForEachRound()
+    {
+        var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };
+        var teams = BuildTeams(5);
+        var fixtures = FixtureGenerator.GenerateGroupFixtures(BuildTournament(), group, teams, new int?[] { 3, 5, 1, 4, 2 });
+
+        var firstRound = fixtures.Where(fixture => fixture.Round == 1).ToList();
+        var firstBye = teams.Select(team => team.Id)
+            .Except(firstRound.SelectMany(fixture => new[] { fixture.HomeTeamId!.Value, fixture.AwayTeamId!.Value }))
+            .Single();
+
+        Assert.Equal(3, firstBye);
+
+        var byeTeamIds = fixtures
+            .GroupBy(fixture => fixture.Round)
+            .Select(round => teams.Select(team => team.Id)
+                .Except(round.SelectMany(fixture => new[] { fixture.HomeTeamId!.Value, fixture.AwayTeamId!.Value }))
+                .Single())
+            .ToList();
+
+        Assert.Equal(new[] { 3, 5, 1, 4, 2 }, byeTeamIds);
+    }
+
+    [Fact]
+    public void CanChooseTheFirstHomeTeam()
+    {
+        var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };
+        var fixtures = FixtureGenerator.GenerateGroupFixtures(BuildTournament(), group, BuildTeams(5), firstHomeTeamId: 3);
+
+        Assert.Equal(3, fixtures.First().HomeTeamId);
+    }
+
+    [Fact]
     public void ADoubleRoundRobinPlaysEveryPairTwice()
     {
         var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };

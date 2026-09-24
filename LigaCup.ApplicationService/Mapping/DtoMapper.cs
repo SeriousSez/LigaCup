@@ -28,6 +28,7 @@ public static class DtoMapper
         tournament.BreakDurationMinutes,
         tournament.MatchIntervalMinutes,
         tournament.MatchesPerTimeSlot,
+        tournament.FirstHomeTeamId,
         tournament.TrackMatchClock,
         tournament.AllowTimeouts,
         tournament.UseStoppageTime,

@@ -339,10 +339,11 @@ public class TournamentService(LigaCupContext dbContext)
 
             dbContext.Matches.RemoveRange(doomed);
         }
-        else if (tournament.Matches.Count > 0)
-        {
-            throw new InvalidOperationException("Fixtures already exist. Enable 'replace existing' to regenerate them.");
-        }
+
+        var firstHomeTeamId = request.FirstHomeTeamId is not null && tournament.Teams.Any(team => team.Id == request.FirstHomeTeamId)
+            ? request.FirstHomeTeamId
+            : null;
+        tournament.FirstHomeTeamId = firstHomeTeamId;
 
         var generated = new List<Match>();
 
@@ -353,7 +354,7 @@ public class TournamentService(LigaCupContext dbContext)
                 // No groups configured, so treat the whole field as one league.
                 var placeholder = new TournamentGroup { Id = 0, TournamentId = tournament.Id, Name = "League" };
                 generated.AddRange(FixtureGenerator
-                    .GenerateGroupFixtures(tournament, placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList())
+                    .GenerateGroupFixtures(tournament, placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList(), request.ByeTeamIds, firstHomeTeamId)
                     .Select(match =>
                     {
                         match.GroupId = null;
@@ -370,7 +371,7 @@ public class TournamentService(LigaCupContext dbContext)
                         .ThenBy(team => team.Name)
                         .ToList();
 
-                    generated.AddRange(FixtureGenerator.GenerateGroupFixtures(tournament, group, groupTeams));
+                    generated.AddRange(FixtureGenerator.GenerateGroupFixtures(tournament, group, groupTeams, request.ByeTeamIds, firstHomeTeamId));
                 }
             }
         }
@@ -385,12 +386,115 @@ public class TournamentService(LigaCupContext dbContext)
             generated.AddRange(FixtureGenerator.GenerateKnockoutBracket(tournament, slots));
         }
 
+        var completedExisting = 0;
+        var removedPartialFixtures = new List<Match>();
+        if (!request.ReplaceExisting)
+        {
+            (generated, completedExisting, removedPartialFixtures) = MergeExistingGroupFixtures(tournament.Matches, generated);
+        }
+
         AssignKickoffTimes(tournament, generated);
 
+        dbContext.Matches.RemoveRange(removedPartialFixtures);
         dbContext.Matches.AddRange(generated);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return generated.Count;
+        return generated.Count + completedExisting;
     }
+
+    private static (List<Match> Remaining, int Completed, List<Match> RemovedPartials) MergeExistingGroupFixtures(
+        IEnumerable<Match> existing,
+        IEnumerable<Match> generated)
+    {
+        var partialFixtures = existing
+            .Where(match => match.Stage == MatchStage.Group && (match.HomeTeamId is null || match.AwayTeamId is null))
+            .ToList();
+        var existingPairCounts = existing
+            .Where(match => match.Stage == MatchStage.Group && match.HomeTeamId is not null && match.AwayTeamId is not null)
+            .GroupBy(match => PairKey(match.HomeTeamId!.Value, match.AwayTeamId!.Value))
+            .ToDictionary(group => group.Key, group => group.Count());
+        var existingKnockoutKeys = existing
+            .Where(match => match.Stage != MatchStage.Group)
+            .Select(match => (match.Stage, match.Round))
+            .ToHashSet();
+        var occupiedTeamIdsByRound = existing
+            .Where(match => match.Stage == MatchStage.Group)
+            .GroupBy(match => (match.GroupId, match.Round))
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(match => new[] { match.HomeTeamId, match.AwayTeamId })
+                    .Where(teamId => teamId.HasValue)
+                    .Select(teamId => teamId!.Value)
+                    .ToHashSet());
+
+        var remaining = new List<Match>();
+        var removedPartials = new List<Match>();
+        var completed = 0;
+        foreach (var match in generated)
+        {
+            if (match.Stage != MatchStage.Group || match.HomeTeamId is null || match.AwayTeamId is null)
+            {
+                if (match.Stage != MatchStage.Group && !existingKnockoutKeys.Add((match.Stage, match.Round)))
+                {
+                    continue;
+                }
+
+                remaining.Add(match);
+                continue;
+            }
+
+            var key = PairKey(match.HomeTeamId.Value, match.AwayTeamId.Value);
+            if (existingPairCounts.TryGetValue(key, out var count) && count > 0)
+            {
+                existingPairCounts[key] = count - 1;
+                var redundantPartial = partialFixtures.FirstOrDefault(candidate =>
+                    candidate.GroupId == match.GroupId &&
+                    candidate.Round == match.Round &&
+                    (candidate.HomeTeamId is null || candidate.HomeTeamId == match.HomeTeamId) &&
+                    (candidate.AwayTeamId is null || candidate.AwayTeamId == match.AwayTeamId));
+                if (redundantPartial is not null)
+                {
+                    partialFixtures.Remove(redundantPartial);
+                    removedPartials.Add(redundantPartial);
+                }
+
+                continue;
+            }
+
+            var roundKey = (match.GroupId, match.Round);
+            var occupiedTeamIds = occupiedTeamIdsByRound.GetValueOrDefault(roundKey) ?? [];
+            var partialFixture = partialFixtures.FirstOrDefault(candidate =>
+                candidate.GroupId == match.GroupId &&
+                candidate.Round == match.Round &&
+                (candidate.HomeTeamId is null || candidate.HomeTeamId == match.HomeTeamId) &&
+                (candidate.AwayTeamId is null || candidate.AwayTeamId == match.AwayTeamId));
+            if (partialFixture is not null)
+            {
+                partialFixtures.Remove(partialFixture);
+                partialFixture.HomeTeamId = match.HomeTeamId;
+                partialFixture.AwayTeamId = match.AwayTeamId;
+                occupiedTeamIds.Add(match.HomeTeamId.Value);
+                occupiedTeamIds.Add(match.AwayTeamId.Value);
+                occupiedTeamIdsByRound[roundKey] = occupiedTeamIds;
+                completed++;
+            }
+            else if (occupiedTeamIds.Contains(match.HomeTeamId.Value) || occupiedTeamIds.Contains(match.AwayTeamId.Value))
+            {
+                continue;
+            }
+            else
+            {
+                remaining.Add(match);
+                occupiedTeamIds.Add(match.HomeTeamId.Value);
+                occupiedTeamIds.Add(match.AwayTeamId.Value);
+                occupiedTeamIdsByRound[roundKey] = occupiedTeamIds;
+            }
+        }
+
+        return (remaining, completed, removedPartials);
+    }
+
+    private static (int Low, int High) PairKey(int firstTeamId, int secondTeamId) =>
+        firstTeamId < secondTeamId ? (firstTeamId, secondTeamId) : (secondTeamId, firstTeamId);
 
     private static void AssignKickoffTimes(Tournament tournament, IReadOnlyCollection<Match> matches)
     {

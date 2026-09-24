@@ -55,6 +55,9 @@ public class Tournament
     /// <summary>How many matches start together in each schedule slot.</summary>
     public int MatchesPerTimeSlot { get; set; } = 4;
 
+    /// <summary>Optional team that should host the first generated group-stage match.</summary>
+    public int? FirstHomeTeamId { get; set; }
+
     /// <summary>When false the organiser records scores without any running clock.</summary>
     public bool TrackMatchClock { get; set; } = true;
 

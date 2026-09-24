@@ -51,6 +51,7 @@ public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContex
             entity.Property(tournament => tournament.MatchIntervalMinutes);
             entity.Property(tournament => tournament.PlayerRegistrationMode);
             entity.Property(tournament => tournament.MatchesPerTimeSlot);
+            entity.Property(tournament => tournament.FirstHomeTeamId);
             entity.HasIndex(tournament => tournament.Slug).IsUnique();
         });
 

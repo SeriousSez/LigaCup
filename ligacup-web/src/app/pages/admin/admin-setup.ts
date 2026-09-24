@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { AfterViewChecked, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -12,14 +13,15 @@ import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
 import { ConfirmDialog } from '../../shared/confirm-dialog';
-import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentFormat, TournamentStatus } from '../../core/models';
+import { Group, Match, SaveTournamentRequest, Team, TiebreakerRule, TournamentDetail, TournamentFormat, TournamentStatus } from '../../core/models';
 
 type RichTextEditor = 'rules' | 'parking';
+type FixtureView = 'rounds' | 'all';
 type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
 
 @Component({
   selector: 'app-admin-setup',
-  imports: [FormsModule, RouterLink, FontAwesomeModule, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
+  imports: [CommonModule, FormsModule, RouterLink, FontAwesomeModule, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
     @if (detail(); as data) {
       <section class="spread heading">
@@ -534,7 +536,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
         <section class="card stack" data-guide-target="admin-fixtures">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
-        <div class="row" data-guide-target="admin-fixture-generator">
+        <div class="row fixture-generator" data-guide-target="admin-fixture-generator">
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="generateGroups" />
             {{ t().setup.groupStage }}
@@ -547,6 +549,16 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             <input type="checkbox" [(ngModel)]="replaceExisting" />
             {{ t().setup.replaceExisting }}
           </label>
+          @if (data.tournament.format === 'League' || data.groups.length === 0) {
+            <label class="first-home-control">
+              <span>{{ t().setup.firstHomeTeam }}</span>
+              <app-select
+                [options]="firstHomeTeamOptions(data.teams)"
+                [(ngModel)]="firstHomeTeamId"
+                (ngModelChange)="firstHomeTeamChanged(data.matches, $event)"
+              />
+            </label>
+          }
         </div>
         <div class="row">
           <button class="primary" type="button" (click)="generate()" [disabled]="busy()">
@@ -563,6 +575,48 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <p class="muted">{{ fixtureMessage() }}</p>
         }
         @if (data.matches.length) {
+          <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+            <button
+              type="button"
+              [class.active]="fixtureView() === 'rounds'"
+              [attr.aria-pressed]="fixtureView() === 'rounds'"
+              (click)="fixtureView.set('rounds')"
+            >
+              {{ t().tournament.byRounds }}
+            </button>
+            <button
+              type="button"
+              [class.active]="fixtureView() === 'all'"
+              [attr.aria-pressed]="fixtureView() === 'all'"
+              (click)="fixtureView.set('all')"
+            >
+              {{ t().tournament.allMatches }}
+            </button>
+          </div>
+
+          @if (fixtureView() === 'rounds') {
+            <div class="schedule-list" data-guide-target="admin-schedule-list">
+              @for (round of scheduleRounds(data.matches); track round.key) {
+                <section class="round-schedule">
+                  <div class="schedule-heading">
+                    <h4>{{ t().tournament.matchday }} {{ round.round }}</h4>
+                    @if (round.isGroupRound && byeRounds(data).includes(round.round)) {
+                      <label>
+                        {{ t().setup.byeTeamForRound }}
+                        <app-select
+                          [options]="byeTeamOptions(data.teams, round.matches)"
+                          [(ngModel)]="byeTeamIds[round.round - 1]"
+                        />
+                      </label>
+                    }
+                  </div>
+                  @for (match of roundScheduleMatches(round.matches, round.round); track match.id) {
+                    <ng-container [ngTemplateOutlet]="scheduleEditor" [ngTemplateOutletContext]="{ $implicit: match, teams: data.teams }" />
+                  }
+                </section>
+              }
+            </div>
+          } @else {
           <div class="schedule-list" data-guide-target="admin-schedule-list">
             <div class="schedule-heading">
               <h4>{{ t().setup.schedule }}</h4>
@@ -577,62 +631,71 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               </button>
             </div>
             @for (match of scheduleMatches(data.matches); track match.id) {
-              <div class="schedule-row">
-                @if (match.stage === 'Group') {
-                  <label>
-                    {{ t().setup.homeTeam }}
-                    <app-select [options]="teamOptions(data.teams, match.awayTeamId)" [(ngModel)]="match.homeTeamId" />
-                  </label>
-                  <label>
-                    {{ t().setup.awayTeam }}
-                    <app-select [options]="teamOptions(data.teams, match.homeTeamId)" [(ngModel)]="match.awayTeamId" />
-                  </label>
-                } @else {
-                  <strong>{{ match.homeTeamName }} - {{ match.awayTeamName }}</strong>
-                }
-                <label>
-                  {{ t().setup.kickoff }}
-                  <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
-                </label>
-                <label>
-                  {{ t().setup.pitchNumber }}
-                  <input type="number" min="1" [(ngModel)]="match.pitchNumber" />
-                </label>
-                <label>
-                  {{ t().setup.location }}
-                  <input
-                    [(ngModel)]="match.venue"
-                    [placeholder]="t().setup.locationOverridePlaceholder"
-                    maxlength="160"
-                  />
-                </label>
-                <div class="schedule-actions">
-                  <button
-                    type="button"
-                    class="icon-button"
-                    [disabled]="busy() || !hasScheduleChanges(match)"
-                    [attr.aria-label]="t().setup.saveSchedule"
-                    [title]="t().setup.saveSchedule"
-                    (click)="saveSchedule(match)"
-                  >
-                    <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    class="danger icon-button"
-                    [attr.aria-label]="t().common.remove"
-                    [title]="t().common.remove"
-                    (click)="confirmDeleteSchedule(match)"
-                  >
-                    <fa-icon [icon]="faTrashCan" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
+              <ng-container [ngTemplateOutlet]="scheduleEditor" [ngTemplateOutletContext]="{ $implicit: match, teams: data.teams }" />
             }
           </div>
+          }
         }
         </section>
       }
+
+      <ng-template #scheduleEditor let-match let-teams="teams">
+        <div class="schedule-row">
+          @if (match.stage === 'Group') {
+            <label>
+              {{ t().setup.homeTeam }}
+              <app-select
+                [options]="teamOptions(teams, match.awayTeamId)"
+                [(ngModel)]="match.homeTeamId"
+                (ngModelChange)="homeTeamChanged(match, $event, data.matches)"
+              />
+            </label>
+            <label>
+              {{ t().setup.awayTeam }}
+              <app-select [options]="teamOptions(teams, match.homeTeamId)" [(ngModel)]="match.awayTeamId" />
+            </label>
+          } @else {
+            <strong>{{ match.homeTeamName }} - {{ match.awayTeamName }}</strong>
+          }
+          <label>
+            {{ t().setup.kickoff }}
+            <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
+          </label>
+          <label>
+            {{ t().setup.pitchNumber }}
+            <input type="number" min="1" [(ngModel)]="match.pitchNumber" />
+          </label>
+          <label>
+            {{ t().setup.location }}
+            <input
+              [(ngModel)]="match.venue"
+              [placeholder]="t().setup.locationOverridePlaceholder"
+              maxlength="160"
+            />
+          </label>
+          <div class="schedule-actions">
+            <button
+              type="button"
+              class="icon-button"
+              [disabled]="busy() || !hasScheduleChanges(match)"
+              [attr.aria-label]="t().setup.saveSchedule"
+              [title]="t().setup.saveSchedule"
+              (click)="saveSchedule(match)"
+            >
+              <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="danger icon-button"
+              [attr.aria-label]="t().common.remove"
+              [title]="t().common.remove"
+              (click)="confirmDeleteSchedule(match)"
+            >
+              <fa-icon [icon]="faTrashCan" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </ng-template>
 
       <app-confirm-dialog
         [open]="pendingConfirmation() !== null"
@@ -920,6 +983,45 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       gap: 0.6rem;
     }
 
+    .fixture-view {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.2rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .fixture-view button {
+      min-height: 2.25rem;
+      padding: 0.4rem 0.75rem;
+      border-color: transparent;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .fixture-view button.active {
+      background: var(--surface-raised);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .round-schedule {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .first-home-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .first-home-control app-select {
+      width: auto;
+      min-width: 9rem;
+    }
+
     .schedule-heading {
       display: flex;
       align-items: center;
@@ -1195,6 +1297,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected generateGroups = true;
   protected generateKnockout = true;
   protected replaceExisting = false;
+  protected byeTeamIds: (number | null)[] = [];
+  protected firstHomeTeamId: number | null = null;
+  protected readonly fixtureView = signal<FixtureView>('rounds');
 
   protected settings: SaveTournamentRequest = {
     name: '',
@@ -1234,6 +1339,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     if (!data) {
       return;
     }
+
+    this.byeTeamIds = this.byeRounds(data).map(() => null);
+    this.firstHomeTeamId = data.tournament.firstHomeTeamId;
 
     this.settings = {
       ...this.settings,
@@ -1950,6 +2058,8 @@ export class AdminSetup implements OnInit, AfterViewChecked {
           this.generateGroups,
           this.generateKnockout,
           this.replaceExisting,
+          this.byeRounds(data).length ? this.byeTeamIds : null,
+          this.firstHomeTeamId,
         ),
       );
       await this.store.reload();
@@ -1961,6 +2071,49 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       this.fixtureMessage.set(this.t().setup.generateBlocked);
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  byeRounds(data: TournamentDetail): number[] {
+    if (data.tournament.format === 'League' || data.groups.length === 0) {
+      return data.teams.length % 2 === 1 ? Array.from({ length: data.teams.length }, (_, index) => index + 1) : [];
+    }
+
+    return [];
+  }
+
+  byeTeamOptions(teams: Team[], roundMatches: Match[]): SelectOption<number | null>[] {
+    const playingTeamIds = new Set(
+      roundMatches.flatMap((match) => [match.homeTeamId, match.awayTeamId].filter((teamId): teamId is number => teamId !== null)),
+    );
+
+    return [
+      { value: null, label: this.t().setup.autoBye },
+      ...teams
+        .filter((team) => !playingTeamIds.has(team.id))
+        .map((team) => ({ value: team.id, label: team.name })),
+    ];
+  }
+
+  firstHomeTeamOptions(teams: Team[]): SelectOption<number | null>[] {
+    return [
+      { value: null, label: this.t().setup.autoBye },
+      ...teams.map((team) => ({ value: team.id, label: team.name })),
+    ];
+  }
+
+  firstHomeTeamChanged(matches: Match[], teamId: number | null): void {
+    const partialRoundOne = matches.find(
+      (match) => match.stage === 'Group' && match.round === 1 && match.homeTeamId !== null && match.awayTeamId === null,
+    );
+    if (partialRoundOne) {
+      partialRoundOne.homeTeamId = teamId;
+    }
+  }
+
+  homeTeamChanged(match: Match, teamId: number | null, matches: Match[]): void {
+    if (match.stage === 'Group' && match.round === 1 && match.awayTeamId === null) {
+      this.firstHomeTeamId = teamId;
     }
   }
 
@@ -2010,6 +2163,37 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
       return left.kickoffUtc!.localeCompare(right.kickoffUtc!);
     });
+  }
+
+  roundScheduleMatches(matches: Match[], round: number): Match[] {
+    const ordered = this.scheduleMatches(matches);
+    if (round !== 1 || this.firstHomeTeamId === null) {
+      return ordered;
+    }
+
+    return ordered.sort((left, right) => {
+      const leftIsFirstHome = left.homeTeamId === this.firstHomeTeamId;
+      const rightIsFirstHome = right.homeTeamId === this.firstHomeTeamId;
+      return Number(rightIsFirstHome) - Number(leftIsFirstHome);
+    });
+  }
+
+  scheduleRounds(matches: Match[]): Array<{ key: string; round: number; isGroupRound: boolean; matches: Match[] }> {
+    const rounds = new Map<number, Match[]>();
+    for (const match of matches) {
+      const roundMatches = rounds.get(match.round) ?? [];
+      roundMatches.push(match);
+      rounds.set(match.round, roundMatches);
+    }
+
+    return [...rounds.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([round, roundMatches]) => ({
+        key: String(round),
+        round,
+        isGroupRound: roundMatches.some((match) => match.stage === 'Group'),
+        matches: roundMatches,
+      }));
   }
 
   async deleteSchedule(match: Match): Promise<void> {
