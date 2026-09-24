@@ -673,6 +673,28 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               maxlength="160"
             />
           </label>
+          <div class="schedule-order-controls" aria-label="Reorder matches">
+            <button
+              type="button"
+              class="icon-button"
+              [disabled]="!canMoveMatchOrder(match, -1)"
+              [attr.aria-label]="t().setup.moveUp"
+              [title]="t().setup.moveUp"
+              (click)="moveMatchOrder(match, -1)"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              [disabled]="!canMoveMatchOrder(match, 1)"
+              [attr.aria-label]="t().setup.moveDown"
+              [title]="t().setup.moveDown"
+              (click)="moveMatchOrder(match, 1)"
+            >
+              ↓
+            </button>
+          </div>
           <div class="schedule-actions">
             <button
               type="button"
@@ -1040,9 +1062,9 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
     .schedule-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      gap: 0.5rem;
+      gap: 0.65rem;
       align-items: center;
-      padding: 0.65rem 0.75rem;
+      padding: 0.75rem;
       border: 1px solid var(--surface-line);
       border-radius: 10px;
       background: var(--surface-raised);
@@ -1056,11 +1078,55 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       font-size: 0.75rem;
     }
 
+    .schedule-order-controls,
     .schedule-actions {
       display: flex;
       align-items: center;
       gap: 0.35rem;
-      align-self: end;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .schedule-order-controls {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+      padding: 0.2rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      background: rgba(9, 29, 25, 0.9);
+      width: fit-content;
+      margin-left: auto;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .schedule-order-controls .icon-button,
+    .schedule-actions .icon-button {
+      width: 2rem;
+      height: 2rem;
+      min-width: 2rem;
+      padding: 0;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .schedule-order-controls .icon-button {
+      color: var(--text);
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.015);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .schedule-order-controls .icon-button:hover,
+    .schedule-actions .icon-button:hover {
+      border-color: var(--surface-line);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .schedule-actions {
+      margin-left: 0.15rem;
     }
 
     .schedule-actions button {
@@ -1069,11 +1135,15 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
 
     @media (min-width: 1000px) {
       .schedule-row {
-        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) 13rem 6rem minmax(12rem, 1fr) auto;
+        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) 13rem 6rem minmax(12rem, 1fr) auto auto;
       }
 
       .schedule-row > strong {
         grid-column: 1 / -1;
+      }
+
+      .schedule-order-controls {
+        margin-left: 0;
       }
     }
 
@@ -1766,7 +1836,67 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       match.kickoffUtc,
       match.pitchNumber,
       match.venue,
+      match.sortOrder,
     ]);
+  }
+
+  protected moveMatchOrder(match: Match, offset: number): void {
+    if (this.isFirstHomeMatch(match)) {
+      return;
+    }
+
+    const ordered = this.orderedRoundMatches(match);
+    const index = ordered.findIndex((candidate) => candidate.id === match.id);
+    const nextIndex = Math.min(Math.max(index + offset, 0), ordered.length - 1);
+    if (index === -1 || index === nextIndex || this.isCrossingFirstHomeMatch(ordered, index, nextIndex)) {
+      return;
+    }
+
+    const [moved] = ordered.splice(index, 1);
+    ordered.splice(nextIndex, 0, moved);
+    ordered.forEach((candidate, position) => {
+      candidate.sortOrder = position;
+    });
+  }
+
+  protected canMoveMatchOrder(match: Match, offset: number): boolean {
+    if (this.isFirstHomeMatch(match)) {
+      return false;
+    }
+
+    const ordered = this.orderedRoundMatches(match);
+    const index = ordered.findIndex((candidate) => candidate.id === match.id);
+    const nextIndex = index + offset;
+    return index !== -1
+      && nextIndex >= 0
+      && nextIndex < ordered.length
+      && !this.isCrossingFirstHomeMatch(ordered, index, nextIndex);
+  }
+
+  private isFirstHomeMatch(match: Match): boolean {
+    return this.firstHomeTeamId !== null
+      && match.stage === 'Group'
+      && match.round === 1
+      && match.homeTeamId === this.firstHomeTeamId;
+  }
+
+  private isCrossingFirstHomeMatch(ordered: Match[], currentIndex: number, nextIndex: number): boolean {
+    return ordered.slice(Math.min(currentIndex, nextIndex), Math.max(currentIndex, nextIndex) + 1)
+      .some((candidate) => candidate !== ordered[currentIndex] && this.isFirstHomeMatch(candidate));
+  }
+
+  private orderedRoundMatches(match: Match): Match[] {
+    const data = this.detail();
+    if (!data) {
+      return [];
+    }
+
+    const roundMatches = data.matches.filter((candidate) => candidate.stage === match.stage && candidate.round === match.round && candidate.groupId === match.groupId);
+    return [...roundMatches].sort((left, right) => {
+      const leftOrder = left.sortOrder ?? 0;
+      const rightOrder = right.sortOrder ?? 0;
+      return leftOrder - rightOrder || left.id - right.id;
+    });
   }
 
   protected hasUnsavedScheduleChanges(): boolean {
@@ -1821,6 +1951,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       groupId: match.groupId,
       stage: match.stage,
       round: match.round,
+      sortOrder: match.sortOrder,
       homeTeamId: match.homeTeamId,
       awayTeamId: match.awayTeamId,
       homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
@@ -2129,10 +2260,12 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         .filter((match) => match.stage === 'Group')
         .map((match) => match.round);
       const round = groupRounds.length ? Math.max(...groupRounds) + 1 : 1;
+      const roundMatches = data.matches.filter((match) => match.stage === 'Group' && match.round === round);
       await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
         groupId: null,
         stage: 'Group',
         round,
+        sortOrder: roundMatches.length,
         homeTeamId: null,
         awayTeamId: null,
         homePlaceholder: null,
@@ -2149,6 +2282,11 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
   scheduleMatches(matches: Match[]): Match[] {
     return [...matches].sort((left, right) => {
+      const leftRoundMatch = left.stage === right.stage && left.round === right.round && left.groupId === right.groupId;
+      if (leftRoundMatch) {
+        return (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.id - right.id;
+      }
+
       if (!left.kickoffUtc && right.kickoffUtc) {
         return -1;
       }

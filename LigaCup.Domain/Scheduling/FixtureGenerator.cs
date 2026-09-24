@@ -29,6 +29,7 @@ public static class FixtureGenerator
 
         for (var round = 0; round < rounds; round++)
         {
+            var sortOrder = 0;
             foreach (var (home, away, matchday) in legFixtures)
             {
                 // Alternate home advantage on every return leg.
@@ -40,6 +41,7 @@ public static class FixtureGenerator
                     GroupId = group.Id,
                     Stage = MatchStage.Group,
                     Round = (round * matchdaysPerLeg) + matchday,
+                    SortOrder = sortOrder++,
                     HomeTeamId = swap ? away.Id : home.Id,
                     AwayTeamId = swap ? home.Id : away.Id,
                     Venue = tournament.Location,

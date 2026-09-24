@@ -460,6 +460,14 @@ export class Tournament implements OnInit {
           .filter((team) => !playingTeamIds.has(team.id))
           .map((team) => this.i18n.teamName(team.name, team.id)),
         matches: [...group].sort((left, right) => {
+          if (left.stage === right.stage && left.round === right.round && left.groupId === right.groupId) {
+            const leftOrder = left.sortOrder ?? 0;
+            const rightOrder = right.sortOrder ?? 0;
+            if (leftOrder !== rightOrder) {
+              return leftOrder - rightOrder;
+            }
+          }
+
           if (isLeague && firstMatch.stage === 'Group' && firstMatch.round === 1) {
             const leftIsFirstHome = left.homeTeamId === detail?.tournament.firstHomeTeamId;
             const rightIsFirstHome = right.homeTeamId === detail?.tournament.firstHomeTeamId;

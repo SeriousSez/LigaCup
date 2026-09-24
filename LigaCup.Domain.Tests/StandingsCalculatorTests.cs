@@ -241,6 +241,21 @@ public class FixtureGeneratorTests
     }
 
     [Fact]
+    public void MatchesCanBeManuallyOrderedWithinARound()
+    {
+        var matches = new List<Match>
+        {
+            new() { Id = 1, Round = 1, GroupId = 1, SortOrder = 2, HomeTeamId = 1, AwayTeamId = 2 },
+            new() { Id = 2, Round = 1, GroupId = 1, SortOrder = 1, HomeTeamId = 3, AwayTeamId = 4 },
+        };
+
+        var ordered = matches.OrderBy(match => match.SortOrder).ThenBy(match => match.Id).ToList();
+
+        Assert.Equal(2, ordered[0].Id);
+        Assert.Equal(1, ordered[1].Id);
+    }
+
+    [Fact]
     public void GeneratedFixturesUseTheTournamentLocation()
     {
         var tournament = BuildTournament();

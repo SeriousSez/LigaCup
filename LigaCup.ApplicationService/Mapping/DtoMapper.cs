@@ -84,6 +84,7 @@ public static class DtoMapper
             match.Group?.Name,
             match.Stage,
             match.Round,
+            match.SortOrder,
             match.HomeTeamId,
             match.HomeTeam?.Name ?? match.HomePlaceholder ?? "TBD",
             match.HomeTeam?.ShortName,

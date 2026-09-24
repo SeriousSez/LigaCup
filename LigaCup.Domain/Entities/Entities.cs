@@ -164,6 +164,9 @@ public class Match
     /// <summary>Matchday within the group stage, or the bracket slot for knockout ties.</summary>
     public int Round { get; set; } = 1;
 
+    /// <summary>Display order for matches within the same round.</summary>
+    public int SortOrder { get; set; }
+
     public int? HomeTeamId { get; set; }
     public Team? HomeTeam { get; set; }
 

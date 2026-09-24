@@ -26,6 +26,7 @@ public class MatchService(LigaCupContext dbContext, TournamentService tournament
         match.GroupId = request.GroupId;
         match.Stage = request.Stage;
         match.Round = request.Round;
+        match.SortOrder = request.SortOrder;
         match.HomeTeamId = request.HomeTeamId;
         match.AwayTeamId = request.AwayTeamId;
         match.HomePlaceholder = request.HomePlaceholder;

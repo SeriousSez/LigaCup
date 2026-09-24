@@ -55,6 +55,8 @@ public class TournamentService(LigaCupContext dbContext)
             .OrderBy(match => match.Stage)
             .ThenBy(match => match.KickoffUtc ?? DateTime.MaxValue)
             .ThenBy(match => match.Round)
+            .ThenBy(match => match.SortOrder)
+            .ThenBy(match => match.Id)
             .ToList();
 
         return new TournamentDetailDto(

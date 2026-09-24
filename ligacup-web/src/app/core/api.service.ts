@@ -152,6 +152,7 @@ export class ApiService {
             groupId: number | null;
             stage: MatchStage;
             round: number;
+            sortOrder: number;
             homeTeamId: number | null;
             awayTeamId: number | null;
             homePlaceholder: string | null;

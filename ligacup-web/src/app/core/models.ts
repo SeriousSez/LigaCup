@@ -196,6 +196,7 @@ export interface Match {
     groupName: string | null;
     stage: MatchStage;
     round: number;
+    sortOrder: number;
     homeTeamId: number | null;
     homeTeamName: string;
     homeTeamShortName: string | null;
