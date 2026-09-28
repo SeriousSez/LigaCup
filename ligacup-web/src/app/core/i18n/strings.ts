@@ -358,6 +358,8 @@ export interface Strings {
         schedule: string;
         addMatch: string;
         addMatchday: string;
+        copyRound: string;
+        roundCopied: string;
         saveSchedule: string;
         saveAllSchedule: string;
         saveScheduleChanges: string;
@@ -832,6 +834,8 @@ export const danish: Strings = {
         firstHomeTeam: 'Første hjemmehold',
         addMatch: 'Tilføj kamp',
         addMatchday: 'Tilføj spillerunde',
+        copyRound: 'Kopiér runde',
+        roundCopied: 'Runden blev kopieret til spillerunde {round}.',
         saveSchedule: 'Gem kamp',
         saveAllSchedule: 'Gem alle',
         saveScheduleChanges: 'Gem ændringer',
@@ -1309,6 +1313,8 @@ export const english: Strings = {
         firstHomeTeam: 'First home team',
         addMatch: 'Add match',
         addMatchday: 'Add matchday',
+        copyRound: 'Copy round',
+        roundCopied: 'The round was copied to matchday {round}.',
         saveSchedule: 'Save match',
         saveAllSchedule: 'Save all',
         saveScheduleChanges: 'Save changes',

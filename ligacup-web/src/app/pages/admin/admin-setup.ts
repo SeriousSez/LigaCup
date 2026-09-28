@@ -613,6 +613,9 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                         <button type="button" (click)="addMatch(round.round)" [disabled]="busy()">
                           {{ t().setup.addMatch }}
                         </button>
+                        <button type="button" (click)="copyRound(round.round)" [disabled]="busy()">
+                          {{ t().setup.copyRound }}
+                        </button>
                       </div>
                     }
                   </div>
@@ -2273,6 +2276,52 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         venue: null,
       }));
       await this.store.reload();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async copyRound(round: number): Promise<void> {
+    const data = this.detail();
+    if (!data) {
+      return;
+    }
+
+    const sourceMatches = data.matches
+      .filter((match) => match.stage === 'Group' && match.round === round)
+      .sort((left, right) => left.sortOrder - right.sortOrder || left.id - right.id);
+    if (!sourceMatches.length) {
+      return;
+    }
+
+    const groupRounds = data.matches
+      .filter((match) => match.stage === 'Group')
+      .map((match) => match.round);
+    const targetRound = Math.max(...groupRounds) + 1;
+
+    this.busy.set(true);
+    this.fixtureMessage.set(null);
+    try {
+      for (const match of sourceMatches) {
+        await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
+          groupId: match.groupId,
+          stage: 'Group',
+          round: targetRound,
+          sortOrder: match.sortOrder,
+          homeTeamId: match.homeTeamId,
+          awayTeamId: match.awayTeamId,
+          homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
+          awayPlaceholder: match.awayTeamId === null ? match.awayTeamName : null,
+          kickoffUtc: match.kickoffUtc,
+          pitchNumber: match.pitchNumber,
+          venue: match.venue,
+        }));
+      }
+
+      await this.store.reload();
+      this.fixtureMessage.set(this.i18n.format(this.t().setup.roundCopied, { round: targetRound }));
+    } catch {
+      this.fixtureMessage.set(this.t().common.somethingWentWrong);
     } finally {
       this.busy.set(false);
     }
