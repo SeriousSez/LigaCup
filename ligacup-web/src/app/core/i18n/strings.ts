@@ -357,6 +357,7 @@ export interface Strings {
         firstHomeTeam: string;
         schedule: string;
         addMatch: string;
+        addMatchday: string;
         saveSchedule: string;
         saveAllSchedule: string;
         saveScheduleChanges: string;
@@ -830,6 +831,7 @@ export const danish: Strings = {
         autoBye: 'Automatisk',
         firstHomeTeam: 'Første hjemmehold',
         addMatch: 'Tilføj kamp',
+        addMatchday: 'Tilføj spillerunde',
         saveSchedule: 'Gem kamp',
         saveAllSchedule: 'Gem alle',
         saveScheduleChanges: 'Gem ændringer',
@@ -1306,6 +1308,7 @@ export const english: Strings = {
         autoBye: 'Automatic',
         firstHomeTeam: 'First home team',
         addMatch: 'Add match',
+        addMatchday: 'Add matchday',
         saveSchedule: 'Save match',
         saveAllSchedule: 'Save all',
         saveScheduleChanges: 'Save changes',

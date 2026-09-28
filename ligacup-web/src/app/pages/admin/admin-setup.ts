@@ -555,7 +555,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               <app-select
                 [options]="firstHomeTeamOptions(data.teams)"
                 [(ngModel)]="firstHomeTeamId"
-                (ngModelChange)="firstHomeTeamChanged(data.matches, $event)"
               />
             </label>
           }
@@ -565,7 +564,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             {{ t().setup.generate }}
           </button>
           <button type="button" (click)="addMatch()" [disabled]="busy()">
-            {{ t().setup.addMatch }}
+            {{ t().setup.addMatchday }}
           </button>
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
             {{ t().setup.seedKnockout }}
@@ -600,14 +599,21 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                 <section class="round-schedule">
                   <div class="schedule-heading">
                     <h4>{{ t().tournament.matchday }} {{ round.round }}</h4>
-                    @if (round.isGroupRound && byeRounds(data).includes(round.round)) {
-                      <label>
-                        {{ t().setup.byeTeamForRound }}
-                        <app-select
-                          [options]="byeTeamOptions(data.teams, round.matches)"
-                          [(ngModel)]="byeTeamIds[round.round - 1]"
-                        />
-                      </label>
+                    @if (round.isGroupRound) {
+                      <div class="schedule-heading-actions">
+                        @if (byeRounds(data).includes(round.round)) {
+                          <label>
+                            {{ t().setup.byeTeamForRound }}
+                            <app-select
+                              [options]="byeTeamOptions(data.teams, round.matches)"
+                              [(ngModel)]="byeTeamIds[round.round - 1]"
+                            />
+                          </label>
+                        }
+                        <button type="button" (click)="addMatch(round.round)" [disabled]="busy()">
+                          {{ t().setup.addMatch }}
+                        </button>
+                      </div>
                     }
                   </div>
                   @for (match of roundScheduleMatches(round.matches, round.round); track match.id) {
@@ -647,7 +653,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               <app-select
                 [options]="teamOptions(teams, match.awayTeamId)"
                 [(ngModel)]="match.homeTeamId"
-                (ngModelChange)="homeTeamChanged(match, $event, data.matches)"
               />
             </label>
             <label>
@@ -1052,6 +1057,14 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
     }
 
     .schedule-heading h4 { margin: 0; }
+
+    .schedule-heading-actions {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
 
     .schedule-heading button {
       display: inline-flex;
@@ -2233,22 +2246,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     ];
   }
 
-  firstHomeTeamChanged(matches: Match[], teamId: number | null): void {
-    const partialRoundOne = matches.find(
-      (match) => match.stage === 'Group' && match.round === 1 && match.homeTeamId !== null && match.awayTeamId === null,
-    );
-    if (partialRoundOne) {
-      partialRoundOne.homeTeamId = teamId;
-    }
-  }
-
-  homeTeamChanged(match: Match, teamId: number | null, matches: Match[]): void {
-    if (match.stage === 'Group' && match.round === 1 && match.awayTeamId === null) {
-      this.firstHomeTeamId = teamId;
-    }
-  }
-
-  async addMatch(): Promise<void> {
+  async addMatch(round?: number): Promise<void> {
     const data = this.detail();
     if (!data) {
       return;
@@ -2259,12 +2257,12 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       const groupRounds = data.matches
         .filter((match) => match.stage === 'Group')
         .map((match) => match.round);
-      const round = groupRounds.length ? Math.max(...groupRounds) + 1 : 1;
-      const roundMatches = data.matches.filter((match) => match.stage === 'Group' && match.round === round);
+      const targetRound = round ?? (groupRounds.length ? Math.max(...groupRounds) + 1 : 1);
+      const roundMatches = data.matches.filter((match) => match.stage === 'Group' && match.round === targetRound);
       await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
         groupId: null,
         stage: 'Group',
-        round,
+        round: targetRound,
         sortOrder: roundMatches.length,
         homeTeamId: null,
         awayTeamId: null,
