@@ -353,6 +353,9 @@ export interface Strings {
         fixtures: string;
         fixturesHelp: string;
         byeTeamForRound: string;
+        teamsSittingOut: string;
+        extraTeamSittingOut: string;
+        invalidTeamsSittingOut: string;
         autoBye: string;
         firstHomeTeam: string;
         schedule: string;
@@ -830,6 +833,9 @@ export const danish: Strings = {
         fixtures: 'Kampprogram',
         schedule: 'Tidspunkter for kampe',
         byeTeamForRound: 'Hold der sidder over i runde',
+        teamsSittingOut: 'Mindst antal hold der sidder over pr. runde',
+        extraTeamSittingOut: 'Et ekstra hold sidder over, så alle kampe har to hold.',
+        invalidTeamsSittingOut: 'Angiv et helt tal fra 0 til to færre end antallet af hold.',
         autoBye: 'Automatisk',
         firstHomeTeam: 'Første hjemmehold',
         addMatch: 'Tilføj kamp',
@@ -1309,6 +1315,9 @@ export const english: Strings = {
         fixtures: 'Fixtures',
         schedule: 'Match schedule',
         byeTeamForRound: 'Team sitting out in round',
+        teamsSittingOut: 'Minimum teams sitting out per round',
+        extraTeamSittingOut: 'One additional team sits out so every match has two teams.',
+        invalidTeamsSittingOut: 'Enter a whole number from 0 to two fewer than the number of teams.',
         autoBye: 'Automatic',
         firstHomeTeam: 'First home team',
         addMatch: 'Add match',

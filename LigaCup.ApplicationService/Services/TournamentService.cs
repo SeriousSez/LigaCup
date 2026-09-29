@@ -356,7 +356,7 @@ public class TournamentService(LigaCupContext dbContext)
                 // No groups configured, so treat the whole field as one league.
                 var placeholder = new TournamentGroup { Id = 0, TournamentId = tournament.Id, Name = "League" };
                 generated.AddRange(FixtureGenerator
-                    .GenerateGroupFixtures(tournament, placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList(), request.ByeTeamIds, firstHomeTeamId)
+                    .GenerateGroupFixtures(tournament, placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList(), request.ByeTeamIds, firstHomeTeamId, request.TeamsSittingOut)
                     .Select(match =>
                     {
                         match.GroupId = null;
@@ -373,7 +373,7 @@ public class TournamentService(LigaCupContext dbContext)
                         .ThenBy(team => team.Name)
                         .ToList();
 
-                    generated.AddRange(FixtureGenerator.GenerateGroupFixtures(tournament, group, groupTeams, request.ByeTeamIds, firstHomeTeamId));
+                    generated.AddRange(FixtureGenerator.GenerateGroupFixtures(tournament, group, groupTeams, request.ByeTeamIds, firstHomeTeamId, request.TeamsSittingOut));
                 }
             }
         }

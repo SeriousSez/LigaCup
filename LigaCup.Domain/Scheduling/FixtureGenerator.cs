@@ -14,7 +14,8 @@ public static class FixtureGenerator
         TournamentGroup group,
         IReadOnlyList<Team> teams,
         IReadOnlyList<int?>? byeTeamIds = null,
-        int? firstHomeTeamId = null)
+        int? firstHomeTeamId = null,
+        int? teamsSittingOut = null)
     {
         var fixtures = new List<Match>();
         if (teams.Count < 2)
@@ -25,6 +26,46 @@ public static class FixtureGenerator
         var rounds = Math.Max(1, tournament.GroupRounds);
 
         var legFixtures = BuildSingleRoundRobin(teams, byeTeamIds, firstHomeTeamId);
+        var naturalByes = teams.Count % 2;
+        if (teamsSittingOut is < 0 || teamsSittingOut > teams.Count - 2)
+        {
+            throw new ArgumentOutOfRangeException(nameof(teamsSittingOut));
+        }
+
+        var actualByes = teamsSittingOut is null
+            ? naturalByes
+            : teamsSittingOut.Value + (teams.Count - teamsSittingOut.Value) % 2;
+        if (actualByes > naturalByes)
+        {
+            var matchesPerRound = (teams.Count - actualByes) / 2;
+            var remaining = legFixtures.ToList();
+            var scheduled = new List<(Team Home, Team Away, int Matchday)>();
+            var matchday = 0;
+            while (remaining.Count > 0)
+            {
+                matchday++;
+                var playing = new HashSet<int>();
+                var matchesInRound = 0;
+                foreach (var fixture in remaining.ToList())
+                {
+                    if (matchesInRound == matchesPerRound)
+                    {
+                        break;
+                    }
+
+                    if (!playing.Contains(fixture.Home.Id) && !playing.Contains(fixture.Away.Id))
+                    {
+                        playing.Add(fixture.Home.Id);
+                        playing.Add(fixture.Away.Id);
+                        scheduled.Add((fixture.Home, fixture.Away, matchday));
+                        remaining.Remove(fixture);
+                        matchesInRound++;
+                    }
+                }
+            }
+
+            legFixtures = scheduled;
+        }
         var matchdaysPerLeg = legFixtures.Count == 0 ? 0 : legFixtures.Max(fixture => fixture.Matchday);
 
         for (var round = 0; round < rounds; round++)

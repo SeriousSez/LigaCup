@@ -218,6 +218,34 @@ public class FixtureGeneratorTests
         Assert.Equal(new[] { 3, 5, 1, 4, 2 }, byeTeamIds);
     }
 
+    [Theory]
+    [InlineData(6, 2)]
+    [InlineData(6, 1)]
+    [InlineData(5, 2)]
+    [InlineData(5, 3)]
+    [InlineData(7, 3)]
+    [InlineData(8, 4)]
+    [InlineData(9, 5)]
+    public void CanChooseHowManyTeamsSitOutEachRound(int teamCount, int teamsSittingOut)
+    {
+        var group = new TournamentGroup { Id = 1, TournamentId = 1, Name = "Group A" };
+        var teams = BuildTeams(teamCount);
+        var fixtures = FixtureGenerator.GenerateGroupFixtures(BuildTournament(), group, teams, teamsSittingOut: teamsSittingOut);
+        var actualByes = teamsSittingOut + (teamCount - teamsSittingOut) % 2;
+
+        Assert.Equal(teamCount * (teamCount - 1) / 2, fixtures.Count);
+        Assert.Equal((int)Math.Ceiling((double)fixtures.Count / ((teamCount - actualByes) / 2)),
+            fixtures.Select(fixture => fixture.Round).Distinct().Count());
+        Assert.All(fixtures.GroupBy(fixture => fixture.Round), round =>
+        {
+            Assert.InRange(round.Count(), 1, (teamCount - actualByes) / 2);
+            Assert.Equal(round.Count() * 2, round.SelectMany(fixture => new[] { fixture.HomeTeamId, fixture.AwayTeamId }).Distinct().Count());
+        });
+        Assert.Equal(fixtures.Count, fixtures.Select(fixture =>
+            (Math.Min(fixture.HomeTeamId!.Value, fixture.AwayTeamId!.Value),
+             Math.Max(fixture.HomeTeamId!.Value, fixture.AwayTeamId!.Value))).Distinct().Count());
+    }
+
     [Fact]
     public void CanChooseTheFirstHomeTeam()
     {

@@ -77,7 +77,7 @@ Everything about the format is configurable per tournament from the setup screen
 - **Rules images**: insert an image from an HTTPS URL, paste one from the clipboard, or upload a PNG, JPEG, GIF or WebP image up to 5 MB. Select an inserted image to choose a small, medium, large or full-width responsive size. Uploaded and pasted images are stored under the API's `wwwroot/uploads/rules` directory.
 - **Parking**: maintain parking directions, maps and images in a dedicated setup tab that is also available to visitors on the tournament page.
 
-Group fixtures are generated with the circle method, so every team plays every other team and an odd number of teams gives each team exactly one bye. The knockout bracket is created up front with placeholders such as `Winner QF1`, and those resolve into real teams the moment a tie finishes. Level knockout ties are decided on the penalty shootout score.
+Group fixtures are generated with the circle method, so every team plays every other team and an odd number of teams gives each team exactly one bye by default. For league fixtures, organisers can enter the minimum number of teams sitting out per round when generating the schedule. If that leaves an odd number playing, one additional team sits out so matches remain paired; a final partial round may also have more teams sitting out. The knockout bracket is created up front with placeholders such as `Winner QF1`, and those resolve into real teams the moment a tie finishes. Level knockout ties are decided on the penalty shootout score.
 
 ## The match clock
 

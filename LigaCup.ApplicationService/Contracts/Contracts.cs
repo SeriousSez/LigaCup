@@ -237,7 +237,8 @@ public record GenerateFixturesRequest(
     bool IncludeKnockoutStage,
     bool ReplaceExisting,
     IReadOnlyList<int?>? ByeTeamIds,
-    int? FirstHomeTeamId);
+    int? FirstHomeTeamId,
+    int? TeamsSittingOut = null);
 
 /// <summary>Everything a connected client needs to repaint after a live change.</summary>
 public record LiveUpdateDto(

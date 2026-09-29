@@ -550,6 +550,20 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             {{ t().setup.replaceExisting }}
           </label>
           @if (data.tournament.format === 'League' || data.groups.length === 0) {
+            @if (data.teams.length >= 2) {
+              <label class="first-home-control">
+                <span>{{ t().setup.teamsSittingOut }}</span>
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  [max]="data.teams.length - 2"
+                  step="1"
+                  [ngModel]="selectedSitOutCount(data.teams.length)"
+                  (ngModelChange)="teamsSittingOut = $event"
+                />
+              </label>
+            }
             <label class="first-home-control">
               <span>{{ t().setup.firstHomeTeam }}</span>
               <app-select
@@ -559,8 +573,17 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             </label>
           }
         </div>
+        @if ((data.tournament.format === 'League' || data.groups.length === 0) && data.teams.length >= 2) {
+          <p class="muted fixture-bye-help">
+            @if (!validSitOutCount(data.teams.length)) {
+              {{ t().setup.invalidTeamsSittingOut }}
+            } @else if ((data.teams.length - selectedSitOutCount(data.teams.length)) % 2 !== 0) {
+              {{ t().setup.extraTeamSittingOut }}
+            }
+          </p>
+        }
         <div class="row">
-          <button class="primary" type="button" (click)="generate()" [disabled]="busy()">
+          <button class="primary" type="button" (click)="generate()" [disabled]="busy() || (generateGroups && data.teams.length >= 2 && !validSitOutCount(data.teams.length))">
             {{ t().setup.generate }}
           </button>
           <button type="button" (click)="addMatch()" [disabled]="busy()">
@@ -601,7 +624,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                     <h4>{{ t().tournament.matchday }} {{ round.round }}</h4>
                     @if (round.isGroupRound) {
                       <div class="schedule-heading-actions">
-                        @if (byeRounds(data).includes(round.round)) {
+                        @if (selectedSitOutCount(data.teams.length) === 1 && byeRounds(data).includes(round.round)) {
                           <label>
                             {{ t().setup.byeTeamForRound }}
                             <app-select
@@ -1052,6 +1075,16 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       min-width: 9rem;
     }
 
+    .first-home-control input[type='number'] {
+      width: 5rem;
+    }
+
+    .fixture-bye-help {
+      min-height: 2.5rem;
+      margin: 0;
+      font-size: 0.8rem;
+    }
+
     .schedule-heading {
       display: flex;
       align-items: center;
@@ -1384,6 +1417,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected generateKnockout = true;
   protected replaceExisting = false;
   protected byeTeamIds: (number | null)[] = [];
+  protected teamsSittingOut: number | null = null;
   protected firstHomeTeamId: number | null = null;
   protected readonly fixtureView = signal<FixtureView>('rounds');
 
@@ -1517,6 +1551,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   async saveSettings(): Promise<void> {
     const data = this.detail();
     if (!data) {
+      return;
+    }
+
+    if (this.generateGroups && data.teams.length >= 2 && !this.validSitOutCount(data.teams.length)) {
       return;
     }
 
@@ -2205,8 +2243,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
           this.generateGroups,
           this.generateKnockout,
           this.replaceExisting,
-          this.byeRounds(data).length ? this.byeTeamIds : null,
+          this.selectedSitOutCount(data.teams.length) === 1 && this.byeRounds(data).length ? this.byeTeamIds : null,
           this.firstHomeTeamId,
+          this.selectedSitOutCount(data.teams.length),
         ),
       );
       await this.store.reload();
@@ -2227,6 +2266,18 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     }
 
     return [];
+  }
+
+  selectedSitOutCount(teamCount: number): number {
+    const natural = teamCount % 2;
+    return this.teamsSittingOut !== null && this.validSitOutCount(teamCount)
+      ? this.teamsSittingOut
+      : natural;
+  }
+
+  validSitOutCount(teamCount: number): boolean {
+    return this.teamsSittingOut === null ||
+      (Number.isInteger(this.teamsSittingOut) && this.teamsSittingOut >= 0 && this.teamsSittingOut <= teamCount - 2);
   }
 
   byeTeamOptions(teams: Team[], roundMatches: Match[]): SelectOption<number | null>[] {
