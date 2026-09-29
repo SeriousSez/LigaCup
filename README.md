@@ -71,11 +71,12 @@ Everything about the format is configurable per tournament from the setup screen
 - **Format**: group stage only, groups followed by a knockout bracket, or straight knockout.
 - **Points**: the values for a win, a draw and a loss are all editable, so three points for a win is a default rather than a rule.
 - **Group rounds**: play each pairing once, twice or more. Home advantage flips on every return leg.
+- **Fixture times**: public match fixtures default to showing kickoff times only when a round is on one day. Choose whether to show times only; dates remain visible for any round whose matches span multiple days.
 - **Tiebreakers**: an ordered list applied after points. Goal difference, goals scored, fewest conceded, most wins, head to head points, head to head goal difference, head to head goals scored, fewest disciplinary points and alphabetical. Head to head rules are worked out as a mini league between only the teams that are still level, which is how the real competitions do it.
 - **Points adjustments**: an organiser can deduct or award points to a team, for example after a forfeit.
 - **Players**: optional. Leave player tracking switched off and the app runs as a lightweight teams and scores tool. Switch it on and you get squads, a goalscorer feed and a top scorer table.
 - **Rules images**: insert an image from an HTTPS URL, paste one from the clipboard, or upload a PNG, JPEG, GIF or WebP image up to 5 MB. Select an inserted image to choose a small, medium, large or full-width responsive size. Uploaded and pasted images are stored under the API's `wwwroot/uploads/rules` directory.
-- **Parking**: maintain parking directions, maps and images in a dedicated setup tab that is also available to visitors on the tournament page.
+- **Parking**: new tournaments start with the default directions and parking map image. Maintain parking directions, maps and images in a dedicated setup tab that is also available to visitors on the tournament page; saved content is loaded unchanged when editing.
 
 Group fixtures are generated with the circle method, so every team plays every other team and an odd number of teams gives each team exactly one bye by default. For league fixtures, organisers can enter the minimum number of teams sitting out per round when generating the schedule. If that leaves an odd number playing, one additional team sits out so matches remain paired; a final partial round may also have more teams sitting out. The knockout bracket is created up front with placeholders such as `Winner QF1`, and those resolve into real teams the moment a tie finishes. Level knockout ties are decided on the penalty shootout score.
 

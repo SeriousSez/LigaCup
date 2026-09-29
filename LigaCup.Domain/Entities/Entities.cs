@@ -58,6 +58,8 @@ public class Tournament
     /// <summary>Optional team that should host the first generated group-stage match.</summary>
     public int? FirstHomeTeamId { get; set; }
 
+    public bool ShowMatchTimesOnly { get; set; } = true;
+
     /// <summary>When false the organiser records scores without any running clock.</summary>
     public bool TrackMatchClock { get; set; } = true;
 

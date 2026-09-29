@@ -2,6 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faEye, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -16,7 +18,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, FormsModule, DatePipe, CardListSkeleton, SelectField, DateTimePicker, ConfirmDialog],
+  imports: [RouterLink, FormsModule, DatePipe, FontAwesomeModule, CardListSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
     <h1>{{ t().adminHome.title }}</h1>
 
@@ -83,10 +85,23 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
                 <button class="primary" type="button">{{ t().adminHome.liveConsole }}</button>
               </a>
               <a [routerLink]="['/', tournament.slug]">
-                <button class="ghost" type="button">{{ t().adminHome.view }}</button>
+                <button
+                  class="ghost icon-button"
+                  type="button"
+                  [attr.aria-label]="t().adminHome.view"
+                  [title]="t().adminHome.view"
+                >
+                  <fa-icon [icon]="faEye" aria-hidden="true" />
+                </button>
               </a>
-              <button class="danger" type="button" (click)="askDeleteTournament(tournament)">
-                {{ t().adminHome.delete }}
+              <button
+                class="danger icon-button"
+                type="button"
+                [attr.aria-label]="t().adminHome.delete"
+                [title]="t().adminHome.delete"
+                (click)="askDeleteTournament(tournament)"
+              >
+                <fa-icon [icon]="faTrashCan" aria-hidden="true" />
               </button>
             </div>
           </article>
@@ -140,9 +155,21 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
     .tournament-actions a {
       display: contents;
     }
+
+    .tournament-actions .icon-button {
+      width: 2.5rem;
+      min-width: 2.5rem;
+      aspect-ratio: 1;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+    }
   `,
 })
 export class AdminHome {
+  protected readonly faEye = faEye;
+  protected readonly faTrashCan = faTrashCan;
+
   private readonly api = inject(ApiService);
 
   protected readonly auth = inject(AuthService);
@@ -165,7 +192,8 @@ export class AdminHome {
 
   protected draft = {
     name: '',
-    tournamentDateUtc: '2026-09-06T15:00',
+    location: 'Ved Stadion 5, 4600 Køge',
+    tournamentDateUtc: '2026-09-06T08:00',
     format: 'League' as TournamentFormat,
     trackPlayers: false,
   };
@@ -197,7 +225,7 @@ export class AdminHome {
       description: null,
       rules: defaultTournamentRulesWithoutDate,
       parking: defaultTournamentParking,
-      location: null,
+      location: this.draft.location,
       season: new Date(this.draft.tournamentDateUtc).getFullYear(),
       tournamentDateUtc: this.draft.tournamentDateUtc,
       format: this.draft.format,
@@ -217,6 +245,7 @@ export class AdminHome {
       breakDurationMinutes: 0,
       matchIntervalMinutes: 5,
       matchesPerTimeSlot: 4,
+      showMatchTimesOnly: true,
       trackMatchClock: true,
       allowTimeouts: false,
       useStoppageTime: true,

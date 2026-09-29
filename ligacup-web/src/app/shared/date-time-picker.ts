@@ -5,10 +5,10 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
-    selector: 'app-date-time-picker',
-    imports: [FormsModule, FontAwesomeModule],
-    providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => DateTimePicker), multi: true }],
-    template: `
+  selector: 'app-date-time-picker',
+  imports: [FormsModule, FontAwesomeModule],
+  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => DateTimePicker), multi: true }],
+  template: `
     <div class="picker">
       <button class="picker-input" type="button" [disabled]="disabled()" (click)="toggle()">
         <span>{{ displayValue() || placeholder() || t().datePicker.placeholder }}</span>
@@ -42,7 +42,7 @@ import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
       }
     </div>
   `,
-    styles: `
+  styles: `
     :host { display: block; position: relative; width: 100%; align-self: end; }
     .picker { width: 100%; }
     .picker-input { width: 100%; min-height: var(--tap); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px solid var(--surface-line); border-radius: 10px; font: inherit; font-size: 16px; text-align: left; color: var(--text); background: var(--pitch-800); }
@@ -71,56 +71,56 @@ import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
   `,
 })
 export class DateTimePicker implements ControlValueAccessor {
-      protected readonly faCalendarDays = faCalendarDays;
-    readonly placeholder = input<string | null>(null);
-    readonly ariaLabel = input<string | null>(null);
-    protected readonly open = signal(false);
-    protected readonly disabled = signal(false);
-    protected readonly dateValue = signal('');
-    protected readonly viewDate = signal(new Date());
-    protected readonly calendarView = signal<'days' | 'months' | 'years'>('days');
-    protected timeValue = '15:00';
-    private onChange: (value: string) => void = () => undefined;
-    private onTouched: () => void = () => undefined;
-    private readonly element = inject(ElementRef<HTMLElement>);
-    private readonly i18n = inject(I18nService);
-    protected readonly t = this.i18n.t;
-    protected readonly locale = this.i18n.locale;
+  protected readonly faCalendarDays = faCalendarDays;
+  readonly placeholder = input<string | null>(null);
+  readonly ariaLabel = input<string | null>(null);
+  protected readonly open = signal(false);
+  protected readonly disabled = signal(false);
+  protected readonly dateValue = signal('');
+  protected readonly viewDate = signal(new Date());
+  protected readonly calendarView = signal<'days' | 'months' | 'years'>('days');
+  protected timeValue = '08:00';
+  private onChange: (value: string) => void = () => undefined;
+  private onTouched: () => void = () => undefined;
+  private readonly element = inject(ElementRef<HTMLElement>);
+  private readonly i18n = inject(I18nService);
+  protected readonly t = this.i18n.t;
+  protected readonly locale = this.i18n.locale;
 
-    displayValue(): string { const value = this.dateValue(); if (!value) return ''; const date = new Date(`${value}T00:00`); return `${date.toLocaleDateString(this.locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })} ${this.timeValue}`; }
-    monthName(): string { return this.viewDate().toLocaleDateString(this.locale(), { month: 'long' }); }
-    year(): number { return this.viewDate().getFullYear(); }
-    months(): { index: number; label: string }[] { return Array.from({ length: 12 }, (_, index) => ({ index, label: new Date(this.year(), index, 1).toLocaleDateString(this.locale(), { month: 'short' }) })); }
-    years(): number[] { return Array.from({ length: 12 }, (_, index) => this.year() - 5 + index); }
-    days(): { value: string; label: string; inMonth: boolean; today: boolean }[] { const view = this.viewDate(); const first = new Date(view.getFullYear(), view.getMonth(), 1); const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7)); const today = this.toDateValue(new Date()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); const value = this.toDateValue(date); return { value, label: String(date.getDate()), inMonth: date.getMonth() === view.getMonth(), today: value === today }; }); }
-    writeValue(value: string | null): void { const [date, time] = (value ?? '').split('T'); this.dateValue.set(date || ''); if (time) this.timeValue = time.slice(0, 5); if (date) this.viewDate.set(new Date(`${date}T00:00`)); }
-    registerOnChange(fn: (value: string) => void): void { this.onChange = fn; }
-    registerOnTouched(fn: () => void): void { this.onTouched = fn; }
-    setDisabledState(value: boolean): void { this.disabled.set(value); }
-    toggle(): void { if (!this.disabled()) { this.open.update((value) => !value); this.calendarView.set('days'); } }
-    selectDate(value: string): void { this.dateValue.set(value); this.calendarView.set('days'); this.emit(); }
-    selectMonth(month: number): void { this.viewDate.set(new Date(this.year(), month, 1)); this.calendarView.set('days'); }
-    selectYear(year: number): void { this.viewDate.set(new Date(year, this.viewDate().getMonth(), 1)); this.calendarView.set('months'); }
-    updateTime(value: string): void { this.timeValue = value; this.emit(); }
-    previousMonth(): void {
-        const date = this.viewDate();
-        this.viewDate.set(new Date(
-            this.calendarView() === 'years' ? date.getFullYear() - 12 : this.calendarView() === 'months' ? date.getFullYear() - 1 : date.getFullYear(),
-            this.calendarView() === 'days' ? date.getMonth() - 1 : date.getMonth(),
-            1,
-        ));
-    }
-    nextMonth(): void {
-        const date = this.viewDate();
-        this.viewDate.set(new Date(
-            this.calendarView() === 'years' ? date.getFullYear() + 12 : this.calendarView() === 'months' ? date.getFullYear() + 1 : date.getFullYear(),
-            this.calendarView() === 'days' ? date.getMonth() + 1 : date.getMonth(),
-            1,
-        ));
-    }
-    today(): void { const date = new Date(); this.dateValue.set(this.toDateValue(date)); this.viewDate.set(new Date(date.getFullYear(), date.getMonth(), 1)); this.emit(); }
-    clear(): void { this.dateValue.set(''); this.onChange(''); this.onTouched(); this.open.set(false); }
-    @HostListener('document:click', ['$event']) closeWhenOutside(event: MouseEvent): void { if (!this.element.nativeElement.contains(event.target as Node)) { this.open.set(false); this.onTouched(); } }
-    private emit(): void { if (this.dateValue()) this.onChange(`${this.dateValue()}T${this.timeValue}`); }
-    private toDateValue(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+  displayValue(): string { const value = this.dateValue(); if (!value) return ''; const date = new Date(`${value}T00:00`); return `${date.toLocaleDateString(this.locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })} ${this.timeValue}`; }
+  monthName(): string { return this.viewDate().toLocaleDateString(this.locale(), { month: 'long' }); }
+  year(): number { return this.viewDate().getFullYear(); }
+  months(): { index: number; label: string }[] { return Array.from({ length: 12 }, (_, index) => ({ index, label: new Date(this.year(), index, 1).toLocaleDateString(this.locale(), { month: 'short' }) })); }
+  years(): number[] { return Array.from({ length: 12 }, (_, index) => this.year() - 5 + index); }
+  days(): { value: string; label: string; inMonth: boolean; today: boolean }[] { const view = this.viewDate(); const first = new Date(view.getFullYear(), view.getMonth(), 1); const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7)); const today = this.toDateValue(new Date()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); const value = this.toDateValue(date); return { value, label: String(date.getDate()), inMonth: date.getMonth() === view.getMonth(), today: value === today }; }); }
+  writeValue(value: string | null): void { const [date, time] = (value ?? '').split('T'); this.dateValue.set(date || ''); if (time) this.timeValue = time.slice(0, 5); if (date) this.viewDate.set(new Date(`${date}T00:00`)); }
+  registerOnChange(fn: (value: string) => void): void { this.onChange = fn; }
+  registerOnTouched(fn: () => void): void { this.onTouched = fn; }
+  setDisabledState(value: boolean): void { this.disabled.set(value); }
+  toggle(): void { if (!this.disabled()) { this.open.update((value) => !value); this.calendarView.set('days'); } }
+  selectDate(value: string): void { this.dateValue.set(value); this.calendarView.set('days'); this.emit(); }
+  selectMonth(month: number): void { this.viewDate.set(new Date(this.year(), month, 1)); this.calendarView.set('days'); }
+  selectYear(year: number): void { this.viewDate.set(new Date(year, this.viewDate().getMonth(), 1)); this.calendarView.set('months'); }
+  updateTime(value: string): void { this.timeValue = value; this.emit(); }
+  previousMonth(): void {
+    const date = this.viewDate();
+    this.viewDate.set(new Date(
+      this.calendarView() === 'years' ? date.getFullYear() - 12 : this.calendarView() === 'months' ? date.getFullYear() - 1 : date.getFullYear(),
+      this.calendarView() === 'days' ? date.getMonth() - 1 : date.getMonth(),
+      1,
+    ));
+  }
+  nextMonth(): void {
+    const date = this.viewDate();
+    this.viewDate.set(new Date(
+      this.calendarView() === 'years' ? date.getFullYear() + 12 : this.calendarView() === 'months' ? date.getFullYear() + 1 : date.getFullYear(),
+      this.calendarView() === 'days' ? date.getMonth() + 1 : date.getMonth(),
+      1,
+    ));
+  }
+  today(): void { const date = new Date(); this.dateValue.set(this.toDateValue(date)); this.viewDate.set(new Date(date.getFullYear(), date.getMonth(), 1)); this.emit(); }
+  clear(): void { this.dateValue.set(''); this.onChange(''); this.onTouched(); this.open.set(false); }
+  @HostListener('document:click', ['$event']) closeWhenOutside(event: MouseEvent): void { if (!this.element.nativeElement.contains(event.target as Node)) { this.open.set(false); this.onTouched(); } }
+  private emit(): void { if (this.dateValue()) this.onChange(`${this.dateValue()}T${this.timeValue}`); }
+  private toDateValue(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 }

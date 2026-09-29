@@ -3,6 +3,7 @@ using System;
 using LigaCup.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LigaCup.Infrastructure.Migrations
 {
     [DbContext(typeof(LigaCupContext))]
-    partial class LigaCupContextModelSnapshot : ModelSnapshot
+    [Migration("20260929201507_ShowMatchTimesOnly")]
+    partial class ShowMatchTimesOnly
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -346,9 +349,7 @@ namespace LigaCup.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ShowMatchTimesOnly")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(true);
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()

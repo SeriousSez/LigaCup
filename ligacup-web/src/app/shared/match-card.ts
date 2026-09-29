@@ -22,14 +22,14 @@ import { Match, TournamentSummary } from '../core/models';
         <span>{{ stageLabel() }}</span>
         @if (match().kickoffUtc) {
           <span>
-            {{ match().kickoffUtc | date: 'EEE d MMM HH:mm' : undefined : locale() }}
+            {{ match().kickoffUtc | date: (timeOnly() ? 'HH:mm' : 'EEE d MMM HH:mm') : undefined : locale() }}
             @if (match().scheduledEndUtc) {
               &ndash;{{ match().scheduledEndUtc | date: 'HH:mm' : undefined : locale() }}
             }
           </span>
         }
         @if (match().pitchNumber) {
-          <span>{{ t().matchCard.pitch }} {{ match().pitchNumber }}</span>
+          <span class="pitch">{{ t().matchCard.pitch }} {{ match().pitchNumber }}</span>
         }
       </div>
 
@@ -133,6 +133,11 @@ import { Match, TournamentSummary } from '../core/models';
       color: var(--text-muted);
     }
 
+    .meta .pitch {
+      margin-left: auto;
+      text-align: right;
+    }
+
     .scoreline {
       display: grid;
       grid-template-columns: 1fr auto 1fr;
@@ -213,6 +218,7 @@ export class MatchCard {
   protected readonly mapsUrl = mapsUrl;
   readonly match = input.required<Match>();
   readonly tournament = input.required<TournamentSummary>();
+  readonly timeOnly = input(false);
 
   private readonly i18n = inject(I18nService);
   private readonly clock = inject(MatchClockService);

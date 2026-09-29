@@ -7,7 +7,7 @@ import { faFloppyDisk, faLink, faTrashCan, faUpload } from '@fortawesome/free-so
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { defaultTournamentParking, defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
+import { defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
 import { TournamentStore } from '../../core/tournament.store';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
@@ -549,6 +549,10 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             <input type="checkbox" [(ngModel)]="replaceExisting" />
             {{ t().setup.replaceExisting }}
           </label>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
+            {{ t().setup.showMatchTimesOnly }}
+          </label>
           @if (data.tournament.format === 'League' || data.groups.length === 0) {
             @if (data.teams.length >= 2) {
               <label class="first-home-control">
@@ -592,6 +596,14 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
             {{ t().setup.seedKnockout }}
           </button>
+          @if (hasUnsavedSettingsChanges()) {
+            <button type="button" (click)="saveSettings()" [disabled]="busy()">
+              {{ t().common.save }}
+            </button>
+          }
+          @if (message()) {
+            <span class="muted" role="status">{{ message() }}</span>
+          }
         </div>
         @if (fixtureMessage()) {
           <p class="muted">{{ fixtureMessage() }}</p>
@@ -1426,9 +1438,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     slug: null,
     description: null,
     rules: defaultTournamentRulesWithoutDate,
-    parking: defaultTournamentParking,
+    parking: null,
     location: null,
-    tournamentDateUtc: '2026-09-06T15:00',
+    tournamentDateUtc: '2026-09-06T08:00',
     season: new Date().getFullYear(),
     format: 'League',
     status: 'Draft',
@@ -1447,6 +1459,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     breakDurationMinutes: 5,
     matchIntervalMinutes: 5,
     matchesPerTimeSlot: 4,
+    showMatchTimesOnly: true,
     trackMatchClock: true,
     allowTimeouts: false,
     useStoppageTime: true,
@@ -1496,6 +1509,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       breakDurationMinutes: data.tournament.breakDurationMinutes,
       matchIntervalMinutes: data.tournament.matchIntervalMinutes,
       matchesPerTimeSlot: data.tournament.matchesPerTimeSlot,
+      showMatchTimesOnly: data.tournament.showMatchTimesOnly,
       trackMatchClock: data.tournament.trackMatchClock,
       allowTimeouts: data.tournament.allowTimeouts,
       useStoppageTime: data.tournament.useStoppageTime,
