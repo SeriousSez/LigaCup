@@ -49,6 +49,7 @@ public record TournamentSummaryDto(
     int? MatchIntervalMinutes,
     int MatchesPerTimeSlot,
     bool ShowMatchTimesOnly,
+    bool HideMatchAddresses,
     int? FirstHomeTeamId,
     bool TrackMatchClock,
     bool AllowTimeouts,
@@ -94,7 +95,8 @@ public record SaveTournamentRequest(
     bool AllowTimeouts,
     bool UseStoppageTime,
     IReadOnlyList<TiebreakerRule>? Tiebreakers,
-    bool? ShowMatchTimesOnly = null);
+    bool? ShowMatchTimesOnly = null,
+    bool? HideMatchAddresses = null);
 
 public record GroupDto(int Id, string Name, int SortOrder);
 

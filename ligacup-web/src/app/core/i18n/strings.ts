@@ -357,6 +357,7 @@ export interface Strings {
         extraTeamSittingOut: string;
         invalidTeamsSittingOut: string;
         showMatchTimesOnly: string;
+        hideMatchAddresses: string;
         autoBye: string;
         firstHomeTeam: string;
         schedule: string;
@@ -838,6 +839,7 @@ export const danish: Strings = {
         extraTeamSittingOut: 'Et ekstra hold sidder over, så alle kampe har to hold.',
         invalidTeamsSittingOut: 'Angiv et helt tal fra 0 til to færre end antallet af hold.',
         showMatchTimesOnly: 'Vis kun kampenes klokkeslæt',
+        hideMatchAddresses: 'Skjul adresser ved kampe for besøgende',
         autoBye: 'Automatisk',
         firstHomeTeam: 'Første hjemmehold',
         addMatch: 'Tilføj kamp',
@@ -1321,6 +1323,7 @@ export const english: Strings = {
         extraTeamSittingOut: 'One additional team sits out so every match has two teams.',
         invalidTeamsSittingOut: 'Enter a whole number from 0 to two fewer than the number of teams.',
         showMatchTimesOnly: 'Show match times only',
+        hideMatchAddresses: 'Hide match addresses from visitors',
         autoBye: 'Automatic',
         firstHomeTeam: 'First home team',
         addMatch: 'Add match',

@@ -29,6 +29,7 @@ public static class DtoMapper
         tournament.MatchIntervalMinutes,
         tournament.MatchesPerTimeSlot,
         tournament.ShowMatchTimesOnly,
+        tournament.HideMatchAddresses,
         tournament.FirstHomeTeamId,
         tournament.TrackMatchClock,
         tournament.AllowTimeouts,

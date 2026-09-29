@@ -59,6 +59,7 @@ public class Tournament
     public int? FirstHomeTeamId { get; set; }
 
     public bool ShowMatchTimesOnly { get; set; } = true;
+    public bool HideMatchAddresses { get; set; }
 
     /// <summary>When false the organiser records scores without any running clock.</summary>
     public bool TrackMatchClock { get; set; } = true;

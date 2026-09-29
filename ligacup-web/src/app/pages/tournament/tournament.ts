@@ -34,7 +34,7 @@ type FixtureView = 'rounds' | 'all';
             @if (data.tournament.tournamentDateUtc) {
               &middot; {{ data.tournament.tournamentDateUtc | date: 'd MMM yyyy HH:mm' : undefined : locale() }}
             }
-            @if (data.tournament.location; as address) {
+            @if (!data.tournament.hideMatchAddresses && data.tournament.location; as address) {
               &middot;
               <a
                 class="tournament-location"
@@ -146,7 +146,7 @@ type FixtureView = 'rounds' | 'all';
                   <div class="grid-auto">
                     @for (match of round.matches; track match.id) {
                       <div data-guide-target="tournament-match">
-                        <app-match-card [match]="match" [tournament]="data.tournament" [timeOnly]="data.tournament.showMatchTimesOnly && timeOnlyMatchIds().has(match.id)" />
+                        <app-match-card [match]="match" [tournament]="data.tournament" [timeOnly]="data.tournament.showMatchTimesOnly" />
                       </div>
                     }
                   </div>
@@ -158,7 +158,7 @@ type FixtureView = 'rounds' | 'all';
               <div class="grid-auto">
                 @for (match of fixtureMatches(); track match.id) {
                   <div data-guide-target="tournament-match">
-                    <app-match-card [match]="match" [tournament]="data.tournament" [timeOnly]="data.tournament.showMatchTimesOnly && timeOnlyMatchIds().has(match.id)" />
+                    <app-match-card [match]="match" [tournament]="data.tournament" [timeOnly]="data.tournament.showMatchTimesOnly" />
                   </div>
                 } @empty {
                   <p class="muted">{{ t().tournament.noFixtures }}</p>
@@ -427,31 +427,6 @@ export class Tournament implements OnInit {
       return left.round - right.round;
     }),
   );
-
-  protected readonly timeOnlyMatchIds = computed(() => {
-    const matches = this.detail()?.matches ?? [];
-    const kickoffDatesByRound = new Map<string, Set<string>>();
-
-    for (const match of matches) {
-      if (!match.kickoffUtc) continue;
-
-      const localDate = new Date(match.kickoffUtc);
-      const dateKey = `${localDate.getFullYear()}-${localDate.getMonth()}-${localDate.getDate()}`;
-      const roundKey = `${match.stage}:${match.groupId ?? ''}:${match.round}`;
-      const dates = kickoffDatesByRound.get(roundKey) ?? new Set<string>();
-      dates.add(dateKey);
-      kickoffDatesByRound.set(roundKey, dates);
-    }
-
-    return new Set(
-      matches
-        .filter((match) => {
-          const roundKey = `${match.stage}:${match.groupId ?? ''}:${match.round}`;
-          return (kickoffDatesByRound.get(roundKey)?.size ?? 0) <= 1;
-        })
-        .map((match) => match.id),
-    );
-  });
 
   protected readonly fixtureRounds = computed(() => {
     const detail = this.detail();

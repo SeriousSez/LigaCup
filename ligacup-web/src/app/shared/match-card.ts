@@ -73,7 +73,7 @@ import { Match, TournamentSummary } from '../core/models';
       }
       </a>
 
-      @if (location(); as address) {
+      @if (!tournament().hideMatchAddresses && location(); as address) {
         <a
           class="location muted"
           [href]="mapsUrl(address)"

@@ -92,6 +92,7 @@ export interface TournamentSummary {
     matchIntervalMinutes: number | null;
     matchesPerTimeSlot: number;
     showMatchTimesOnly: boolean;
+    hideMatchAddresses: boolean;
     firstHomeTeamId: number | null;
     trackMatchClock: boolean;
     allowTimeouts: boolean;
@@ -139,6 +140,7 @@ export interface SaveTournamentRequest {
     useStoppageTime: boolean;
     tiebreakers: TiebreakerRule[] | null;
     showMatchTimesOnly: boolean;
+    hideMatchAddresses: boolean;
 }
 
 export interface Group {

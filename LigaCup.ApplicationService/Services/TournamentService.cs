@@ -174,6 +174,7 @@ public class TournamentService(LigaCupContext dbContext)
             : Math.Clamp(request.MatchIntervalMinutes.Value, 0, 180);
         tournament.MatchesPerTimeSlot = Math.Clamp(request.MatchesPerTimeSlot, 1, 16);
         tournament.ShowMatchTimesOnly = request.ShowMatchTimesOnly ?? tournament.ShowMatchTimesOnly;
+        tournament.HideMatchAddresses = request.HideMatchAddresses ?? tournament.HideMatchAddresses;
         tournament.TrackMatchClock = request.TrackMatchClock;
         tournament.AllowTimeouts = request.AllowTimeouts;
         tournament.UseStoppageTime = request.UseStoppageTime;

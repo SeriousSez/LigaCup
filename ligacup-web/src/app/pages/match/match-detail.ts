@@ -109,7 +109,7 @@ import { HeadingSkeleton } from '../../shared/loading-skeletons';
             @if (currentMatch.kickoffUtc) {
               <div>
                 <span>{{ t().matchPage.kickoff }}</span>
-                <strong>{{ currentMatch.kickoffUtc | date: 'EEEE d MMMM, HH:mm' : undefined : locale() }}</strong>
+                <strong>{{ currentMatch.kickoffUtc | date: (data.tournament.showMatchTimesOnly ? 'HH:mm' : 'EEEE d MMMM, HH:mm') : undefined : locale() }}</strong>
               </div>
             }
             @if (currentMatch.pitchNumber) {
@@ -118,7 +118,7 @@ import { HeadingSkeleton } from '../../shared/loading-skeletons';
                 <strong>{{ currentMatch.pitchNumber }}</strong>
               </div>
             }
-            @if (currentMatch.venue ?? data.tournament.location; as location) {
+            @if (!data.tournament.hideMatchAddresses && (currentMatch.venue ?? data.tournament.location); as location) {
               <div>
                 <span>{{ t().matchPage.venue }}</span>
                 <a

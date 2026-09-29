@@ -45,7 +45,7 @@ import { CardListSkeleton } from '../../shared/loading-skeletons';
               <span>{{ tournament.matchCount }} {{ t().common.matches }}</span>
               <span>{{ t().tournamentStatus[tournament.status] }}</span>
             </div>
-            @if (tournament.location) {
+            @if (!tournament.hideMatchAddresses && tournament.location) {
               <a
                 class="location muted"
                 [href]="mapsUrl(tournament.location)"

@@ -553,6 +553,10 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
             <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
             {{ t().setup.showMatchTimesOnly }}
           </label>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.hideMatchAddresses" />
+            {{ t().setup.hideMatchAddresses }}
+          </label>
           @if (data.tournament.format === 'League' || data.groups.length === 0) {
             @if (data.teams.length >= 2) {
               <label class="first-home-control">
@@ -684,7 +688,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       }
 
       <ng-template #scheduleEditor let-match let-teams="teams">
-        <div class="schedule-row">
+        <div class="schedule-row" [class.no-venue]="settings.hideMatchAddresses" [class.knockout]="match.stage !== 'Group'">
           @if (match.stage === 'Group') {
             <label>
               {{ t().setup.homeTeam }}
@@ -702,20 +706,26 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           }
           <label>
             {{ t().setup.kickoff }}
-            <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
+            @if (settings.showMatchTimesOnly) {
+              <input type="time" [ngModel]="matchTime(match)" (ngModelChange)="setMatchTime(match, $event)" />
+            } @else {
+              <app-date-time-picker [(ngModel)]="match.kickoffUtc" />
+            }
           </label>
           <label>
             {{ t().setup.pitchNumber }}
             <input type="number" min="1" [(ngModel)]="match.pitchNumber" />
           </label>
-          <label>
-            {{ t().setup.location }}
-            <input
-              [(ngModel)]="match.venue"
-              [placeholder]="t().setup.locationOverridePlaceholder"
-              maxlength="160"
-            />
-          </label>
+          @if (!settings.hideMatchAddresses) {
+            <label>
+              {{ t().setup.location }}
+              <input
+                [(ngModel)]="match.venue"
+                [placeholder]="t().setup.locationOverridePlaceholder"
+                maxlength="160"
+              />
+            </label>
+          }
           <div class="schedule-order-controls" aria-label="Reorder matches">
             <button
               type="button"
@@ -1199,8 +1209,16 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
         grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) 13rem 6rem minmax(12rem, 1fr) auto auto;
       }
 
+      .schedule-row.no-venue {
+        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) 13rem 6rem auto auto;
+      }
+
       .schedule-row > strong {
         grid-column: 1 / -1;
+      }
+
+      .schedule-row.no-venue.knockout > strong {
+        grid-column: 1 / span 2;
       }
 
       .schedule-order-controls {
@@ -1460,6 +1478,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     matchIntervalMinutes: 5,
     matchesPerTimeSlot: 4,
     showMatchTimesOnly: true,
+    hideMatchAddresses: false,
     trackMatchClock: true,
     allowTimeouts: false,
     useStoppageTime: true,
@@ -1510,6 +1529,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       matchIntervalMinutes: data.tournament.matchIntervalMinutes,
       matchesPerTimeSlot: data.tournament.matchesPerTimeSlot,
       showMatchTimesOnly: data.tournament.showMatchTimesOnly,
+      hideMatchAddresses: data.tournament.hideMatchAddresses,
       trackMatchClock: data.tournament.trackMatchClock,
       allowTimeouts: data.tournament.allowTimeouts,
       useStoppageTime: data.tournament.useStoppageTime,
@@ -1839,8 +1859,8 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     return copy.innerHTML;
   }
 
-  localKickoff(value: string | null): string {
-    return value ? value.slice(0, 16) : '';
+  matchTime(match: Match): string {
+    return match.kickoffUtc?.slice(11, 16) ?? '';
   }
 
   teamOptions(teams: Team[], excludedTeamId: number | null): SelectOption<number | null>[] {
@@ -1849,9 +1869,16 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       .map((team) => ({ value: team.id, label: team.name }));
   }
 
-  setKickoff(match: Match, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    match.kickoffUtc = value || null;
+  setMatchTime(match: Match, time: string): void {
+    if (!time) {
+      match.kickoffUtc = null;
+      return;
+    }
+
+    const today = new Date();
+    const date = (match.kickoffUtc ?? this.settings.tournamentDateUtc)?.slice(0, 10)
+      ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    match.kickoffUtc = `${date}T${time}${match.kickoffUtc?.slice(16) ?? ''}`;
   }
 
   protected hasScheduleChanges(match: Match): boolean {
@@ -2320,6 +2347,17 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       return;
     }
 
+    const pendingSchedules = new Map(data.matches
+      .filter((match) => this.hasScheduleChanges(match))
+      .map((match) => [match.id, {
+        homeTeamId: match.homeTeamId,
+        awayTeamId: match.awayTeamId,
+        kickoffUtc: match.kickoffUtc,
+        pitchNumber: match.pitchNumber,
+        venue: match.venue,
+        sortOrder: match.sortOrder,
+      }] as const));
+
     this.busy.set(true);
     try {
       const groupRounds = data.matches
@@ -2341,6 +2379,13 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         venue: null,
       }));
       await this.store.reload();
+      for (const match of this.detail()?.matches ?? []) {
+        const pending = pendingSchedules.get(match.id);
+        if (pending) {
+          this.hasScheduleChanges(match);
+          Object.assign(match, pending);
+        }
+      }
     } finally {
       this.busy.set(false);
     }

@@ -246,6 +246,7 @@ export class AdminHome {
       matchIntervalMinutes: 5,
       matchesPerTimeSlot: 4,
       showMatchTimesOnly: true,
+      hideMatchAddresses: false,
       trackMatchClock: true,
       allowTimeouts: false,
       useStoppageTime: true,
