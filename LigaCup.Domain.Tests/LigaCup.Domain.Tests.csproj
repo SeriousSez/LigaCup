@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LigaCup.Domain\LigaCup.Domain.csproj" />
+    <ProjectReference Include="..\LigaCup.ApplicationService\LigaCup.ApplicationService.csproj" />
   </ItemGroup>
 
 </Project>

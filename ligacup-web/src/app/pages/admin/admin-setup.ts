@@ -9,6 +9,7 @@ import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
 import { TournamentStore } from '../../core/tournament.store';
+import { localDateTime, utcDateTime } from '../../core/date-time';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
@@ -533,6 +534,23 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       }
 
       @if (activeTab() === 'fixtures') {
+        <section class="card stack">
+          <h3>{{ t().setup.fixtureDisplay }}</h3>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
+            {{ t().setup.showMatchTimesOnly }}
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.hideMatchAddresses" />
+            {{ t().setup.hideMatchAddresses }}
+          </label>
+          <div class="row">
+            <button type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
+              {{ t().setup.saveFixtureDisplay }}
+            </button>
+            @if (message()) { <span class="muted" role="status">{{ message() }}</span> }
+          </div>
+        </section>
         <section class="card stack" data-guide-target="admin-fixtures">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
@@ -548,14 +566,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="replaceExisting" />
             {{ t().setup.replaceExisting }}
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
-            {{ t().setup.showMatchTimesOnly }}
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" [(ngModel)]="settings.hideMatchAddresses" />
-            {{ t().setup.hideMatchAddresses }}
           </label>
           @if (data.tournament.format === 'League' || data.groups.length === 0) {
             @if (data.teams.length >= 2) {
@@ -600,35 +610,38 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
             {{ t().setup.seedKnockout }}
           </button>
-          @if (hasUnsavedSettingsChanges()) {
-            <button type="button" (click)="saveSettings()" [disabled]="busy()">
-              {{ t().common.save }}
-            </button>
-          }
-          @if (message()) {
-            <span class="muted" role="status">{{ message() }}</span>
-          }
         </div>
         @if (fixtureMessage()) {
           <p class="muted">{{ fixtureMessage() }}</p>
         }
         @if (data.matches.length) {
-          <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+          <div class="schedule-toolbar">
+            <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+              <button
+                type="button"
+                [class.active]="fixtureView() === 'rounds'"
+                [attr.aria-pressed]="fixtureView() === 'rounds'"
+                (click)="fixtureView.set('rounds')"
+              >
+                {{ t().tournament.byRounds }}
+              </button>
+              <button
+                type="button"
+                [class.active]="fixtureView() === 'all'"
+                [attr.aria-pressed]="fixtureView() === 'all'"
+                (click)="fixtureView.set('all')"
+              >
+                {{ t().tournament.allMatches }}
+              </button>
+            </div>
             <button
               type="button"
-              [class.active]="fixtureView() === 'rounds'"
-              [attr.aria-pressed]="fixtureView() === 'rounds'"
-              (click)="fixtureView.set('rounds')"
+              class="primary save-all-schedules"
+              [disabled]="busy() || !hasUnsavedScheduleChanges()"
+              (click)="saveAllSchedules()"
             >
-              {{ t().tournament.byRounds }}
-            </button>
-            <button
-              type="button"
-              [class.active]="fixtureView() === 'all'"
-              [attr.aria-pressed]="fixtureView() === 'all'"
-              (click)="fixtureView.set('all')"
-            >
-              {{ t().tournament.allMatches }}
+              <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
+              {{ t().setup.saveAllSchedule }}
             </button>
           </div>
 
@@ -668,15 +681,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <div class="schedule-list" data-guide-target="admin-schedule-list">
             <div class="schedule-heading">
               <h4>{{ t().setup.schedule }}</h4>
-              <button
-                type="button"
-                class="primary"
-                [disabled]="busy() || !hasUnsavedScheduleChanges()"
-                (click)="saveAllSchedules()"
-              >
-                <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
-                {{ t().setup.saveAllSchedule }}
-              </button>
             </div>
             @for (match of scheduleMatches(data.matches); track match.id) {
               <ng-container [ngTemplateOutlet]="scheduleEditor" [ngTemplateOutletContext]="{ $implicit: match, teams: data.teams }" />
@@ -772,6 +776,15 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
         </div>
       </ng-template>
 
+      <app-confirm-dialog
+        [open]="replaceFixturesConfirmation()"
+        [title]="t().setup.replaceExisting"
+        [message]="t().setup.replaceFixturesWarning"
+        [confirmLabel]="t().setup.replaceExisting"
+        [cancelLabel]="t().common.cancel"
+        (confirmed)="generate(true)"
+        (cancelled)="replaceFixturesConfirmation.set(false)"
+      />
       <app-confirm-dialog
         [open]="pendingConfirmation() !== null"
         [title]="t().common.remove"
@@ -1056,6 +1069,28 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
     .schedule-list {
       display: grid;
       gap: 0.6rem;
+    }
+
+    .schedule-toolbar {
+      position: sticky;
+      top: var(--header-h);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      background: var(--surface-raised);
+    }
+
+    .save-all-schedules {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
     }
 
     .fixture-view {
@@ -1365,6 +1400,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   protected readonly uploadingRuleImage = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
+  protected readonly replaceFixturesConfirmation = signal(false);
   protected readonly pendingConfirmation = signal<{ message: string; action: () => Promise<void> | void } | null>(null);
   protected readonly leaveConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
   protected readonly fixtureReviewConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
@@ -1505,9 +1541,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         : defaultTournamentRulesWithoutDate,
       parking: data.tournament.parking,
       location: data.tournament.location,
-      tournamentDateUtc: data.tournament.tournamentDateUtc
-        ? data.tournament.tournamentDateUtc.slice(0, 16)
-        : null,
+      tournamentDateUtc: data.tournament.tournamentDateUtc,
       season: data.tournament.tournamentDateUtc
         ? new Date(data.tournament.tournamentDateUtc).getFullYear()
         : data.tournament.season,
@@ -1585,10 +1619,6 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   async saveSettings(): Promise<void> {
     const data = this.detail();
     if (!data) {
-      return;
-    }
-
-    if (this.generateGroups && data.teams.length >= 2 && !this.validSitOutCount(data.teams.length)) {
       return;
     }
 
@@ -1860,7 +1890,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   matchTime(match: Match): string {
-    return match.kickoffUtc?.slice(11, 16) ?? '';
+    return localDateTime(match.kickoffUtc).slice(11, 16);
   }
 
   teamOptions(teams: Team[], excludedTeamId: number | null): SelectOption<number | null>[] {
@@ -1875,10 +1905,8 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       return;
     }
 
-    const today = new Date();
-    const date = (match.kickoffUtc ?? this.settings.tournamentDateUtc)?.slice(0, 10)
-      ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    match.kickoffUtc = `${date}T${time}${match.kickoffUtc?.slice(16) ?? ''}`;
+    const date = localDateTime(match.kickoffUtc || this.settings.tournamentDateUtc || new Date().toISOString()).slice(0, 10);
+    match.kickoffUtc = utcDateTime(`${date}T${time}`);
   }
 
   protected hasScheduleChanges(match: Match): boolean {
@@ -2268,9 +2296,23 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     this.requestConfirmation(playerName, () => this.removePlayer(playerId));
   }
 
-  async generate(): Promise<void> {
+  async generate(replacementConfirmed = false): Promise<void> {
+    this.replaceFixturesConfirmation.set(false);
     const data = this.detail();
     if (!data) {
+      return;
+    }
+
+    if (this.hasUnsavedScheduleChanges()) {
+      this.fixtureMessage.set(this.t().setup.saveBeforeGenerate);
+      return;
+    }
+    if (this.generateGroups && data.teams.length >= 2 && !this.validSitOutCount(data.teams.length)) {
+      this.fixtureMessage.set(this.t().setup.invalidTeamsSittingOut);
+      return;
+    }
+    if (this.replaceExisting && data.matches.length && !replacementConfirmed) {
+      this.replaceFixturesConfirmation.set(true);
       return;
     }
 
@@ -2278,6 +2320,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     this.fixtureMessage.set(null);
 
     try {
+      if (this.hasUnsavedSettingsChanges()) {
+        await this.saveSettingsRequest(data.tournament.id);
+        this.settingsSnapshot = this.settingsState();
+      }
       const result = await firstValueFrom(
         this.api.generateFixtures(
           data.tournament.id,
@@ -2291,6 +2337,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       );
       await this.store.reload();
       this.structuralFixtureChange.set(false);
+      this.replaceExisting = false;
       this.fixtureMessage.set(
         this.i18n.format(this.t().setup.generated, { count: result.generated }),
       );

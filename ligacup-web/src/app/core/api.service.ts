@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { utcDateTime } from './date-time';
 import {
     CreateUserRequest,
     Group,
@@ -51,11 +52,15 @@ export class ApiService {
     }
 
     createTournament(request: SaveTournamentRequest) {
-        return this.http.post<string>(`${this.base}/api/admin/tournaments`, request);
+        return this.http.post<string>(`${this.base}/api/admin/tournaments`, {
+            ...request, tournamentDateUtc: utcDateTime(request.tournamentDateUtc),
+        });
     }
 
     updateTournament(id: number, request: SaveTournamentRequest) {
-        return this.http.put<string>(`${this.base}/api/admin/tournaments/${id}`, request);
+        return this.http.put<string>(`${this.base}/api/admin/tournaments/${id}`, {
+            ...request, tournamentDateUtc: utcDateTime(request.tournamentDateUtc),
+        });
     }
 
     deleteTournament(id: number) {
@@ -163,12 +168,13 @@ export class ApiService {
             venue: string | null;
         },
     ) {
+        const payload = { ...body, kickoffUtc: utcDateTime(body.kickoffUtc) };
         return matchId
             ? this.http.put<Match>(
                 `${this.base}/api/admin/tournaments/${tournamentId}/matches/${matchId}`,
-                body,
+                payload,
             )
-            : this.http.post<Match>(`${this.base}/api/admin/tournaments/${tournamentId}/matches`, body);
+            : this.http.post<Match>(`${this.base}/api/admin/tournaments/${tournamentId}/matches`, payload);
     }
 
     deleteMatch(tournamentId: number, matchId: number) {
