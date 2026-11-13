@@ -20,11 +20,11 @@ public record UserDto(
     UserRole Role,
     bool IsActive,
     DateTime CreatedUtc,
-    DateTime? LastLoginUtc);
+    DateTime? LastLoginUtc) { public string Revision { get; init; } = ""; }
 
 public record CreateUserRequest(string Username, string? Email, string Password, UserRole Role);
 
-public record UpdateUserRequest(string? Email, UserRole Role, bool IsActive);
+public record UpdateUserRequest(string? Email, UserRole Role, bool IsActive, string? Revision = null);
 
 public record ResetPasswordRequest(string Password);
 
@@ -63,7 +63,7 @@ public record TournamentSummaryDto(
     bool HasThirdPlacePlayOff,
     IReadOnlyList<TiebreakerRule> Tiebreakers,
     int TeamCount,
-    int MatchCount);
+    int MatchCount) { public string Revision { get; init; } = ""; }
 
 public record SaveTournamentRequest(
     string Name,
@@ -96,11 +96,14 @@ public record SaveTournamentRequest(
     bool UseStoppageTime,
     IReadOnlyList<TiebreakerRule>? Tiebreakers,
     bool? ShowMatchTimesOnly = null,
-    bool? HideMatchAddresses = null);
+    bool? HideMatchAddresses = null,
+    string? Revision = null);
 
 public record GroupDto(int Id, string Name, int SortOrder);
 
 public record SaveGroupRequest(string Name, int SortOrder);
+
+public record AssignTeamGroupRequest(int? GroupId);
 
 public record TeamDto(
     int Id,
@@ -112,7 +115,7 @@ public record TeamDto(
     int? GroupId,
     string? GroupName,
     int PointsAdjustment,
-    IReadOnlyList<PlayerDto> Players);
+    IReadOnlyList<PlayerDto> Players) { public string Revision { get; init; } = ""; }
 
 public record SaveTeamRequest(
     string Name,
@@ -121,11 +124,12 @@ public record SaveTeamRequest(
     string? LogoUrl,
     string? Manager,
     int? GroupId,
-    int PointsAdjustment);
+    int PointsAdjustment,
+    string? Revision = null);
 
-public record PlayerDto(int Id, int TeamId, string Name, int? ShirtNumber, string? Position, bool IsActive);
+public record PlayerDto(int Id, int TeamId, string Name, int? ShirtNumber, string? Position, bool IsActive) { public string Revision { get; init; } = ""; }
 
-public record SavePlayerRequest(int TeamId, string Name, int? ShirtNumber, string? Position, bool IsActive);
+public record SavePlayerRequest(int TeamId, string Name, int? ShirtNumber, string? Position, bool IsActive, string? Revision = null);
 
 public record MatchEventDto(
     int Id,
@@ -167,7 +171,7 @@ public record MatchDto(
     int? AwayPenalties,
     MatchClockDto Clock,
     string? Notes,
-    IReadOnlyList<MatchEventDto> Events);
+    IReadOnlyList<MatchEventDto> Events) { public string Revision { get; init; } = ""; public string LiveRevision { get; init; } = ""; }
 
 /// <summary>
 /// Raw clock state rather than a rendered minute, so a client can keep counting
@@ -193,9 +197,10 @@ public record SaveMatchRequest(
     string? AwayPlaceholder,
     DateTime? KickoffUtc,
     int? PitchNumber,
-    string? Venue);
+    string? Venue,
+    string? Revision = null);
 
-public record UpdateScoreRequest(int HomeScore, int AwayScore, int? HomePenalties, int? AwayPenalties);
+public record UpdateScoreRequest(int HomeScore, int AwayScore, int? HomePenalties, int? AwayPenalties, string? Revision = null);
 
 public record UpdateMatchStatusRequest(MatchStatus Status);
 
@@ -251,3 +256,7 @@ public record LiveUpdateDto(
     IReadOnlyList<GroupTableDto> Tables,
     IReadOnlyList<BracketMatchDto> Bracket,
     IReadOnlyList<ScorerDto> TopScorers);
+
+public record BulkMatchItem(int Id, string Revision, SaveMatchRequest Changes);
+public record BulkMatchRequest(IReadOnlyList<BulkMatchItem> Matches);
+public record CopyRoundRequest(int SourceRound, int TargetRound);

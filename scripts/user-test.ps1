@@ -94,7 +94,7 @@ if ($tournaments.Count -gt 0) {
 Write-Host 'The last administrator is protected...' -ForegroundColor Cyan
 $me = (Get-Users $headers) | Where-Object { $_.username -eq 'Sez' }
 Expect-Failure { Invoke-RestMethod "$base/api/admin/users/$($me.id)" -Method Put -Headers $headers -ContentType 'application/json' `
-        -Body (@{ email = $me.email; role = 'Viewer'; isActive = $true } | ConvertTo-Json) } 'demoting the last admin'
+        -Body (@{ revision = $me.revision; email = $me.email; role = 'Viewer'; isActive = $true } | ConvertTo-Json) } 'demoting the last admin'
 Expect-Failure { Invoke-RestMethod "$base/api/admin/users/$($me.id)" -Method Delete -Headers $headers } 'deleting yourself'
 
 Write-Host 'Resetting a password and signing in with it...' -ForegroundColor Cyan
@@ -105,7 +105,7 @@ Show 'signed in as' (Login 'testviewer' 'changed-password-9').username
 
 Write-Host 'A deactivated user cannot sign in...' -ForegroundColor Cyan
 Invoke-RestMethod "$base/api/admin/users/$($target.id)" -Method Put -Headers $headers -ContentType 'application/json' `
-    -Body (@{ email = $target.email; role = 'Viewer'; isActive = $false } | ConvertTo-Json) | Out-Null
+    -Body (@{ revision = $target.revision; email = $target.email; role = 'Viewer'; isActive = $false } | ConvertTo-Json) | Out-Null
 Expect-Failure { Login 'testviewer' 'changed-password-9' } 'deactivated sign in'
 
 Write-Host 'Cleaning up...' -ForegroundColor Cyan

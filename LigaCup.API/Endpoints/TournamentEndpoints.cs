@@ -35,7 +35,7 @@ public static class TournamentEndpoints
         adminApi.MapPut("/{id:int}", async (int id, SaveTournamentRequest request, TournamentService service, CancellationToken cancellationToken) =>
         {
             var tournament = await service.SaveTournamentAsync(id, request, cancellationToken);
-            return Results.Ok(tournament.Slug);
+            return Results.Ok(service.BuildDetail((await service.LoadGraphAsync(id, cancellationToken))!).Tournament);
         });
 
         adminApi.MapDelete("/{id:int}", async (int id, TournamentService service, CancellationToken cancellationToken) =>
@@ -100,6 +100,12 @@ public static class TournamentEndpoints
         adminApi.MapPut("/{id:int}/teams/{teamId:int}", async (int id, int teamId, SaveTeamRequest request, TournamentService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.SaveTeamAsync(id, teamId, request, cancellationToken)));
 
+        adminApi.MapPut("/{id:int}/teams/{teamId:int}/group", async (int id, int teamId, AssignTeamGroupRequest request, TournamentService service, CancellationToken cancellationToken) =>
+        {
+            await service.AssignTeamGroupAsync(id, teamId, request.GroupId, cancellationToken);
+            return Results.NoContent();
+        });
+
         adminApi.MapDelete("/{id:int}/teams/{teamId:int}", async (int id, int teamId, TournamentService service, CancellationToken cancellationToken) =>
         {
             try
@@ -128,6 +134,11 @@ public static class TournamentEndpoints
 
         adminApi.MapPost("/{id:int}/knockout/seed", async (int id, MatchService service, CancellationToken cancellationToken) =>
             Results.Ok(new { seeded = await service.SeedKnockoutFromGroupsAsync(id, cancellationToken) }));
+
+        adminApi.MapPut("/{id:int}/matches/bulk", async (int id, BulkMatchRequest request, MatchService service, CancellationToken ct) =>
+            Results.Ok(await service.SaveBulkAsync(id, request, ct)));
+        adminApi.MapPost("/{id:int}/rounds/copy", async (int id, CopyRoundRequest request, MatchService service, CancellationToken ct) =>
+            Results.Ok(await service.CopyRoundAsync(id, request, ct)));
 
         adminApi.MapPost("/{id:int}/matches", async (int id, SaveMatchRequest request, MatchService service, CancellationToken cancellationToken) =>
             Results.Ok(await service.SaveMatchAsync(id, null, request, cancellationToken)));

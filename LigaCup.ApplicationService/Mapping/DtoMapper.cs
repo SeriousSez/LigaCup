@@ -3,6 +3,7 @@ using LigaCup.Domain.Entities;
 using LigaCup.Domain.Enums;
 using LigaCup.Domain.Standings;
 using LigaCup.Domain.Timing;
+using LigaCup.ApplicationService.Security;
 
 namespace LigaCup.ApplicationService.Mapping;
 
@@ -13,8 +14,8 @@ public static class DtoMapper
         tournament.Name,
         tournament.Slug,
         tournament.Description,
-        tournament.Rules,
-        tournament.Parking,
+        RichHtml.Sanitize(tournament.Rules),
+        RichHtml.Sanitize(tournament.Parking),
         tournament.Location,
         tournament.TournamentDateUtc,
         tournament.Season,
@@ -43,12 +44,12 @@ public static class DtoMapper
         tournament.HasThirdPlacePlayOff,
         tournament.GetTiebreakers(),
         teamCount,
-        matchCount);
+        matchCount) { Revision = tournament.Revision };
 
     public static GroupDto ToDto(TournamentGroup group) => new(group.Id, group.Name, group.SortOrder);
 
     public static PlayerDto ToDto(Player player) =>
-        new(player.Id, player.TeamId, player.Name, player.ShirtNumber, player.Position, player.IsActive);
+        new(player.Id, player.TeamId, player.Name, player.ShirtNumber, player.Position, player.IsActive) { Revision = player.Revision };
 
     public static TeamDto ToDto(Team team) => new(
         team.Id,
@@ -60,7 +61,7 @@ public static class DtoMapper
         team.GroupId,
         team.Group?.Name,
         team.PointsAdjustment,
-        team.Players.OrderBy(player => player.ShirtNumber ?? int.MaxValue).ThenBy(player => player.Name).Select(ToDto).ToList());
+        team.Players.OrderBy(player => player.ShirtNumber ?? int.MaxValue).ThenBy(player => player.Name).Select(ToDto).ToList()) { Revision = team.Revision };
 
     public static MatchDto ToDto(Match match, Tournament tournament)
     {
@@ -106,7 +107,7 @@ public static class DtoMapper
             match.AwayPenalties,
             ToClockDto(tournament, match),
             match.Notes,
-            events);
+            events) { Revision = match.Revision, LiveRevision = EditRevision.For(match, true) };
     }
 
     private static MatchClockDto ToClockDto(Tournament tournament, Match match)

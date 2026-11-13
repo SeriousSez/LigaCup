@@ -6,6 +6,27 @@ namespace LigaCup.Domain.Tests;
 
 public class MatchClockTests
 {
+    [Theory]
+    [InlineData(MatchStatus.Live)]
+    [InlineData(MatchStatus.Paused)]
+    [InlineData(MatchStatus.HalfTime)]
+    [InlineData(MatchStatus.Finished)]
+    [InlineData(MatchStatus.Scheduled)]
+    [InlineData(MatchStatus.Postponed)]
+    [InlineData(MatchStatus.Abandoned)]
+    public void RepeatedStatusIsANoOp(MatchStatus status)
+    {
+        var tournament = BuildTournament();
+        var match = BuildMatch();
+        MatchClock.ApplyStatusChange(tournament, match, MatchStatus.Live, Kickoff);
+        MatchClock.ApplyStatusChange(tournament, match, status, Kickoff.AddMinutes(5));
+        var before = System.Text.Json.JsonSerializer.Serialize(match);
+        MatchClock.ApplyStatusChange(tournament, match, status, Kickoff.AddMinutes(8));
+        Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(match));
+        if (status == MatchStatus.Live)
+            Assert.Equal(480, MatchClock.Calculate(tournament, match, Kickoff.AddMinutes(8)).ElapsedSeconds);
+    }
+
     private static readonly DateTime Kickoff = new(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
 
     private static Tournament BuildTournament(

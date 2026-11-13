@@ -67,7 +67,7 @@ $scores = @(@(2, 1), @(0, 0), @(3, 1), @(1, 2), @(2, 2), @(4, 0), @(1, 0), @(2, 
 for ($i = 0; $i -lt $scores.Count -and $i -lt $groupMatches.Count; $i++) {
     $m = $groupMatches[$i]
     Invoke-RestMethod "$base/api/live/matches/$($m.id)/score" -Method Put -Headers $headers -ContentType 'application/json' `
-        -Body (@{ homeScore = $scores[$i][0]; awayScore = $scores[$i][1]; homePenalties = $null; awayPenalties = $null } | ConvertTo-Json) | Out-Null
+        -Body (@{ revision = $m.liveRevision; homeScore = $scores[$i][0]; awayScore = $scores[$i][1]; homePenalties = $null; awayPenalties = $null } | ConvertTo-Json) | Out-Null
     Invoke-RestMethod "$base/api/live/matches/$($m.id)/status" -Method Put -Headers $headers -ContentType 'application/json' `
         -Body (@{ status = 'Finished' } | ConvertTo-Json) | Out-Null
 }

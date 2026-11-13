@@ -49,6 +49,7 @@ export interface AuthResponse {
 export type UserRole = 'Viewer' | 'Editor' | 'Admin';
 
 export interface User {
+    revision?: string;
     id: number;
     username: string;
     email: string | null;
@@ -66,12 +67,14 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
+    revision?: string;
     email: string | null;
     role: UserRole;
     isActive: boolean;
 }
 
 export interface TournamentSummary {
+    revision?: string;
     id: number;
     name: string;
     slug: string;
@@ -110,6 +113,7 @@ export interface TournamentSummary {
 }
 
 export interface SaveTournamentRequest {
+    revision?: string;
     name: string;
     slug: string | null;
     description: string | null;
@@ -150,6 +154,7 @@ export interface Group {
 }
 
 export interface Player {
+    revision?: string;
     id: number;
     teamId: number;
     name: string;
@@ -159,6 +164,7 @@ export interface Player {
 }
 
 export interface Team {
+    revision?: string;
     id: number;
     name: string;
     shortName: string | null;
@@ -172,6 +178,7 @@ export interface Team {
 }
 
 export interface MatchEvent {
+    revision?: string;
     id: number;
     matchId: number;
     teamId: number;
@@ -184,6 +191,7 @@ export interface MatchEvent {
 }
 
 export interface MatchClock {
+    revision?: string;
     period: number;
     periodElapsedSeconds: number;
     clockStartedUtc: string | null;
@@ -194,6 +202,8 @@ export interface MatchClock {
 }
 
 export interface Match {
+    liveRevision?: string;
+    revision?: string;
     id: number;
     tournamentId: number;
     groupId: number | null;

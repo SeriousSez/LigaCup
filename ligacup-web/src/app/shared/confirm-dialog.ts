@@ -109,13 +109,7 @@ export class ConfirmDialog {
         if (event.key === 'Escape') {
             event.preventDefault();
             this.cancelled.emit();
-        } else if (event.key === 'Enter') {
-            event.preventDefault();
-            if (this.alternateLabel()) {
-                this.alternate.emit();
-            } else {
-                this.confirmed.emit();
-            }
+
         }
     }
 }

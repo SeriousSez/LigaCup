@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "node scripts/test-scheduling.mjs"
   },
   "prettier": {
     "printWidth": 100,
@@ -33,6 +33,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@microsoft/signalr": "^10.0.11",
+    "dompurify": "3.4.17",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -40,6 +41,7 @@
     "@angular/build": "^21.0.4",
     "@angular/cli": "^21.0.4",
     "@angular/compiler-cli": "^21.0.0",
+    "jsdom": "31.0.1",
     "typescript": "~5.9.2"
   }
 }

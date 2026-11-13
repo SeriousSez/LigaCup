@@ -1,5 +1,6 @@
 using LigaCup.ApplicationService.Contracts;
 using LigaCup.ApplicationService.Mapping;
+using LigaCup.ApplicationService.Security;
 using LigaCup.Domain.Entities;
 using LigaCup.Domain.Enums;
 using LigaCup.Domain.Scheduling;
@@ -67,7 +68,7 @@ public class TournamentService(LigaCupContext dbContext)
             BuildTables(tournament),
             BuildBracket(tournament),
             BuildTopScorers(tournament),
-            tournament.Rules);
+            RichHtml.Sanitize(tournament.Rules));
     }
 
     public IReadOnlyList<GroupTableDto> BuildTables(Tournament tournament)
@@ -141,6 +142,15 @@ public class TournamentService(LigaCupContext dbContext)
 
     public async Task<Tournament> SaveTournamentAsync(int? id, SaveTournamentRequest request, CancellationToken cancellationToken = default)
     {
+        RequestValidation.Text(request.Name, "name", 120, required: true);
+        RequestValidation.EnumValue(request.Format, "format");
+        RequestValidation.EnumValue(request.Status, "status");
+        RequestValidation.EnumValue(request.PlayerRegistrationMode, "playerRegistrationMode");
+        foreach (var rule in request.Tiebreakers ?? []) RequestValidation.EnumValue(rule, "tiebreakers");
+        RequestValidation.Text(request.Location, "location", 160);
+        RequestValidation.Text(request.Description, "description", 2000);
+        RequestValidation.Text(request.Rules, "rules", 20000);
+        RequestValidation.Text(request.Parking, "parking", 20000);
         var tournament = id is null
             ? new Tournament()
             : await dbContext.Tournaments.FirstOrDefaultAsync(candidate => candidate.Id == id, cancellationToken)
@@ -149,8 +159,8 @@ public class TournamentService(LigaCupContext dbContext)
         tournament.Name = request.Name.Trim();
         tournament.Slug = Slugify(string.IsNullOrWhiteSpace(request.Slug) ? request.Name : request.Slug);
         tournament.Description = request.Description;
-        tournament.Rules = string.IsNullOrWhiteSpace(request.Rules) ? null : request.Rules.Trim();
-        tournament.Parking = string.IsNullOrWhiteSpace(request.Parking) ? null : request.Parking.Trim();
+        tournament.Rules = RichHtml.Sanitize(request.Rules);
+        tournament.Parking = RichHtml.Sanitize(request.Parking);
         tournament.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
         tournament.TournamentDateUtc = request.TournamentDateUtc;
         tournament.Season = request.Season;
@@ -210,6 +220,8 @@ public class TournamentService(LigaCupContext dbContext)
 
     public async Task<TournamentGroup> SaveGroupAsync(int tournamentId, int? groupId, SaveGroupRequest request, CancellationToken cancellationToken = default)
     {
+        await RequestValidation.Tournament(dbContext, tournamentId, cancellationToken);
+        RequestValidation.Text(request.Name, "name", 60, required: true);
         var group = groupId is null
             ? new TournamentGroup { TournamentId = tournamentId }
             : await dbContext.Groups.FirstOrDefaultAsync(candidate => candidate.Id == groupId && candidate.TournamentId == tournamentId, cancellationToken)
@@ -244,6 +256,13 @@ public class TournamentService(LigaCupContext dbContext)
 
     public async Task<Team> SaveTeamAsync(int tournamentId, int? teamId, SaveTeamRequest request, CancellationToken cancellationToken = default)
     {
+        await RequestValidation.Tournament(dbContext, tournamentId, cancellationToken);
+        await RequestValidation.Group(dbContext, tournamentId, request.GroupId, cancellationToken);
+        RequestValidation.Text(request.Name, "name", 120, required: true);
+        RequestValidation.Text(request.ShortName, "shortName", 10);
+        RequestValidation.Text(request.Manager, "manager", 120);
+        RequestValidation.Text(request.ColorHex, "colorHex", 9);
+        RequestValidation.Text(request.LogoUrl, "logoUrl", 500);
         var team = teamId is null
             ? new Team { TournamentId = tournamentId }
             : await dbContext.Teams.FirstOrDefaultAsync(candidate => candidate.Id == teamId && candidate.TournamentId == tournamentId, cancellationToken)
@@ -264,6 +283,16 @@ public class TournamentService(LigaCupContext dbContext)
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return team;
+    }
+
+    public async Task AssignTeamGroupAsync(int tournamentId, int teamId, int? groupId, CancellationToken cancellationToken = default)
+    {
+        var team = await dbContext.Teams.FirstOrDefaultAsync(t => t.Id == teamId && t.TournamentId == tournamentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Team {teamId} was not found in this tournament.");
+        await RequestValidation.Group(dbContext, tournamentId, groupId, cancellationToken);
+        // Deliberately update only membership, never client-supplied copies of team metadata.
+        team.GroupId = groupId;
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteTeamAsync(int tournamentId, int teamId, CancellationToken cancellationToken = default)
@@ -291,10 +320,24 @@ public class TournamentService(LigaCupContext dbContext)
 
     public async Task<Player> SavePlayerAsync(int? playerId, SavePlayerRequest request, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await dbContext.BeginWriteAsync(cancellationToken);
+        var targetTeam = await dbContext.Teams.AsNoTracking().FirstOrDefaultAsync(t => t.Id == request.TeamId, cancellationToken);
+        RequestValidation.Require(targetTeam is not null, "teamId", "The team does not exist.");
+        RequestValidation.Text(request.Name, "name", 120, required: true);
+        RequestValidation.Text(request.Position, "position", 40);
+        RequestValidation.Require(request.ShirtNumber is null or >= 0, "shirtNumber", "Shirt number cannot be negative.");
         var player = playerId is null
             ? new Player()
             : await dbContext.Players.FirstOrDefaultAsync(candidate => candidate.Id == playerId, cancellationToken)
               ?? throw new KeyNotFoundException($"Player {playerId} was not found.");
+
+        if (playerId is not null && player.TeamId != request.TeamId)
+        {
+            var originalTournamentId = await dbContext.Teams.Where(t => t.Id == player.TeamId).Select(t => t.TournamentId).SingleAsync(cancellationToken);
+            RequestValidation.Require(originalTournamentId == targetTeam!.TournamentId, "teamId", "A player cannot be moved to another tournament.");
+            if (await dbContext.MatchEvents.AnyAsync(e => e.PlayerId == player.Id, cancellationToken))
+                throw new RequestConflictException("A player with recorded match events cannot be moved to another team.");
+        }
 
         player.TeamId = request.TeamId;
         player.Name = request.Name.Trim();
@@ -308,6 +351,7 @@ public class TournamentService(LigaCupContext dbContext)
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitOwnedAsync(cancellationToken);
         return player;
     }
 
@@ -333,6 +377,11 @@ public class TournamentService(LigaCupContext dbContext)
             .FirstOrDefaultAsync(candidate => candidate.Id == tournamentId, cancellationToken)
             ?? throw new KeyNotFoundException($"Tournament {tournamentId} was not found.");
 
+        RequestValidation.Require(request.FirstHomeTeamId is null || tournament.Teams.Any(t => t.Id == request.FirstHomeTeamId),
+            "firstHomeTeamId", "The first home team must belong to this tournament.");
+        RequestValidation.Require(request.ByeTeamIds is null || request.ByeTeamIds.All(id => id is null || tournament.Teams.Any(t => t.Id == id)),
+            "byeTeamIds", "Bye teams must belong to this tournament.");
+
         if (request.ReplaceExisting)
         {
             var supportsKnockoutStage = tournament.Format is TournamentFormat.GroupsThenKnockout or TournamentFormat.KnockoutOnly;
@@ -351,14 +400,25 @@ public class TournamentService(LigaCupContext dbContext)
 
         var generated = new List<Match>();
 
+        List<Match> GenerateGroup(TournamentGroup group, IReadOnlyList<Team> teams)
+        {
+            try
+            {
+                return FixtureGenerator.GenerateGroupFixtures(tournament, group, teams, request.ByeTeamIds, firstHomeTeamId, request.TeamsSittingOut);
+            }
+            catch (ArgumentException error) when (error.ParamName is "byeTeamIds" or "firstHomeTeamId")
+            {
+                throw new RequestValidationException(error.ParamName, error.Message);
+            }
+        }
+
         if (request.IncludeGroupStage && tournament.Format != TournamentFormat.KnockoutOnly)
         {
             if (tournament.Format == TournamentFormat.League || tournament.Groups.Count == 0)
             {
                 // No groups configured, so treat the whole field as one league.
                 var placeholder = new TournamentGroup { Id = 0, TournamentId = tournament.Id, Name = "League" };
-                generated.AddRange(FixtureGenerator
-                    .GenerateGroupFixtures(tournament, placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList(), request.ByeTeamIds, firstHomeTeamId, request.TeamsSittingOut)
+                generated.AddRange(GenerateGroup(placeholder, tournament.Teams.OrderBy(team => team.SortOrder).ToList())
                     .Select(match =>
                     {
                         match.GroupId = null;
@@ -375,7 +435,7 @@ public class TournamentService(LigaCupContext dbContext)
                         .ThenBy(team => team.Name)
                         .ToList();
 
-                    generated.AddRange(FixtureGenerator.GenerateGroupFixtures(tournament, group, groupTeams, request.ByeTeamIds, firstHomeTeamId, request.TeamsSittingOut));
+                    generated.AddRange(GenerateGroup(group, groupTeams));
                 }
             }
         }

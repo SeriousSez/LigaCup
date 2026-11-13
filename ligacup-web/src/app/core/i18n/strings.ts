@@ -390,6 +390,10 @@ export interface Strings {
         seedKnockout: string;
         generated: string;
         generateBlocked: string;
+        saveBeforeGenerate: string;
+        fixtureDisplay: string;
+        saveFixtureDisplay: string;
+        replaceFixturesWarning: string;
         seeded: string;
         seedFailed: string;
     };
@@ -847,7 +851,7 @@ export const danish: Strings = {
         copyRound: 'Kopiér runde',
         roundCopied: 'Runden blev kopieret til spillerunde {round}.',
         saveSchedule: 'Gem kamp',
-        saveAllSchedule: 'Gem alle',
+        saveAllSchedule: 'Gem alle kampændringer',
         saveScheduleChanges: 'Gem ændringer',
         unsavedScheduleTitle: 'Gem ændringer?',
         unsavedScheduleMessage: 'Dine ændringer er ikke blevet gemt.',
@@ -873,6 +877,10 @@ export const danish: Strings = {
         seedKnockout: 'Sæt slutspil ud fra stillingen',
         generated: 'Der blev oprettet {count} kampe.',
         generateBlocked: 'Kampprogrammet kunne ikke genereres.',
+        saveBeforeGenerate: 'Gem dine kampændringer, før du genererer kampprogrammet.',
+        fixtureDisplay: 'Visning for besøgende',
+        saveFixtureDisplay: 'Gem indstillinger',
+        replaceFixturesWarning: 'De valgte eksisterende kampe erstattes. Dine tilpassede tider, baner og resultater for disse kampe slettes. Vil du fortsætte?',
         seeded: 'Der blev sat {count} slutspilskampe ud fra stillingen.',
         seedFailed: 'Slutspillet kunne ikke sættes.',
     },
@@ -1331,7 +1339,7 @@ export const english: Strings = {
         copyRound: 'Copy round',
         roundCopied: 'The round was copied to matchday {round}.',
         saveSchedule: 'Save match',
-        saveAllSchedule: 'Save all',
+        saveAllSchedule: 'Save all match changes',
         saveScheduleChanges: 'Save changes',
         unsavedScheduleTitle: 'Save changes?',
         unsavedScheduleMessage: 'Your changes have not been saved.',
@@ -1357,6 +1365,10 @@ export const english: Strings = {
         seedKnockout: 'Seed knockout from tables',
         generated: 'Generated {count} fixtures.',
         generateBlocked: 'The fixtures could not be generated.',
+        saveBeforeGenerate: 'Save your match changes before generating fixtures.',
+        fixtureDisplay: 'Visitor display',
+        saveFixtureDisplay: 'Save settings',
+        replaceFixturesWarning: 'The selected existing fixtures will be replaced. Custom times, pitches and results for those matches will be deleted. Continue?',
         seeded: 'Filled {count} knockout ties from the group tables.',
         seedFailed: 'The knockout bracket could not be seeded.',
     },

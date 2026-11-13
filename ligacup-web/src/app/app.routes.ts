@@ -15,12 +15,14 @@ export const routes: Routes = [
     },
     {
         path: 'admin',
+        canDeactivate: [unsavedChangesGuard],
         canActivate: [adminGuard],
         loadComponent: () => import('./pages/admin/admin-home').then((module) => module.AdminHome),
         title: 'Admin - Liga Cup',
     },
     {
         path: 'admin/users',
+        canDeactivate: [unsavedChangesGuard],
         canActivate: [administratorGuard],
         loadComponent: () => import('./pages/admin/admin-users').then((module) => module.AdminUsers),
         title: 'Brugere - Liga Cup',
@@ -34,6 +36,7 @@ export const routes: Routes = [
     },
     {
         path: 'admin/:slug/live',
+        canDeactivate: [unsavedChangesGuard],
         canActivate: [adminGuard],
         loadComponent: () => import('./pages/admin/live-console').then((module) => module.LiveConsole),
         title: 'Live console - Liga Cup',

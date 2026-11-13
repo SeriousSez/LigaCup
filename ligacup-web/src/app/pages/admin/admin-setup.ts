@@ -1,5 +1,6 @@
+import { EditDrafts, scheduleFields, teamFields } from '../../core/edit-drafts';
 import { CommonModule } from '@angular/common';
-import { AfterViewChecked, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -7,8 +8,10 @@ import { faFloppyDisk, faLink, faTrashCan, faUpload } from '@fortawesome/free-so
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { defaultTournamentRulesWithoutDate, removeLegacyDefaultDateTime } from '../../core/default-rules';
+import { defaultTournamentRulesWithoutDate } from '../../core/default-rules';
+import { sanitizeRichHtml } from '../../core/rich-html';
 import { TournamentStore } from '../../core/tournament.store';
+import { localDateTime, utcDateTime } from '../../core/date-time';
 import { FormSkeleton, HeadingSkeleton } from '../../shared/loading-skeletons';
 import { SelectField, SelectOption } from '../../shared/select-field';
 import { DateTimePicker } from '../../shared/date-time-picker';
@@ -23,7 +26,32 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
   selector: 'app-admin-setup',
   imports: [CommonModule, FormsModule, RouterLink, FontAwesomeModule, HeadingSkeleton, FormSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
-    @if (detail(); as data) {
+    <fieldset [disabled]="busy()" style="border:0;padding:0;margin:0;min-width:0">
+    <section class="card stack" aria-live="polite">
+      <p>Save scopes: tournament settings include rules, parking and display. Match saves include schedules only. Teams save individually. Live scoring and add/remove/copy actions apply immediately; copying uses the saved round. Generation options apply only when you generate fixtures.</p>
+      @if (hasUnsavedChanges()) { <strong>Unsaved edits — save each affected form before leaving.</strong> }
+      <button type="button" [disabled]="busy()" (click)="store.reload()">Reload server values (preserve drafts)</button>
+      @if (settingsConflict()) {
+        <p>Server tournament settings changed. Your settings draft is preserved.</p>
+        <details><summary>Server settings</summary><pre>{{ conflictValues(store.detail()?.tournament) }}</pre></details>
+        <button (click)="resolveSettings(true)">Keep my settings draft for review</button>
+        <button (click)="resolveSettings(false)">Discard settings draft and use server</button>
+      }
+      @for (conflict of matchDrafts.conflicts(); track conflict.id) {
+        <p>Match {{ conflict.id }} conflict: {{ conflict.fields.join(', ') }}</p>
+        <details><summary>Compare draft and server</summary><pre>{{ conflictValues(conflict.local) }}</pre><pre>{{ conflictValues(conflict.server) }}</pre></details>
+        @if (conflict.server) { <button (click)="resolveDraft('matches', conflict.id, true)">Keep my match draft for review</button> }
+        <button (click)="resolveDraft('matches', conflict.id, false)">Discard match draft and use server</button>
+      }
+      @for (conflict of teamDrafts.conflicts(); track conflict.id) {
+        <p>Team {{ conflict.id }} conflict: {{ conflict.fields.join(', ') }}</p>
+        <details><summary>Compare draft and server</summary><pre>{{ conflictValues(conflict.local) }}</pre><pre>{{ conflictValues(conflict.server) }}</pre></details>
+        @if (conflict.server) { <button (click)="resolveDraft('teams', conflict.id, true)">Keep my team draft for review</button> }
+        <button (click)="resolveDraft('teams', conflict.id, false)">Discard team draft and use server</button>
+      }
+    </section>
+
+    @if (settingsLoaded() ? detail() : null; as data) {
       <section class="spread heading">
         <div>
           <h1>{{ data.tournament.name }}</h1>
@@ -113,7 +141,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               <span class="muted">{{ message() }}</span>
             }
             <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
-              {{ t().setup.saveRules }}
+              Save all tournament settings
             </button>
           </div>
         </div>
@@ -215,7 +243,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
               <button type="button" [title]="t().setup.rulesClear" [attr.aria-label]="t().setup.rulesClear" (click)="formatRules('removeFormat')">&times;</button>
             </div>
             <input #rulesImageInput class="sr-only" type="file" accept="image/png,image/jpeg,image/gif,image/webp" (change)="uploadRulesImage($event)" />
-            <div #rulesContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'rules')" (mouseup)="saveRulesSelection()" (keyup)="saveRulesSelection()" (paste)="pasteRulesImage($event)" (input)="updateRules($event)"></div>
+            <div #rulesContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'rules')" (mouseup)="saveRulesSelection()" (keyup)="saveRulesSelection()" (paste)="pasteRulesImage($event)" (drop)="dropRichContent($event, 'rules')" (input)="updateRules($event)"></div>
           </div>
           <span class="muted">{{ t().setup.rulesContentHelp }}</span>
         </div>
@@ -346,7 +374,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                 <span class="muted">{{ message() }}</span>
               }
               <button class="primary" type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
-                {{ t().setup.saveParking }}
+                Save all tournament settings
               </button>
             </div>
           </div>
@@ -374,7 +402,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                 <button type="button" [title]="t().setup.rulesClear" [attr.aria-label]="t().setup.rulesClear" (click)="formatParking('removeFormat')">&times;</button>
               </div>
               <input #parkingImageInput class="sr-only" type="file" accept="image/png,image/jpeg,image/gif,image/webp" (change)="uploadParkingImage($event)" />
-              <div #parkingContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'parking')" (mouseup)="saveParkingSelection()" (keyup)="saveParkingSelection()" (paste)="pasteParkingImage($event)" (input)="updateParking($event)"></div>
+              <div #parkingContent class="rules-content" contenteditable="true" (click)="selectEditorImage($event, 'parking')" (mouseup)="saveParkingSelection()" (keyup)="saveParkingSelection()" (paste)="pasteParkingImage($event)" (drop)="dropRichContent($event, 'parking')" (input)="updateParking($event)"></div>
             </div>
             <span class="muted">{{ t().setup.parkingContentHelp }}</span>
           </div>
@@ -435,7 +463,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
                 <app-select
                   [options]="groupOptions(data.groups)"
                   [ngModel]="team.groupId"
-                  (ngModelChange)="assignGroup(team.id, team.name, team.shortName, $event)"
+                  (ngModelChange)="assignGroup(team.id, $event)"
                 />
                 @if (editingTeamId() === team.id) {
                   <button
@@ -533,6 +561,23 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       }
 
       @if (activeTab() === 'fixtures') {
+        <section class="card stack">
+          <h3>{{ t().setup.fixtureDisplay }}</h3>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
+            {{ t().setup.showMatchTimesOnly }}
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="settings.hideMatchAddresses" />
+            {{ t().setup.hideMatchAddresses }}
+          </label>
+          <div class="row">
+            <button type="button" (click)="saveSettings()" [disabled]="busy() || !hasUnsavedSettingsChanges()">
+              Save all tournament settings
+            </button>
+            @if (message()) { <span class="muted" role="status">{{ message() }}</span> }
+          </div>
+        </section>
         <section class="card stack" data-guide-target="admin-fixtures">
         <h3>{{ t().setup.fixtures }}</h3>
         <p class="muted">{{ t().setup.fixturesHelp }}</p>
@@ -548,14 +593,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <label class="checkbox">
             <input type="checkbox" [(ngModel)]="replaceExisting" />
             {{ t().setup.replaceExisting }}
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" [(ngModel)]="settings.showMatchTimesOnly" />
-            {{ t().setup.showMatchTimesOnly }}
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" [(ngModel)]="settings.hideMatchAddresses" />
-            {{ t().setup.hideMatchAddresses }}
           </label>
           @if (data.tournament.format === 'League' || data.groups.length === 0) {
             @if (data.teams.length >= 2) {
@@ -600,35 +637,38 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <button type="button" (click)="seedKnockout()" [disabled]="busy()">
             {{ t().setup.seedKnockout }}
           </button>
-          @if (hasUnsavedSettingsChanges()) {
-            <button type="button" (click)="saveSettings()" [disabled]="busy()">
-              {{ t().common.save }}
-            </button>
-          }
-          @if (message()) {
-            <span class="muted" role="status">{{ message() }}</span>
-          }
         </div>
         @if (fixtureMessage()) {
           <p class="muted">{{ fixtureMessage() }}</p>
         }
         @if (data.matches.length) {
-          <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+          <div class="schedule-toolbar">
+            <div class="fixture-view" role="group" [attr.aria-label]="t().tournament.fixtureViewLabel">
+              <button
+                type="button"
+                [class.active]="fixtureView() === 'rounds'"
+                [attr.aria-pressed]="fixtureView() === 'rounds'"
+                (click)="fixtureView.set('rounds')"
+              >
+                {{ t().tournament.byRounds }}
+              </button>
+              <button
+                type="button"
+                [class.active]="fixtureView() === 'all'"
+                [attr.aria-pressed]="fixtureView() === 'all'"
+                (click)="fixtureView.set('all')"
+              >
+                {{ t().tournament.allMatches }}
+              </button>
+            </div>
             <button
               type="button"
-              [class.active]="fixtureView() === 'rounds'"
-              [attr.aria-pressed]="fixtureView() === 'rounds'"
-              (click)="fixtureView.set('rounds')"
+              class="primary save-all-schedules"
+              [disabled]="busy() || !hasUnsavedScheduleChanges()"
+              (click)="saveAllSchedules()"
             >
-              {{ t().tournament.byRounds }}
-            </button>
-            <button
-              type="button"
-              [class.active]="fixtureView() === 'all'"
-              [attr.aria-pressed]="fixtureView() === 'all'"
-              (click)="fixtureView.set('all')"
-            >
-              {{ t().tournament.allMatches }}
+              <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
+              {{ t().setup.saveAllSchedule }}
             </button>
           </div>
 
@@ -668,15 +708,6 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
           <div class="schedule-list" data-guide-target="admin-schedule-list">
             <div class="schedule-heading">
               <h4>{{ t().setup.schedule }}</h4>
-              <button
-                type="button"
-                class="primary"
-                [disabled]="busy() || !hasUnsavedScheduleChanges()"
-                (click)="saveAllSchedules()"
-              >
-                <fa-icon [icon]="faFloppyDisk" aria-hidden="true" />
-                {{ t().setup.saveAllSchedule }}
-              </button>
             </div>
             @for (match of scheduleMatches(data.matches); track match.id) {
               <ng-container [ngTemplateOutlet]="scheduleEditor" [ngTemplateOutletContext]="{ $implicit: match, teams: data.teams }" />
@@ -773,6 +804,15 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       </ng-template>
 
       <app-confirm-dialog
+        [open]="replaceFixturesConfirmation()"
+        [title]="t().setup.replaceExisting"
+        [message]="t().setup.replaceFixturesWarning"
+        [confirmLabel]="t().setup.replaceExisting"
+        [cancelLabel]="t().common.cancel"
+        (confirmed)="generate(true)"
+        (cancelled)="replaceFixturesConfirmation.set(false)"
+      />
+      <app-confirm-dialog
         [open]="pendingConfirmation() !== null"
         [title]="t().common.remove"
         [message]="pendingConfirmation()?.message ?? ''"
@@ -787,7 +827,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
         [message]="t().setup.unsavedScheduleMessage"
         [confirmLabel]="t().setup.discardScheduleChanges"
         [cancelLabel]="t().setup.stayOnPage"
-        [alternateLabel]="t().setup.saveScheduleChanges"
+        [alternateLabel]="'Save tournament settings and match schedules'"
         (confirmed)="resolveLeave(true)"
         (cancelled)="resolveLeave(false)"
         (alternate)="saveAllAndLeave()"
@@ -806,6 +846,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
       <app-heading-skeleton />
       <app-form-skeleton [sections]="2" [fields]="4" />
     }
+    </fieldset>
   `,
   styles: `
     .heading {
@@ -1056,6 +1097,28 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
     .schedule-list {
       display: grid;
       gap: 0.6rem;
+    }
+
+    .schedule-toolbar {
+      position: sticky;
+      top: var(--header-h);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      background: var(--surface-raised);
+    }
+
+    .save-all-schedules {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
     }
 
     .fixture-view {
@@ -1347,7 +1410,7 @@ type RichTextImageSize = 'small' | 'medium' | 'large' | 'full';
     }
   `,
 })
-export class AdminSetup implements OnInit, AfterViewChecked {
+export class AdminSetup implements OnInit {
   protected readonly faFloppyDisk = faFloppyDisk;
   protected readonly faLink = faLink;
   protected readonly faTrashCan = faTrashCan;
@@ -1358,28 +1421,78 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   private readonly i18n = inject(I18nService);
   protected readonly t = this.i18n.t;
   protected readonly store = inject(TournamentStore);
-  protected readonly detail = this.store.detail;
+  protected readonly matchDrafts = new EditDrafts<Match>(scheduleFields);
+  protected readonly teamDrafts = new EditDrafts<Team>(teamFields);
+  private readonly draftRefresh = signal(0);
+  protected readonly detail = computed(() => {
+    this.draftRefresh();
+    const server = this.store.detail();
+    return server ? { ...server, matches: this.matchDrafts.reconcile(server.matches), teams: this.teamDrafts.reconcile(server.teams) } : null;
+  });
+  protected resolveDraft(scope: 'matches' | 'teams', id: number, keep: boolean): void {
+    (scope === 'matches' ? this.matchDrafts : this.teamDrafts).resolve(id, keep);
+    this.draftRefresh.update(v => v + 1);
+  }
+  protected settingsConflict(): boolean {
+    return this.settingsLoaded() && !!this.settings.revision && this.settings.revision !== this.store.detail()?.tournament.revision;
+  }
+  protected resolveSettings(keep: boolean): void {
+    const server = this.store.detail()?.tournament;
+    if (!server) return;
+    if (!keep) {
+      for (const key of Object.keys(this.settings)) if (key in server) (this.settings as any)[key] = structuredClone((server as any)[key]);
+      this.tiebreakers.set([...server.tiebreakers]);
+      this.settingsSnapshot = this.settingsState();
+      if (this.rulesContent) this.rulesContent.nativeElement.innerHTML = sanitizeRichHtml(this.settings.rules);
+      if (this.parkingContent) this.parkingContent.nativeElement.innerHTML = sanitizeRichHtml(this.settings.parking);
+    }
+    this.settings.revision = server.revision;
+    if (!keep) this.settingsSnapshot = this.settingsState();
+  }
+  protected conflictValues(value: unknown): string { return JSON.stringify(value, null, 2); }
+  protected async saveFailure(failure: unknown): Promise<void> {
+    this.message.set((failure as any)?.error?.message ?? this.t().setup.saveFailed);
+    if ((failure as any)?.status === 409) { try { await this.store.reload(); } catch { /* Draft stays available. */ } }
+  }
   protected readonly activeTab = signal<'rules' | 'parking' | 'structure' | 'squads' | 'fixtures'>('rules');
 
   protected readonly busy = signal(false);
   protected readonly uploadingRuleImage = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly fixtureMessage = signal<string | null>(null);
+  protected readonly replaceFixturesConfirmation = signal(false);
   protected readonly pendingConfirmation = signal<{ message: string; action: () => Promise<void> | void } | null>(null);
   protected readonly leaveConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
   protected readonly fixtureReviewConfirmation = signal<{ resolve: (canLeave: boolean) => void } | null>(null);
   private readonly structuralFixtureChange = signal(false);
   protected readonly tiebreakers = signal<TiebreakerRule[]>([]);
-  @ViewChild('rulesContent') private rulesContent?: ElementRef<HTMLElement>;
-  @ViewChild('parkingContent') private parkingContent?: ElementRef<HTMLElement>;
-  private initializedRulesEditor: HTMLElement | null = null;
-  private initializedParkingEditor: HTMLElement | null = null;
+  private rulesContent?: ElementRef<HTMLElement>;
+  private parkingContent?: ElementRef<HTMLElement>;
+
+  @ViewChild('rulesContent') private set rulesEditor(element: ElementRef<HTMLElement> | undefined) {
+    this.rulesContent = element;
+    if (element) {
+      element.nativeElement.innerHTML = sanitizeRichHtml(this.settings.rules);
+      this.rulesSelection = null;
+      this.selectedRulesImage.set(null);
+    }
+  }
+
+  @ViewChild('parkingContent') private set parkingEditor(element: ElementRef<HTMLElement> | undefined) {
+    this.parkingContent = element;
+    if (element) {
+      element.nativeElement.innerHTML = sanitizeRichHtml(this.settings.parking);
+      this.parkingSelection = null;
+      this.selectedParkingImage.set(null);
+    }
+  }
   private rulesSelection: Range | null = null;
   private parkingSelection: Range | null = null;
   protected readonly selectedRulesImage = signal<HTMLImageElement | null>(null);
   protected readonly selectedParkingImage = signal<HTMLImageElement | null>(null);
   private settingsSnapshot: string | null = null;
-  private readonly scheduleSnapshots = new WeakMap<Match, string>();
+  private generatorSnapshot: string | null = null;
+  private generationState(): string { return JSON.stringify([this.generateGroups, this.generateKnockout, this.replaceExisting, this.byeTeamIds, this.teamsSittingOut, this.firstHomeTeamId]); }
   protected readonly editingTeamId = signal<number | null>(null);
 
   protected readonly allRules: TiebreakerRule[] = [
@@ -1437,6 +1550,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   ]);
 
   protected ruleToAdd: TiebreakerRule | null = null;
+  private pendingCopy = new Map<number, number>();
+  private pendingGroup: { name: string; sortOrder: number } | null = null;
+  private pendingMatch: { round: number | undefined; body: Parameters<ApiService['saveMatch']>[2] } | null = null;
   protected newGroupName = '';
   protected newTeamName = '';
   protected newTeamShort = '';
@@ -1485,7 +1601,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     tiebreakers: null,
   };
 
+  protected readonly settingsLoaded = signal(false);
+
   async ngOnInit(): Promise<void> {
+    this.settingsLoaded.set(false);
     await this.store.load(this.slug());
     const data = this.detail();
     if (!data) {
@@ -1497,17 +1616,14 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.settings = {
       ...this.settings,
+      revision: data.tournament.revision,
       name: data.tournament.name,
       slug: data.tournament.slug,
       description: data.tournament.description,
-      rules: data.tournament.rules
-        ? removeLegacyDefaultDateTime(data.tournament.rules)
-        : defaultTournamentRulesWithoutDate,
+      rules: data.tournament.rules ?? defaultTournamentRulesWithoutDate,
       parking: data.tournament.parking,
       location: data.tournament.location,
-      tournamentDateUtc: data.tournament.tournamentDateUtc
-        ? data.tournament.tournamentDateUtc.slice(0, 16)
-        : null,
+      tournamentDateUtc: data.tournament.tournamentDateUtc,
       season: data.tournament.tournamentDateUtc
         ? new Date(data.tournament.tournamentDateUtc).getFullYear()
         : data.tournament.season,
@@ -1537,24 +1653,8 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.tiebreakers.set(data.tournament.tiebreakers);
     this.settingsSnapshot = this.settingsState();
-  }
-
-  ngAfterViewChecked(): void {
-    const editor = this.rulesContent?.nativeElement;
-    if (editor && editor !== this.initializedRulesEditor && document.activeElement !== editor) {
-      editor.innerHTML = this.settings.rules ?? '';
-      this.initializedRulesEditor = editor;
-      this.rulesSelection = null;
-      this.selectedRulesImage.set(null);
-    }
-
-    const parkingEditor = this.parkingContent?.nativeElement;
-    if (parkingEditor && parkingEditor !== this.initializedParkingEditor && document.activeElement !== parkingEditor) {
-      parkingEditor.innerHTML = this.settings.parking ?? '';
-      this.initializedParkingEditor = parkingEditor;
-      this.parkingSelection = null;
-      this.selectedParkingImage.set(null);
-    }
+    this.generatorSnapshot = this.generationState();
+    this.settingsLoaded.set(true);
   }
 
   addRule(): void {
@@ -1583,26 +1683,22 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async saveSettings(): Promise<void> {
+    if (this.settingsConflict()) { this.message.set('Resolve the tournament settings conflict before saving.'); return; }
     const data = this.detail();
     if (!data) {
       return;
     }
 
-    if (this.generateGroups && data.teams.length >= 2 && !this.validSitOutCount(data.teams.length)) {
-      return;
-    }
-
     this.busy.set(true);
     this.message.set(null);
-    const hasDirtySchedules = this.hasUnsavedScheduleChanges();
 
     try {
       await this.saveSettingsRequest(data.tournament.id);
-      this.settingsSnapshot = this.settingsState();
-      if (!hasDirtySchedules) await this.store.reload();
+      try { await this.store.reload(); }
+      catch { this.message.set('Tournament settings were saved. Reload failed; your drafts are preserved. Reload before saving settings again.'); return; }
       this.message.set(this.t().common.saved);
-    } catch {
-      this.message.set(this.t().setup.saveFailed);
+    } catch (failure) {
+      await this.saveFailure(failure);
     } finally {
       this.busy.set(false);
     }
@@ -1692,6 +1788,12 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     const file = imageItem?.getAsFile()
       ?? Array.from(clipboard?.files ?? []).find((candidate) => candidate.type.startsWith('image/'));
     if (!file) {
+      const html = clipboard?.getData('text/html');
+      if (html) {
+        event.preventDefault();
+        document.execCommand('insertHTML', false, sanitizeRichHtml(html));
+        this.updateEditor(kind);
+      }
       return;
     }
 
@@ -1718,6 +1820,23 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     } finally {
       this.uploadingRuleImage.set(false);
     }
+  }
+
+  async dropRichContent(event: DragEvent, kind: RichTextEditor): Promise<void> {
+    event.preventDefault();
+    const transfer = event.dataTransfer;
+    if (!transfer) return;
+    const image = Array.from(transfer.files).find((file) => file.type.startsWith('image/'));
+    if (image) {
+      this.saveEditorSelection(kind);
+      await this.uploadImageFile(image, kind, false);
+      return;
+    }
+    this.editor(kind)?.focus();
+    const html = transfer.getData('text/html');
+    document.execCommand(html ? 'insertHTML' : 'insertText', false,
+      html ? sanitizeRichHtml(html) : transfer.getData('text/plain'));
+    this.updateEditor(kind);
   }
 
   private insertImage(kind: RichTextEditor, source: string, alt: string): boolean {
@@ -1856,11 +1975,11 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   private serializedEditorHtml(editor: HTMLElement): string {
     const copy = editor.cloneNode(true) as HTMLElement;
     copy.querySelectorAll('.is-selected').forEach((element) => element.classList.remove('is-selected'));
-    return copy.innerHTML;
+    return sanitizeRichHtml(copy.innerHTML);
   }
 
   matchTime(match: Match): string {
-    return match.kickoffUtc?.slice(11, 16) ?? '';
+    return localDateTime(match.kickoffUtc).slice(11, 16);
   }
 
   teamOptions(teams: Team[], excludedTeamId: number | null): SelectOption<number | null>[] {
@@ -1875,21 +1994,12 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       return;
     }
 
-    const today = new Date();
-    const date = (match.kickoffUtc ?? this.settings.tournamentDateUtc)?.slice(0, 10)
-      ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    match.kickoffUtc = `${date}T${time}${match.kickoffUtc?.slice(16) ?? ''}`;
+    const date = localDateTime(match.kickoffUtc || this.settings.tournamentDateUtc || new Date().toISOString()).slice(0, 10);
+    match.kickoffUtc = utcDateTime(`${date}T${time}`);
   }
 
   protected hasScheduleChanges(match: Match): boolean {
-    const current = this.scheduleState(match);
-    const initial = this.scheduleSnapshots.get(match);
-
-    if (initial === undefined) {
-      this.scheduleSnapshots.set(match, current);
-      return false;
-    }
-    return initial !== current;
+    return this.matchDrafts.dirty(match.id);
   }
 
   protected hasUnsavedSettingsChanges(): boolean {
@@ -1897,7 +2007,10 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   protected hasUnsavedChanges(): boolean {
-    return this.hasUnsavedSettingsChanges() || this.hasUnsavedScheduleChanges();
+    this.detail(); // Reconcile before rendering dirty/conflict indicators, even when settings are dirty.
+    return this.hasUnsavedSettingsChanges() || this.hasUnsavedScheduleChanges() || this.teamDrafts.dirty()
+      || (this.generatorSnapshot !== null && this.generatorSnapshot !== this.generationState())
+      || !!(this.newGroupName || this.newTeamName || this.newTeamShort || this.newTeamGroupId !== null || Object.values(this.playerDrafts).some(Boolean) || Object.values(this.playerNumberDrafts).some(Boolean));
   }
 
   protected fixturesNeedReview(): boolean {
@@ -1922,17 +2035,6 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
   private settingsState(): string {
     return JSON.stringify({ ...this.settings, tiebreakers: this.tiebreakers() });
-  }
-
-  private scheduleState(match: Match): string {
-    return JSON.stringify([
-      match.homeTeamId,
-      match.awayTeamId,
-      match.kickoffUtc,
-      match.pitchNumber,
-      match.venue,
-      match.sortOrder,
-    ]);
   }
 
   protected moveMatchOrder(match: Match, offset: number): void {
@@ -1999,6 +2101,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async saveSchedule(match: Match): Promise<void> {
+    if (this.matchDrafts.conflicts().some(c => c.id === match.id)) { this.message.set('Resolve this match conflict before saving.'); return; }
     const data = this.detail();
     if (!data) {
       return;
@@ -2006,17 +2109,21 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.busy.set(true);
     try {
-      const saved = await this.saveScheduleRequest(data.tournament.id, match);
-      this.scheduleSnapshots.set(saved, this.scheduleState(saved));
+      const submitted = structuredClone(match);
+      const saved = await this.saveScheduleRequest(data.tournament.id, submitted);
+      this.matchDrafts.saved(saved.id, submitted, saved);
       this.store.patchMatch(saved);
       this.structuralFixtureChange.set(false);
       this.message.set(this.t().common.saved);
+    } catch (failure) {
+      await this.saveFailure(failure);
     } finally {
       this.busy.set(false);
     }
   }
 
   protected async saveAllSchedules(): Promise<boolean> {
+    if (this.matchDrafts.conflicts().length) { this.message.set("Resolve match conflicts before saving."); return false; }
     const data = this.detail();
     if (!data) return false;
 
@@ -2025,16 +2132,17 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
     this.busy.set(true);
     try {
-      for (const match of changedMatches) {
-        const saved = await this.saveScheduleRequest(data.tournament.id, match);
-        this.scheduleSnapshots.set(saved, this.scheduleState(saved));
+      const submitted = structuredClone(changedMatches);
+      const savedMatches = await firstValueFrom(this.api.saveMatches(data.tournament.id, submitted));
+      for (const saved of savedMatches) {
+        this.matchDrafts.saved(saved.id, submitted.find(m => m.id === saved.id)!, saved);
         this.store.patchMatch(saved);
       }
       this.structuralFixtureChange.set(false);
       this.message.set(this.t().common.saved);
       return true;
-    } catch {
-      this.message.set(this.t().common.somethingWentWrong);
+    } catch (failure) {
+      await this.saveFailure(failure);
       return false;
     } finally {
       this.busy.set(false);
@@ -2043,6 +2151,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
 
   private saveScheduleRequest(tournamentId: number, match: Match) {
     return firstValueFrom(this.api.saveMatch(tournamentId, match.id, {
+      revision: match.revision,
       groupId: match.groupId,
       stage: match.stage,
       round: match.round,
@@ -2057,11 +2166,23 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     }));
   }
 
-  private saveSettingsRequest(tournamentId: number) {
-    return firstValueFrom(this.api.updateTournament(tournamentId, {
-      ...this.settings,
-      tiebreakers: this.tiebreakers(),
-    }));
+  private async saveSettingsRequest(tournamentId: number) {
+    const submitted = structuredClone({ ...this.settings, tiebreakers: this.tiebreakers() });
+    const saved = await firstValueFrom(this.api.updateTournament(tournamentId, submitted));
+    const baseline = { ...submitted, revision: saved.revision };
+    for (const key of Object.keys(submitted)) {
+      if (key === 'tiebreakers' || !(key in saved)) continue;
+      (baseline as any)[key] = (saved as any)[key];
+      if (JSON.stringify((this.settings as any)[key]) === JSON.stringify((submitted as any)[key]))
+        (this.settings as any)[key] = structuredClone((saved as any)[key]);
+    }
+    if (saved.tiebreakers) {
+      baseline.tiebreakers = [...saved.tiebreakers];
+      if (JSON.stringify(this.tiebreakers()) === JSON.stringify(submitted.tiebreakers)) this.tiebreakers.set([...saved.tiebreakers]);
+    }
+    this.settings.revision = saved.revision;
+    this.settingsSnapshot = JSON.stringify(baseline);
+    return saved;
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
@@ -2096,29 +2217,11 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   private async saveAllChanges(): Promise<boolean> {
-    const data = this.detail();
-    if (!data) return false;
-
-    const settingsChanged = this.hasUnsavedSettingsChanges();
-    const changedMatches = data.matches.filter((match) => this.hasScheduleChanges(match));
-    if (!settingsChanged && !changedMatches.length) return true;
-
-    this.busy.set(true);
-    try {
-      if (settingsChanged) await this.saveSettingsRequest(data.tournament.id);
-      for (const match of changedMatches) {
-        await this.saveScheduleRequest(data.tournament.id, match);
-      }
-      this.settingsSnapshot = this.settingsState();
-      await this.store.reload();
-      this.message.set(this.t().common.saved);
-      return true;
-    } catch {
-      this.message.set(this.t().common.somethingWentWrong);
-      return false;
-    } finally {
-      this.busy.set(false);
-    }
+    // Navigation never implies a universal save of creation, roster or account drafts.
+    if (this.hasUnsavedSettingsChanges()) await this.saveSettings();
+    if (this.hasUnsavedSettingsChanges()) return false;
+    if (!(await this.saveAllSchedules())) return false;
+    return !this.hasUnsavedChanges();
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -2128,27 +2231,44 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     event.returnValue = '';
   }
 
-  async addGroup(): Promise<void> {
-    const data = this.detail();
-    if (!data || !this.newGroupName.trim()) {
-      return;
-    }
+  private async structuralCommand(action: () => Promise<void>): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true); this.message.set(null);
+    try { await action(); }
+    catch (failure) { await this.saveFailure(failure); }
+    finally { this.busy.set(false); }
+  }
 
-    await firstValueFrom(
-      this.api.createGroup(data.tournament.id, this.newGroupName.trim(), data.groups.length),
-    );
-    this.newGroupName = '';
-    await this.store.reload();
+  async addGroup(): Promise<void> {
+    await this.structuralCommand(async () => {
+      const data = this.detail();
+      if (!data || !this.newGroupName.trim()) {
+        return;
+      }
+
+      const name = this.newGroupName.trim();
+      if (this.pendingGroup?.name !== name) this.pendingGroup = { name, sortOrder: data.groups.length };
+      await firstValueFrom(this.api.createGroup(data.tournament.id, name, this.pendingGroup!.sortOrder));
+      this.pendingGroup = null;
+      this.newGroupName = '';
+      await this.store.reload();
+
+
+    });
   }
 
   async removeGroup(groupId: number): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
+    await this.structuralCommand(async () => {
+      const data = this.detail();
+      if (!data) {
+        return;
+      }
 
-    await firstValueFrom(this.api.deleteGroup(data.tournament.id, groupId));
-    await this.store.reload();
+      await firstValueFrom(this.api.deleteGroup(data.tournament.id, groupId));
+      await this.store.reload();
+
+
+    });
   }
 
   confirmRemoveGroup(groupId: number, groupName: string): void {
@@ -2156,39 +2276,46 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async addTeam(): Promise<void> {
-    const data = this.detail();
-    if (!data || !this.newTeamName.trim()) {
-      return;
-    }
+    await this.structuralCommand(async () => {
+      const data = this.detail();
+      if (!data || !this.newTeamName.trim()) {
+        return;
+      }
 
-    await firstValueFrom(
-      this.api.saveTeam(data.tournament.id, null, {
-        name: this.newTeamName.trim(),
-        shortName: this.newTeamShort.trim() || null,
-        groupId: this.newTeamGroupId,
-      }),
-    );
+      await firstValueFrom(
+        this.api.saveTeam(data.tournament.id, null, {
+          name: this.newTeamName.trim(),
+          shortName: this.newTeamShort.trim() || null,
+          groupId: this.newTeamGroupId,
+        }),
+      );
 
-    this.newTeamName = '';
-    this.newTeamShort = '';
-    this.structuralFixtureChange.set(true);
-    await this.store.reload();
+      this.newTeamName = '';
+      this.newTeamShort = '';
+    this.newTeamGroupId = null;
+      this.structuralFixtureChange.set(true);
+      await this.store.reload();
+
+
+    });
   }
 
   async assignGroup(
     teamId: number,
-    name: string,
-    shortName: string | null,
     groupId: number | null,
   ): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
+    await this.structuralCommand(async () => {
+      const data = this.detail();
+      if (!data) {
+        return;
+      }
 
-    await firstValueFrom(this.api.saveTeam(data.tournament.id, teamId, { name, shortName, groupId }));
-    this.structuralFixtureChange.set(true);
-    await this.store.reload();
+      await firstValueFrom(this.api.assignTeamGroup(data.tournament.id, teamId, groupId));
+      this.structuralFixtureChange.set(true);
+      await this.store.reload();
+
+
+    });
   }
 
   editTeam(teamId: number): void {
@@ -2196,11 +2323,14 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async cancelTeamEdit(): Promise<void> {
+    const id = this.editingTeamId();
+    if (id !== null) this.teamDrafts.resolve(id, false);
     this.editingTeamId.set(null);
-    await this.store.reload();
+    this.draftRefresh.update(v => v + 1);
   }
 
   async saveTeam(team: Team): Promise<void> {
+    if (this.teamDrafts.conflicts().some(c => c.id === team.id)) { this.message.set('Resolve this team conflict before saving.'); return; }
     const data = this.detail();
     const name = team.name.trim();
     if (!data || !name) {
@@ -2211,29 +2341,35 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     team.shortName = team.shortName?.trim() || null;
 
     try {
-      await firstValueFrom(this.api.saveTeam(data.tournament.id, team.id, team));
+      const submitted = structuredClone(team);
+      const saved = await firstValueFrom(this.api.saveTeam(data.tournament.id, team.id, submitted));
+      this.teamDrafts.saved(team.id, submitted, { ...team, ...saved });
       await this.store.reload();
       this.editingTeamId.set(null);
       this.message.set(this.t().common.saved);
-    } catch {
-      this.message.set(this.t().common.somethingWentWrong);
+    } catch (failure) {
+      await this.saveFailure(failure);
     }
   }
 
   async removeTeam(teamId: number): Promise<void> {
-    const data = this.detail();
-    if (!data) {
-      return;
-    }
+    await this.structuralCommand(async () => {
+      const data = this.detail();
+      if (!data) {
+        return;
+      }
 
-    try {
-      await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
-      this.structuralFixtureChange.set(true);
-      await this.store.reload();
-    } catch (failure) {
-      const serverMessage = (failure as { error?: { message?: string } })?.error?.message;
-      this.message.set(serverMessage ?? this.t().setup.removeTeamBlocked);
-    }
+      try {
+        await firstValueFrom(this.api.deleteTeam(data.tournament.id, teamId));
+        this.structuralFixtureChange.set(true);
+        await this.store.reload();
+      } catch (failure) {
+        const serverMessage = (failure as { error?: { message?: string } })?.error?.message;
+        this.message.set(serverMessage ?? this.t().setup.removeTeamBlocked);
+      }
+
+
+    });
   }
 
   confirmRemoveTeam(teamId: number, teamName: string): void {
@@ -2241,36 +2377,58 @@ export class AdminSetup implements OnInit, AfterViewChecked {
   }
 
   async addPlayer(teamId: number): Promise<void> {
-    const mode = this.detail()?.tournament.playerRegistrationMode ?? 'NamesAndNumbers';
-    const name = (this.playerDrafts[teamId] ?? '').trim();
-    const numberText = (this.playerNumberDrafts[teamId] ?? '').trim();
-    const shirtNumber = numberText ? Number(numberText) : null;
-    if ((mode !== 'Numbers' && !name) || (mode !== 'Names' && (!Number.isInteger(shirtNumber) || shirtNumber! < 0))) {
-      return;
-    }
+    await this.structuralCommand(async () => {
+      const mode = this.detail()?.tournament.playerRegistrationMode ?? 'NamesAndNumbers';
+      const name = (this.playerDrafts[teamId] ?? '').trim();
+      const numberText = (this.playerNumberDrafts[teamId] ?? '').trim();
+      const shirtNumber = numberText ? Number(numberText) : null;
+      if ((mode !== 'Numbers' && !name) || (mode !== 'Names' && (!Number.isInteger(shirtNumber) || shirtNumber! < 0))) {
+        return;
+      }
 
-    await firstValueFrom(this.api.savePlayer(null, {
-      teamId,
-      name: mode === 'Numbers' ? '' : name,
-      shirtNumber: mode === 'Names' ? null : shirtNumber,
-    }));
-    this.playerDrafts[teamId] = '';
-    this.playerNumberDrafts[teamId] = '';
-    await this.store.reload();
+      await firstValueFrom(this.api.savePlayer(null, {
+        teamId,
+        name: mode === 'Numbers' ? '' : name,
+        shirtNumber: mode === 'Names' ? null : shirtNumber,
+      }));
+      this.playerDrafts[teamId] = '';
+      this.playerNumberDrafts[teamId] = '';
+      await this.store.reload();
+
+
+    });
   }
 
   async removePlayer(playerId: number): Promise<void> {
-    await firstValueFrom(this.api.deletePlayer(playerId));
-    await this.store.reload();
+    await this.structuralCommand(async () => {
+      await firstValueFrom(this.api.deletePlayer(playerId));
+      await this.store.reload();
+
+
+    });
   }
 
   confirmRemovePlayer(playerId: number, playerName: string): void {
     this.requestConfirmation(playerName, () => this.removePlayer(playerId));
   }
 
-  async generate(): Promise<void> {
+  async generate(replacementConfirmed = false): Promise<void> {
+    this.replaceFixturesConfirmation.set(false);
     const data = this.detail();
     if (!data) {
+      return;
+    }
+
+    if (this.hasUnsavedScheduleChanges()) {
+      this.fixtureMessage.set(this.t().setup.saveBeforeGenerate);
+      return;
+    }
+    if (this.generateGroups && data.teams.length >= 2 && !this.validSitOutCount(data.teams.length)) {
+      this.fixtureMessage.set(this.t().setup.invalidTeamsSittingOut);
+      return;
+    }
+    if (this.replaceExisting && data.matches.length && !replacementConfirmed) {
+      this.replaceFixturesConfirmation.set(true);
       return;
     }
 
@@ -2278,6 +2436,9 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     this.fixtureMessage.set(null);
 
     try {
+      if (this.hasUnsavedSettingsChanges()) {
+        await this.saveSettingsRequest(data.tournament.id);
+      }
       const result = await firstValueFrom(
         this.api.generateFixtures(
           data.tournament.id,
@@ -2291,11 +2452,14 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       );
       await this.store.reload();
       this.structuralFixtureChange.set(false);
+      this.replaceExisting = false;
+      this.generatorSnapshot = this.generationState();
       this.fixtureMessage.set(
         this.i18n.format(this.t().setup.generated, { count: result.generated }),
       );
-    } catch {
-      this.fixtureMessage.set(this.t().setup.generateBlocked);
+    } catch (failure) {
+      const serverMessage = (failure as { error?: { message?: string } })?.error?.message;
+      this.fixtureMessage.set(serverMessage ?? this.t().setup.generateBlocked);
     } finally {
       this.busy.set(false);
     }
@@ -2347,17 +2511,8 @@ export class AdminSetup implements OnInit, AfterViewChecked {
       return;
     }
 
-    const pendingSchedules = new Map(data.matches
-      .filter((match) => this.hasScheduleChanges(match))
-      .map((match) => [match.id, {
-        homeTeamId: match.homeTeamId,
-        awayTeamId: match.awayTeamId,
-        kickoffUtc: match.kickoffUtc,
-        pitchNumber: match.pitchNumber,
-        venue: match.venue,
-        sortOrder: match.sortOrder,
-      }] as const));
-
+    if (this.busy()) return;
+    if (this.pendingMatch && this.pendingMatch.round !== round) { this.message.set('Retry the pending add-match action before adding a different match.'); return; }
     this.busy.set(true);
     try {
       const groupRounds = data.matches
@@ -2365,7 +2520,7 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         .map((match) => match.round);
       const targetRound = round ?? (groupRounds.length ? Math.max(...groupRounds) + 1 : 1);
       const roundMatches = data.matches.filter((match) => match.stage === 'Group' && match.round === targetRound);
-      await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
+      this.pendingMatch ??= { round, body: {
         groupId: null,
         stage: 'Group',
         round: targetRound,
@@ -2377,21 +2532,21 @@ export class AdminSetup implements OnInit, AfterViewChecked {
         kickoffUtc: null,
         pitchNumber: null,
         venue: null,
-      }));
-      await this.store.reload();
-      for (const match of this.detail()?.matches ?? []) {
-        const pending = pendingSchedules.get(match.id);
-        if (pending) {
-          this.hasScheduleChanges(match);
-          Object.assign(match, pending);
-        }
-      }
+      } };
+      await firstValueFrom(this.api.saveMatch(data.tournament.id, null, this.pendingMatch.body));
+      this.pendingMatch = null;
+      try { await this.store.reload(); }
+      catch { this.message.set('Match added successfully. Reload failed; reload to see it.'); }
+    } catch (failure) {
+      if ((failure as any)?.status >= 400 && (failure as any)?.status < 500) this.pendingMatch = null;
+      await this.saveFailure(failure);
     } finally {
       this.busy.set(false);
     }
   }
 
   async copyRound(round: number): Promise<void> {
+    if (this.busy()) return;
     const data = this.detail();
     if (!data) {
       return;
@@ -2407,31 +2562,20 @@ export class AdminSetup implements OnInit, AfterViewChecked {
     const groupRounds = data.matches
       .filter((match) => match.stage === 'Group')
       .map((match) => match.round);
-    const targetRound = Math.max(...groupRounds) + 1;
+    const targetRound = this.pendingCopy.get(round) ?? Math.max(...groupRounds) + 1;
+    this.pendingCopy.set(round, targetRound);
 
     this.busy.set(true);
     this.fixtureMessage.set(null);
     try {
-      for (const match of sourceMatches) {
-        await firstValueFrom(this.api.saveMatch(data.tournament.id, null, {
-          groupId: match.groupId,
-          stage: 'Group',
-          round: targetRound,
-          sortOrder: match.sortOrder,
-          homeTeamId: match.homeTeamId,
-          awayTeamId: match.awayTeamId,
-          homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
-          awayPlaceholder: match.awayTeamId === null ? match.awayTeamName : null,
-          kickoffUtc: match.kickoffUtc,
-          pitchNumber: match.pitchNumber,
-          venue: match.venue,
-        }));
-      }
-
-      await this.store.reload();
+      await firstValueFrom(this.api.copyRound(data.tournament.id, round, targetRound));
+      this.pendingCopy.delete(round);
+      try { await this.store.reload(); }
+      catch { this.fixtureMessage.set('Round copied successfully. Reload failed; reload to see the saved round.'); return; }
       this.fixtureMessage.set(this.i18n.format(this.t().setup.roundCopied, { round: targetRound }));
-    } catch {
-      this.fixtureMessage.set(this.t().common.somethingWentWrong);
+    } catch (failure) {
+      if ((failure as any)?.status >= 400 && (failure as any)?.status < 500) this.pendingCopy.delete(round);
+      this.fixtureMessage.set((failure as any)?.error?.message ?? this.t().common.somethingWentWrong);
     } finally {
       this.busy.set(false);
     }

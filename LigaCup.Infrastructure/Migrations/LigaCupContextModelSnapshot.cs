@@ -15,6 +15,15 @@ namespace LigaCup.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
+            modelBuilder.Entity("LigaCup.Domain.Entities.CommandReceipt", b => {
+                b.Property<string>("Id").HasColumnType("TEXT");
+                b.Property<string>("RequestHash").IsRequired().HasColumnType("TEXT");
+                b.Property<int>("StatusCode").HasColumnType("INTEGER");
+                b.Property<string>("Body").IsRequired().HasColumnType("TEXT");
+                b.Property<string>("ContentType").IsRequired().HasColumnType("TEXT");
+                b.HasKey("Id");
+                b.ToTable("CommandReceipts");
+            });
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("LigaCup.Domain.Entities.Match", b =>

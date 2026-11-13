@@ -3,6 +3,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
 import { I18nService } from '../core/i18n/i18n.service';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { localDateTime, utcDateTime } from '../core/date-time';
 
 @Component({
   selector: 'app-date-time-picker',
@@ -93,7 +94,7 @@ export class DateTimePicker implements ControlValueAccessor {
   months(): { index: number; label: string }[] { return Array.from({ length: 12 }, (_, index) => ({ index, label: new Date(this.year(), index, 1).toLocaleDateString(this.locale(), { month: 'short' }) })); }
   years(): number[] { return Array.from({ length: 12 }, (_, index) => this.year() - 5 + index); }
   days(): { value: string; label: string; inMonth: boolean; today: boolean }[] { const view = this.viewDate(); const first = new Date(view.getFullYear(), view.getMonth(), 1); const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7)); const today = this.toDateValue(new Date()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); const value = this.toDateValue(date); return { value, label: String(date.getDate()), inMonth: date.getMonth() === view.getMonth(), today: value === today }; }); }
-  writeValue(value: string | null): void { const [date, time] = (value ?? '').split('T'); this.dateValue.set(date || ''); if (time) this.timeValue = time.slice(0, 5); if (date) this.viewDate.set(new Date(`${date}T00:00`)); }
+  writeValue(value: string | null): void { const [date, time] = localDateTime(value).split('T'); this.dateValue.set(date || ''); if (time) this.timeValue = time; if (date) this.viewDate.set(new Date(`${date}T00:00`)); }
   registerOnChange(fn: (value: string) => void): void { this.onChange = fn; }
   registerOnTouched(fn: () => void): void { this.onTouched = fn; }
   setDisabledState(value: boolean): void { this.disabled.set(value); }
@@ -121,6 +122,6 @@ export class DateTimePicker implements ControlValueAccessor {
   today(): void { const date = new Date(); this.dateValue.set(this.toDateValue(date)); this.viewDate.set(new Date(date.getFullYear(), date.getMonth(), 1)); this.emit(); }
   clear(): void { this.dateValue.set(''); this.onChange(''); this.onTouched(); this.open.set(false); }
   @HostListener('document:click', ['$event']) closeWhenOutside(event: MouseEvent): void { if (!this.element.nativeElement.contains(event.target as Node)) { this.open.set(false); this.onTouched(); } }
-  private emit(): void { if (this.dateValue()) this.onChange(`${this.dateValue()}T${this.timeValue}`); }
+  private emit(): void { if (this.dateValue() && this.timeValue) this.onChange(utcDateTime(`${this.dateValue()}T${this.timeValue}`)!); }
   private toDateValue(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 }
