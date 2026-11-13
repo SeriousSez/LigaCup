@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -15,6 +15,12 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
   selector: 'app-live-console',
   imports: [FormsModule, RouterLink, HeadingSkeleton, ScoreboardSkeleton, SelectField, ConfirmDialog],
   template: `
+    <fieldset [disabled]="commandBusy()" style="border:0;padding:0;margin:0;min-width:0">
+    <p>Scores, status and event actions save immediately. Penalties and added time save separately.</p>
+    @if (dirty()) { <p role="status">Unsaved live form inputs.</p> }
+    @if (commandBusy()) { <p role="status">Saving action...</p> }
+    @if (commandError()) { <p role="alert">{{ commandError() }}</p><button (click)="store.reload()">Reload server result (keep inputs)</button><button (click)="reviewPenalties()">Use displayed score as penalty-save baseline</button> }
+
     @if (detail(); as data) {
       <section class="heading">
         <div class="spread">
@@ -130,6 +136,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
               <button
                 type="button"
                 [class.primary]="match.status === status"
+                [disabled]="match.status === status"
                 (click)="setStatus(match.id, status)"
               >
                 {{ t().matchStatus[status] }}
@@ -277,6 +284,7 @@ import { Match, MatchEventType, MatchStatus, TournamentSummary } from '../../cor
       (confirmed)="confirmEventDelete()"
       (cancelled)="pendingEventDelete.set(null)"
     />
+    </fieldset>
   `,
   styles: `
     .heading {
@@ -462,6 +470,28 @@ export class LiveConsole implements OnInit {
   protected homePenalties: number | null = null;
   protected awayPenalties: number | null = null;
   protected stoppage = 0;
+  private penaltiesRevision?: string;
+  private formBaseline = '';
+  private formState(): string { return JSON.stringify([this.eventPlayerId, this.eventMinute, this.eventType, this.homePenalties, this.awayPenalties, this.stoppage, this.eventTeamId()]); }
+  private acknowledgeFields(indexes: number[]): void {
+    const base = JSON.parse(this.formBaseline || this.formState()); const now = JSON.parse(this.formState());
+    for (const i of indexes) base[i] = now[i];
+    this.formBaseline = JSON.stringify(base);
+  }
+  reviewPenalties(): void { this.penaltiesRevision = this.selected()?.liveRevision; this.commandError.set(null); }
+  protected dirty(): boolean { return !!this.formBaseline && this.formBaseline !== this.formState(); }
+  canDeactivate(): boolean { return !this.dirty() || window.confirm('Discard unsaved event, penalties or added-time inputs?'); }
+  @HostListener('window:beforeunload', ['$event'])
+  warn(event: BeforeUnloadEvent): void { if (this.dirty()) { event.preventDefault(); event.returnValue = ''; } }
+  protected readonly commandBusy = signal(false);
+  protected readonly commandError = signal<string | null>(null);
+  private async command(action: () => Promise<void>): Promise<void> {
+    if (this.commandBusy()) return;
+    this.commandBusy.set(true); this.commandError.set(null);
+    try { await action(); }
+    catch (failure) { this.commandError.set((failure as any)?.error?.message ?? 'Request failed. Your inputs are preserved. Retry the same action to recover its result.'); }
+    finally { this.commandBusy.set(false); }
+  }
 
   protected readonly playerOptions = computed<SelectOption<number | null>[]>(() => [
     { value: null, label: this.t().live.notRecorded },
@@ -493,14 +523,19 @@ export class LiveConsole implements OnInit {
   }
 
   selectMatch(matchId: number | null): void {
+    if (this.dirty() && !window.confirm('Discard unsaved inputs for this match?')) return;
     this.selectedId.set(matchId);
+    this.eventPlayerId = null;
+    this.eventMinute = 1;
 
     const match = this.detail()?.matches.find((candidate) => candidate.id === matchId);
     if (match) {
       this.eventTeamId.set(match.homeTeamId);
+      this.penaltiesRevision = match.liveRevision;
       this.homePenalties = match.homePenalties;
       this.awayPenalties = match.awayPenalties;
       this.stoppage = match.clock.stoppageMinutes;
+      this.formBaseline = this.formState();
     }
   }
 
@@ -526,7 +561,12 @@ export class LiveConsole implements OnInit {
   }
 
   async saveStoppage(matchId: number): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.setStoppage(matchId, this.stoppage)));
+    await this.command(async () => {
+      this.store.patchMatch(await firstValueFrom(this.api.setStoppage(matchId, this.stoppage)));
+      this.acknowledgeFields([5]);
+
+
+    });
   }
 
   protected readonly selected = computed(
@@ -578,41 +618,61 @@ export class LiveConsole implements OnInit {
   }
 
   async adjust(matchId: number, side: 'home' | 'away', delta: 1 | -1): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
+    await this.command(async () => {
+      this.store.patchMatch(await firstValueFrom(this.api.adjustScore(matchId, side, delta)));
+
+
+    });
   }
 
   async setStatus(matchId: number, status: MatchStatus): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
-    await this.store.reload();
+    await this.command(async () => {
+      this.store.patchMatch(await firstValueFrom(this.api.setStatus(matchId, status)));
+      await this.store.reload();
+
+
+    });
   }
 
   async savePenalties(match: Match): Promise<void> {
-    this.store.patchMatch(
-      await firstValueFrom(
-        this.api.setScore(
-          match.id,
-          match.homeScore,
-          match.awayScore,
-          this.homePenalties,
-          this.awayPenalties,
+    await this.command(async () => {
+      this.store.patchMatch(
+        await firstValueFrom(
+          this.api.setScore(
+            match.id,
+            match.homeScore,
+            match.awayScore,
+            this.homePenalties,
+            this.awayPenalties,
+            this.penaltiesRevision,
+          ),
         ),
-      ),
-    );
+      );
+
+      this.penaltiesRevision = this.selected()?.liveRevision;
+      this.acknowledgeFields([3, 4]);
+
+    });
   }
 
   async addEvent(matchId: number): Promise<void> {
-    const teamId = this.eventTeamId();
-    if (!teamId) {
-      return;
-    }
+    await this.command(async () => {
+      const teamId = this.eventTeamId();
+      if (!teamId) {
+        return;
+      }
 
-    this.store.patchMatch(
-      await firstValueFrom(
-        this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
-      ),
-    );
+      this.store.patchMatch(
+        await firstValueFrom(
+          this.api.addEvent(matchId, teamId, this.eventPlayerId, this.eventType, this.eventMinute, null),
+        ),
+      );
 
-    this.eventPlayerId = null;
+      this.eventPlayerId = null;
+      this.acknowledgeFields([0, 1, 2, 6]);
+
+
+    });
   }
 
   askRemoveEvent(matchId: number, eventId: number, eventType: MatchEventType): void {
@@ -634,6 +694,10 @@ export class LiveConsole implements OnInit {
   }
 
   async removeEvent(matchId: number, eventId: number): Promise<void> {
-    this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
+    await this.command(async () => {
+      this.store.patchMatch(await firstValueFrom(this.api.deleteEvent(matchId, eventId)));
+
+
+    });
   }
 }

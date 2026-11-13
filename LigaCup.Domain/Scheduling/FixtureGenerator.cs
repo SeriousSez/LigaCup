@@ -169,22 +169,23 @@ public static class FixtureGenerator
 
         if (byeTeamIds is not null && byeTeamIds.Any(teamId => teamId is not null))
         {
-            var automaticByeIds = teams
-                .Select(team => team.Id)
-                .Except(rounds.Select(round => teams.Select(team => team.Id)
-                    .Except(round.SelectMany(fixture => new[] { fixture.Home.Id, fixture.Away.Id }))
-                    .Single()))
-                .ToList();
-            var requestedByeIds = byeTeamIds
-                .Take(rounds.Count)
-                .Select((teamId, index) => teamId ?? automaticByeIds[index])
-                .ToList();
-
-            if (requestedByeIds.Count != rounds.Count ||
-                requestedByeIds.Distinct().Count() != rounds.Count ||
-                requestedByeIds.Any(teamId => !teams.Any(team => team.Id == teamId)))
+            if (bye is null)
             {
-                throw new ArgumentException("Each round must select a different team to sit out.", nameof(byeTeamIds));
+                throw new ArgumentException("Individual bye selections require an odd number of teams in the round robin.", nameof(byeTeamIds));
+            }
+            if (byeTeamIds.Count > rounds.Count)
+            {
+                throw new ArgumentException($"There are only {rounds.Count} rounds per round-robin leg; remove the extra bye selections.", nameof(byeTeamIds));
+            }
+
+            var manualByeIds = byeTeamIds.Where(teamId => teamId.HasValue).Select(teamId => teamId!.Value).ToList();
+            if (manualByeIds.Distinct().Count() != manualByeIds.Count)
+            {
+                throw new ArgumentException("Select each team to sit out at most once per round-robin leg; leave other rounds automatic.", nameof(byeTeamIds));
+            }
+            if (manualByeIds.Any(teamId => !teams.Any(team => team.Id == teamId)))
+            {
+                throw new ArgumentException("Each selected bye team must belong to this round-robin group.", nameof(byeTeamIds));
             }
 
             var roundsByBye = rounds.ToDictionary(
@@ -192,6 +193,29 @@ public static class FixtureGenerator
                     .Except(round.SelectMany(fixture => new[] { fixture.Home.Id, fixture.Away.Id }))
                     .Single(),
                 round => round);
+
+            // Reserve only explicit selections. Every team has a natural bye, so excluding
+            // all natural byes would leave no candidates for automatic rounds (F02).
+            var automaticByeIds = roundsByBye.Keys.Except(manualByeIds).ToList();
+            var requestedByeIds = new List<int>();
+            for (var index = 0; index < rounds.Count; index++)
+            {
+                var selected = index < byeTeamIds.Count ? byeTeamIds[index] : null;
+                if (selected is int teamId)
+                {
+                    requestedByeIds.Add(teamId);
+                    continue;
+                }
+
+                // Preserve the existing first-home choice when the first bye is automatic.
+                var candidateIndex = automaticByeIds.FindIndex(id => index != 0 || id != firstHomeTeamId);
+                if (candidateIndex < 0)
+                {
+                    throw new ArgumentException("The first home team must play in the first round; change the bye selections or first home team.", nameof(firstHomeTeamId));
+                }
+                requestedByeIds.Add(automaticByeIds[candidateIndex]);
+                automaticByeIds.RemoveAt(candidateIndex);
+            }
 
             orderedRounds = requestedByeIds.Select(byeTeamId => roundsByBye[byeTeamId]).ToList();
         }

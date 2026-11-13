@@ -27,6 +27,8 @@ public class LigaCupContext(DbContextOptions<LigaCupContext> options) : DbContex
         base.ConfigureConventions(configurationBuilder);
     }
 
+    public DbSet<CommandReceipt> CommandReceipts => Set<CommandReceipt>();
+
     public DbSet<Tournament> Tournaments => Set<Tournament>();
     public DbSet<TournamentGroup> Groups => Set<TournamentGroup>();
     public DbSet<Team> Teams => Set<Team>();

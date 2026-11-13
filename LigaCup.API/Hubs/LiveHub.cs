@@ -21,7 +21,7 @@ public class LiveHub : Hub
 
 public class SignalRLiveUpdateBroadcaster(IHubContext<LiveHub> hubContext) : ILiveUpdateBroadcaster
 {
-    public Task BroadcastAsync(LiveUpdateDto update, CancellationToken cancellationToken = default) =>
+    public virtual Task BroadcastAsync(LiveUpdateDto update, CancellationToken cancellationToken = default) =>
         hubContext.Clients
             .Group(LiveHub.GroupName(update.Slug))
             .SendAsync("liveUpdate", update, cancellationToken);

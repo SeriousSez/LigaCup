@@ -24,8 +24,7 @@ env:
   # Used when the WEB_ORIGIN and API_ORIGIN repository variables are not set.
   DEFAULT_WEB_ORIGIN: "https://ligacup.sezginsahin.dk"
   DEFAULT_API_ORIGIN: "https://ligacup.api.sezginsahin.dk"
-  # Encrypts the FTP session. Change to "ftp" only if the host refuses TLS.
-  FTP_PROTOCOL: "ftps"
+  # Every FTP operation requires TLS; failure must never fall back to plaintext.
 
 jobs:
   detect-changes:
@@ -249,7 +248,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ env.FTP_PROTOCOL }}
+          protocol: ftps
+          security: strict
           local-dir: ./api-offline-payload/
           server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
@@ -265,7 +265,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ env.FTP_PROTOCOL }}
+          protocol: ftps
+          security: strict
           local-dir: ${{ env.PUBLISH_PATH }}/
           server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
@@ -295,7 +296,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ env.FTP_PROTOCOL }}
+          protocol: ftps
+          security: strict
           local-dir: ./api-offline-payload/
           server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
@@ -311,7 +313,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ env.FTP_PROTOCOL }}
+          protocol: ftps
+          security: strict
           local-dir: ${{ env.PUBLISH_PATH }}/
           server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
@@ -338,6 +341,7 @@ jobs:
           $request = [System.Net.FtpWebRequest]::Create($uri)
           $request.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
           $request.Credentials = New-Object System.Net.NetworkCredential($env:FTP_USERNAME, $env:FTP_PASSWORD)
+          $request.EnableSsl = $true
           $request.UseBinary = $true
           $request.KeepAlive = $false
           try {
@@ -389,7 +393,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ssl-reqd \
             --upload-file ./api-recovery-payload/app_offline.htm \
             "ftp://$FTP_SERVER/ligacup.api/app_offline.htm"
 
@@ -406,7 +410,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ssl-reqd \
             -Q '-DELE app_offline.htm' "ftp://$FTP_SERVER/ligacup.api/"
 
       - name: Check API health after worker recycle
@@ -428,11 +432,11 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           mkdir -p remote-api-logs
-          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+          curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ssl-reqd \
             "ftp://$FTP_SERVER/ligacup.api/logs/" --list-only > remote-api-logs/index.txt || true
           while read -r log; do
             [ -z "$log" ] && continue
-            curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-ssl \
+            curl --fail --silent --show-error --user "$FTP_USERNAME:$FTP_PASSWORD" --ssl-reqd \
               "ftp://$FTP_SERVER/ligacup.api/logs/$log" -o "remote-api-logs/$log" || true
           done < remote-api-logs/index.txt
           cat remote-api-logs/*.log 2>/dev/null || true
@@ -457,7 +461,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ env.FTP_PROTOCOL }}
+          protocol: ftps
+          security: strict
           local-dir: ./web-dist/
           server-dir: ${{ env.WEB_SERVER_DIR }}
           dangerous-clean-slate: false

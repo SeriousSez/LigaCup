@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using LigaCup.ApplicationService.Contracts;
 using LigaCup.Domain.Entities;
+using LigaCup.Domain.Enums;
 using LigaCup.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         // Accepts the username or the email address, since people rarely remember which they registered with.
         var identifier = (request.Username ?? string.Empty).Trim().ToLower();
 
@@ -50,6 +52,7 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
 
         var response = CreateToken(user, await IssueRefreshTokenAsync(user, cancellationToken));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return response;
     }
@@ -68,6 +71,9 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
         var hash = RefreshTokenGenerator.Hash(refreshToken);
         var now = DateTime.UtcNow;
 
+        // SQLite begins an immediate transaction, serializing token consumption with account revocation.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
         var stored = await dbContext.RefreshTokens
             .Include(token => token.User)
             .FirstOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
@@ -82,6 +88,7 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
 
         var response = CreateToken(stored.User, await IssueRefreshTokenAsync(stored.User, cancellationToken));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return response;
     }
@@ -94,13 +101,21 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
         }
 
         var hash = RefreshTokenGenerator.Hash(refreshToken);
-        var stored = await dbContext.RefreshTokens.FirstOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
+        await dbContext.RefreshTokens.Where(token => token.TokenHash == hash && token.RevokedUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedUtc, DateTime.UtcNow), cancellationToken);
+    }
 
-        if (stored is not null && stored.RevokedUtc is null)
-        {
-            stored.RevokedUtc = DateTime.UtcNow;
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
+    /// <summary>Every authenticated request must still belong to an active persisted session.</summary>
+    public Task<bool> IsSessionValidAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+    {
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var sessionHash = principal.FindFirstValue("session");
+        if (!int.TryParse(userId, out var id) || string.IsNullOrEmpty(sessionHash)
+            || !Enum.TryParse<UserRole>(principal.FindFirstValue(ClaimTypes.Role), out var role)) return Task.FromResult(false);
+        var now = DateTime.UtcNow;
+        return dbContext.RefreshTokens.AsNoTracking().AnyAsync(token => token.UserId == id
+            && token.TokenHash == sessionHash && token.RevokedUtc == null && token.ExpiresUtc > now
+            && token.User != null && token.User.IsActive && token.User.Role == role, cancellationToken);
     }
 
     private async Task<string> IssueRefreshTokenAsync(User user, CancellationToken cancellationToken)
@@ -140,6 +155,7 @@ public class AuthService(LigaCupContext dbContext, IOptions<JwtOptions> jwtOptio
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("session", RefreshTokenGenerator.Hash(refreshToken)),
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Role, user.Role.ToString())
         };

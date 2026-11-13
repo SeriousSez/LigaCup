@@ -63,6 +63,7 @@ public static class MatchClock
     public static void ApplyStatusChange(Tournament tournament, Match match, MatchStatus status, DateTime nowUtc)
     {
         var previous = match.Status;
+        if (previous == status) return;
 
         switch (status)
         {

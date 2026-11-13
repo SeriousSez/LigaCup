@@ -21,7 +21,7 @@ function setup() {
     tournamentDateUtc: '2026-10-25T12:00:00Z', format: 'League', tiebreakers: [],
     showMatchTimesOnly: true, hideMatchAddresses: false }, teams: Array.from({length: 8}, (_, i) => ({id: i+1})), groups: [], matches: [match] });
   const api = {
-    updateTournament: (_id: number, request: any) => { calls.push('settings'); return of('local'); },
+    updateTournament: (_id: number, request: any) => { calls.push('settings'); return of({ ...request }); },
     generateFixtures: () => { calls.push('generate'); return of({generated: 28}); },
   };
   const store = { detail, load: async () => {}, reload: async () => { calls.push('reload'); } };
@@ -32,7 +32,7 @@ function setup() {
   ] });
   const component = runInInjectionContext(injector, () => new AdminSetup()) as any;
   component.slug = () => 'local';
-  return { component, match, calls, api, injector };
+  return { component, match: component.detail().matches[0], calls, api, injector };
 }
 
 test('admin match times use the same local time as public cards', () => {
@@ -61,14 +61,14 @@ test('date picker displays local time and emits an explicit UTC timestamp', () =
 test('saving address visibility preserves the timestamp and unsaved schedule edits', async () => {
   const { component, match, calls, api } = setup();
   let savedDate: string;
-  api.updateTournament = (_id, request) => { savedDate = request.tournamentDateUtc; calls.push('settings'); return of('local'); };
+  api.updateTournament = (_id, request) => { savedDate = request.tournamentDateUtc; calls.push('settings'); return of({ ...request }); };
   await component.ngOnInit();
   component.hasScheduleChanges(match);
   match.pitchNumber = 7;
   component.settings.hideMatchAddresses = true;
   await component.saveSettings();
   assert.equal(savedDate!, '2026-10-25T12:00:00Z');
-  assert.deepEqual(calls, ['settings']);
+  assert.deepEqual(calls, ['settings', 'reload']);
   assert.equal(match.pitchNumber, 7);
   assert.equal(component.hasScheduleChanges(match), true);
 });
@@ -117,8 +117,8 @@ test('API normalizes local inputs and preserves already zoned inputs', async () 
   const { HttpClient } = await import('@angular/common/http');
   const bodies: any[] = [];
   const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: {
-    post: (_url: string, body: any) => { bodies.push(body); return of('local'); },
-    put: (_url: string, body: any) => { bodies.push(body); return of('local'); },
+    post: (_url: string, body: any) => { bodies.push(body); return of({ ...body }); },
+    put: (_url: string, body: any) => { bodies.push(body); return of({ ...body }); },
   } }] });
   const api = runInInjectionContext(injector, () => new ApiService());
   api.createTournament({ tournamentDateUtc: '2026-07-01T13:00' } as any);

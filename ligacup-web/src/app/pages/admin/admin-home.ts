@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,6 +20,8 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
   selector: 'app-admin-home',
   imports: [RouterLink, FormsModule, DatePipe, FontAwesomeModule, CardListSkeleton, SelectField, DateTimePicker, ConfirmDialog],
   template: `
+    <fieldset [disabled]="busy()" style="border:0;padding:0;margin:0;min-width:0">
+    @if (dirty()) { <p role="status">Unsaved tournament form. Create saves this form only.</p> }
     <h1>{{ t().adminHome.title }}</h1>
 
     @if (auth.isAdmin()) {
@@ -121,6 +123,7 @@ import { SaveTournamentRequest, TournamentFormat, TournamentSummary } from '../.
       (confirmed)="confirmDeleteTournament()"
       (cancelled)="pendingDelete.set(null)"
     />
+    </fieldset>
   `,
   styles: `
     .create {
@@ -198,6 +201,12 @@ export class AdminHome {
     trackPlayers: false,
   };
 
+  private initialDraft = JSON.stringify(this.draft);
+  protected dirty(): boolean { return this.initialDraft !== JSON.stringify(this.draft); }
+  canDeactivate(): boolean { return !this.dirty() || window.confirm('Discard the unsaved tournament form?'); }
+  @HostListener('window:beforeunload', ['$event'])
+  warn(event: BeforeUnloadEvent): void { if (this.dirty()) { event.preventDefault(); event.returnValue = ''; } }
+
   constructor() {
     void this.refresh();
   }
@@ -256,6 +265,7 @@ export class AdminHome {
     try {
       await firstValueFrom(this.api.createTournament(request));
       this.draft.name = '';
+      this.initialDraft = JSON.stringify(this.draft);
       await this.refresh();
     } catch {
       this.error.set(this.t().adminHome.createFailed);

@@ -1,5 +1,6 @@
+import { EditDrafts } from '../../core/edit-drafts';
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -17,7 +18,16 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
   selector: 'app-admin-users',
   imports: [FormsModule, RouterLink, DatePipe, FontAwesomeModule, CardListSkeleton, SelectField, ConfirmDialog],
   template: `
+    <fieldset [disabled]="busy()" style="border:0;padding:0;margin:0;min-width:0">
     <div class="users-page">
+    @if (dirty()) { <p role="status">Unsaved account edits. Save each account separately; password reset is a separate action.</p> }
+    <button (click)="refresh()">Reload accounts (preserve drafts)</button>
+    @for (conflict of rowDrafts.conflicts(); track conflict.id) {
+      <p>Account {{ conflict.id }} changed on the server. Your draft is preserved.</p>
+      <details><summary>Compare draft and server</summary><pre>{{ values(conflict.local) }}</pre><pre>{{ values(conflict.server) }}</pre></details>
+      @if (conflict.server) { <button (click)="resolve(conflict.id, true)">Keep my draft for review</button> }
+      <button (click)="resolve(conflict.id, false)">Discard draft and use server</button>
+    }
     <section class="spread heading">
       <div>
         <h1>{{ t().users.title }}</h1>
@@ -159,6 +169,7 @@ import { ConfirmDialog } from '../../shared/confirm-dialog';
       (confirmed)="confirmRemove()"
       (cancelled)="pendingDelete.set(null)"
     />
+    </fieldset>
   `,
   styles: `
     .users-page {
@@ -318,7 +329,14 @@ export class AdminUsers {
   protected readonly t = this.i18n.t;
   protected readonly locale = this.i18n.locale;
 
+  protected readonly rowDrafts = new EditDrafts<User>(['email', 'role', 'isActive']);
   protected readonly users = signal<User[]>([]);
+  protected dirty(): boolean { return this.rowDrafts.dirty() || !!(this.draft.username || this.draft.email || this.draft.password || this.newPassword || this.draft.role !== 'Editor'); }
+  canDeactivate(): boolean { return !this.dirty() || window.confirm('Discard unsaved account edits?'); }
+  @HostListener('window:beforeunload', ['$event'])
+  warn(event: BeforeUnloadEvent): void { if (this.dirty()) { event.preventDefault(); event.returnValue = ''; } }
+  resolve(id: number, keep: boolean): void { this.rowDrafts.resolve(id, keep); this.users.set([...this.users()]); }
+  values(value: unknown): string { return JSON.stringify(value, null, 2); }
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly message = signal<string | null>(null);
@@ -350,7 +368,9 @@ export class AdminUsers {
 
   async refresh(): Promise<void> {
     try {
-      this.users.set(await firstValueFrom(this.api.getUsers()));
+      this.users.set(this.rowDrafts.reconcile(await firstValueFrom(this.api.getUsers())));
+    } catch (failure) {
+      this.error.set(this.describe(failure));
     } finally {
       this.loading.set(false);
     }
@@ -381,18 +401,22 @@ export class AdminUsers {
   }
 
   async save(user: User): Promise<void> {
+    if (this.rowDrafts.conflicts().some(c => c.id === user.id)) { this.error.set('Resolve this account conflict before saving.'); return; }
     this.busy.set(true);
     this.message.set(null);
     this.error.set(null);
 
     try {
-      await firstValueFrom(
+      const submitted = structuredClone(user);
+      const saved = await firstValueFrom(
         this.api.updateUser(user.id, {
+          revision: user.revision,
           email: user.email?.trim() || null,
           role: user.role,
           isActive: user.isActive,
         }),
       );
+      this.rowDrafts.saved(user.id, submitted, saved);
       this.message.set(this.t().users.saved);
       await this.refresh();
     } catch (failure) {
@@ -404,6 +428,7 @@ export class AdminUsers {
   }
 
   startReset(userId: number): void {
+    if (this.newPassword && !window.confirm('Discard the unsaved password?')) return;
     this.newPassword = '';
     this.resettingId.set(this.resettingId() === userId ? null : userId);
   }

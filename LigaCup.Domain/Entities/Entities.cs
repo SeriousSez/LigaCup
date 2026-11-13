@@ -4,6 +4,8 @@ namespace LigaCup.Domain.Entities;
 
 public class Tournament
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Revision => EditRevision.For(this);
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
 
@@ -118,6 +120,8 @@ public class TournamentGroup
 
 public class Team
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Revision => EditRevision.For(this);
     public int Id { get; set; }
     public int TournamentId { get; set; }
     public Tournament? Tournament { get; set; }
@@ -143,6 +147,8 @@ public class Team
 
 public class Player
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Revision => EditRevision.For(this);
     public int Id { get; set; }
     public int TeamId { get; set; }
     public Team? Team { get; set; }
@@ -155,6 +161,8 @@ public class Player
 
 public class Match
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Revision => EditRevision.For(this);
     public int Id { get; set; }
     public int TournamentId { get; set; }
     public Tournament? Tournament { get; set; }
@@ -258,6 +266,8 @@ public class MatchEvent
 
 public class User
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Revision => EditRevision.For(this);
     public int Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? Email { get; set; }

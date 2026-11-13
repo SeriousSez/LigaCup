@@ -1,4 +1,5 @@
 using LigaCup.ApplicationService.Contracts;
+using LigaCup.ApplicationService.Services;
 using LigaCup.Domain.Entities;
 using LigaCup.Domain.Enums;
 using LigaCup.Infrastructure;
@@ -26,6 +27,7 @@ public class UserService(LigaCupContext dbContext)
 
     public async Task<UserDto> CreateAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
+        RequestValidation.EnumValue(request.Role, "role");
         var username = (request.Username ?? string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(username))
@@ -71,6 +73,8 @@ public class UserService(LigaCupContext dbContext)
 
     public async Task<UserDto> UpdateAsync(int id, int currentUserId, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
+        RequestValidation.EnumValue(request.Role, "role");
+        await using var transaction = await dbContext.BeginWriteAsync(cancellationToken);
         var user = await dbContext.Users.FirstOrDefaultAsync(candidate => candidate.Id == id, cancellationToken)
             ?? throw new KeyNotFoundException($"User {id} was not found.");
 
@@ -85,11 +89,15 @@ public class UserService(LigaCupContext dbContext)
             throw new InvalidOperationException("You cannot deactivate your own account.");
         }
 
-        user.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        if (user.Role != request.Role || user.IsActive != request.IsActive || user.Email != email)
+            await RevokeSessionsAsync(user.Id, cancellationToken);
+        user.Email = email;
         user.Role = request.Role;
         user.IsActive = request.IsActive;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitOwnedAsync(cancellationToken);
         return ToDto(user);
     }
 
@@ -100,15 +108,19 @@ public class UserService(LigaCupContext dbContext)
             throw new InvalidOperationException($"The password must be at least {MinimumPasswordLength} characters.");
         }
 
+        await using var transaction = await dbContext.BeginWriteAsync(cancellationToken);
         var user = await dbContext.Users.FirstOrDefaultAsync(candidate => candidate.Id == id, cancellationToken)
             ?? throw new KeyNotFoundException($"User {id} was not found.");
 
         user.PasswordHash = PasswordHasher.Hash(password!);
+        await RevokeSessionsAsync(user.Id, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitOwnedAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(int id, int currentUserId, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await dbContext.BeginWriteAsync(cancellationToken);
         if (id == currentUserId)
         {
             throw new InvalidOperationException("You cannot delete your own account.");
@@ -127,8 +139,13 @@ public class UserService(LigaCupContext dbContext)
 
         dbContext.Users.Remove(user);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitOwnedAsync(cancellationToken);
         return true;
     }
+
+    private Task<int> RevokeSessionsAsync(int userId, CancellationToken cancellationToken) =>
+        dbContext.RefreshTokens.Where(token => token.UserId == userId && token.RevokedUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedUtc, DateTime.UtcNow), cancellationToken);
 
     private async Task<bool> IsLastActiveAdminAsync(int excludingUserId, CancellationToken cancellationToken) =>
         !await dbContext.Users.AnyAsync(
@@ -142,5 +159,5 @@ public class UserService(LigaCupContext dbContext)
         user.Role,
         user.IsActive,
         user.CreatedUtc,
-        user.LastLoginUtc);
+        user.LastLoginUtc) { Revision = user.Revision };
 }

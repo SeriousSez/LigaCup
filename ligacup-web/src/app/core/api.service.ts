@@ -58,7 +58,7 @@ export class ApiService {
     }
 
     updateTournament(id: number, request: SaveTournamentRequest) {
-        return this.http.put<string>(`${this.base}/api/admin/tournaments/${id}`, {
+        return this.http.put<TournamentSummary>(`${this.base}/api/admin/tournaments/${id}`, {
             ...request, tournamentDateUtc: utcDateTime(request.tournamentDateUtc),
         });
     }
@@ -88,6 +88,7 @@ export class ApiService {
 
     saveTeam(tournamentId: number, teamId: number | null, body: Partial<Team>) {
         const payload = {
+            revision: body.revision,
             name: body.name,
             shortName: body.shortName ?? null,
             colorHex: body.colorHex ?? null,
@@ -105,6 +106,10 @@ export class ApiService {
             : this.http.post<Team>(`${this.base}/api/admin/tournaments/${tournamentId}/teams`, payload);
     }
 
+    assignTeamGroup(tournamentId: number, teamId: number, groupId: number | null) {
+        return this.http.put<void>(`${this.base}/api/admin/tournaments/${tournamentId}/teams/${teamId}/group`, { groupId });
+    }
+
     deleteTeam(tournamentId: number, teamId: number) {
         return this.http.delete<void>(
             `${this.base}/api/admin/tournaments/${tournamentId}/teams/${teamId}`,
@@ -113,6 +118,7 @@ export class ApiService {
 
     savePlayer(playerId: number | null, body: Partial<Player>) {
         const payload = {
+            revision: body.revision,
             teamId: body.teamId,
             name: body.name,
             shirtNumber: body.shirtNumber ?? null,
@@ -155,6 +161,7 @@ export class ApiService {
         tournamentId: number,
         matchId: number | null,
         body: {
+            revision?: string;
             groupId: number | null;
             stage: MatchStage;
             round: number;
@@ -177,6 +184,20 @@ export class ApiService {
             : this.http.post<Match>(`${this.base}/api/admin/tournaments/${tournamentId}/matches`, payload);
     }
 
+    saveMatches(tournamentId: number, matches: Match[]) {
+        return this.http.put<Match[]>(`${this.base}/api/admin/tournaments/${tournamentId}/matches/bulk`, {
+            matches: matches.map(match => ({ id: match.id, revision: match.revision, changes: {
+                ...match, kickoffUtc: utcDateTime(match.kickoffUtc),
+                homePlaceholder: match.homeTeamId === null ? match.homeTeamName : null,
+                awayPlaceholder: match.awayTeamId === null ? match.awayTeamName : null,
+            } })),
+        });
+    }
+
+    copyRound(tournamentId: number, sourceRound: number, targetRound: number) {
+        return this.http.post<Match[]>(`${this.base}/api/admin/tournaments/${tournamentId}/rounds/copy`, { sourceRound, targetRound });
+    }
+
     deleteMatch(tournamentId: number, matchId: number) {
         return this.http.delete<void>(
             `${this.base}/api/admin/tournaments/${tournamentId}/matches/${matchId}`,
@@ -196,8 +217,10 @@ export class ApiService {
         awayScore: number,
         homePenalties: number | null,
         awayPenalties: number | null,
+        revision?: string,
     ) {
         return this.http.put<Match>(`${this.base}/api/live/matches/${matchId}/score`, {
+            revision,
             homeScore,
             awayScore,
             homePenalties,

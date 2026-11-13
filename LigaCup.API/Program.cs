@@ -30,7 +30,9 @@ builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<MatchService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<ILiveUpdateBroadcaster, SignalRLiveUpdateBroadcaster>();
+builder.Services.AddScoped<SignalRLiveUpdateBroadcaster>();
+builder.Services.AddScoped<PendingNotifications>();
+builder.Services.AddScoped<ILiveUpdateBroadcaster>(sp => sp.GetRequiredService<PendingNotifications>());
 
 builder.Services.AddSignalR().AddJsonProtocol(options =>
     options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -71,6 +73,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.Events = new JwtBearerEvents
         {
+            OnTokenValidated = async context =>
+            {
+                var auth = context.HttpContext.RequestServices.GetRequiredService<AuthService>();
+                if (context.Principal is null || !await auth.IsSessionValidAsync(context.Principal, context.HttpContext.RequestAborted))
+                    context.Fail("The session is no longer active.");
+            },
             OnMessageReceived = context =>
             {
                 // Browsers cannot attach an Authorization header to a WebSocket handshake.
@@ -111,10 +119,12 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 var app = builder.Build();
 
+app.UseRequestErrors();
 app.UseStaticFiles();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseEditingCommands();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
 app.MapAuthEndpoints();
@@ -217,3 +227,5 @@ static async Task SeedAdminUserAsync(LigaCupContext dbContext, IConfiguration co
     await dbContext.SaveChangesAsync();
     logger.LogInformation("Created administrator '{Username}'.", username);
 }
+
+public partial class Program { }

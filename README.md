@@ -152,7 +152,7 @@ Hosting is split across two subdomains on simply.com:
 
 Those are already set as `WEB_SERVER_DIR` and `API_SERVER_DIR` in the workflow, and the client is built against the API subdomain.
 
-The upload runs over FTPS so credentials and files are encrypted in transit. If the host ever refuses TLS, set `FTP_PROTOCOL` in the workflow to `ftp`, but prefer fixing the TLS side over sending the password in the clear.
+All deployment uploads, cleanup and recovery operations require FTP over TLS. If the host refuses TLS, the operation must fail; repair the TLS configuration instead of downgrading to plaintext.
 
 Do not reuse the hosting FTP password for the application administrator. A leak of one should not hand over the other.
 
